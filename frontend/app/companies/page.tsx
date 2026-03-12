@@ -11,6 +11,8 @@ import {
 } from "@/lib/api";
 import { CompanySearchParams } from "@/types/company";
 
+export const dynamic = "force-dynamic";
+
 function normalizeParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
     return value.filter(Boolean).join(",");

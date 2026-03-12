@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 
 import { getCompany } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 function absoluteSiteUrl(path: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   return new URL(path, base).toString();

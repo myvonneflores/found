@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${FOUND_DB_PORT:-5432}:5432"
 
   web:
     build: .
@@ -16,11 +16,27 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "${FOUND_WEB_PORT:-8000}:8000"
     depends_on:
       - db
     env_file:
       - .env
 
+  frontend:
+    image: node:22-alpine
+    working_dir: /app/frontend
+    command: sh -lc "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/frontend/node_modules
+    ports:
+      - "${FOUND_FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - web
+    environment:
+      API_BASE_URL: http://web:8000/api
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
 volumes:
   postgres_data:
+  frontend_node_modules:
