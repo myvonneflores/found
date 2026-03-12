@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import BusinessCategory, Company, ProductCategory, SustainabilityMarker
+from .models import (
+    BusinessCategory,
+    Company,
+    OwnershipMarker,
+    ProductCategory,
+    SustainabilityMarker,
+)
 
 
 class TaxonomySerializer(serializers.ModelSerializer):
@@ -18,6 +24,11 @@ class ProductCategorySerializer(TaxonomySerializer):
         model = ProductCategory
 
 
+class OwnershipMarkerSerializer(TaxonomySerializer):
+    class Meta(TaxonomySerializer.Meta):
+        model = OwnershipMarker
+
+
 class SustainabilityMarkerSerializer(TaxonomySerializer):
     class Meta(TaxonomySerializer.Meta):
         model = SustainabilityMarker
@@ -26,6 +37,7 @@ class SustainabilityMarkerSerializer(TaxonomySerializer):
 class CompanyListSerializer(serializers.ModelSerializer):
     business_category = serializers.SerializerMethodField()
     product_categories = serializers.StringRelatedField(many=True)
+    ownership_markers = serializers.StringRelatedField(many=True)
     sustainability_markers = serializers.StringRelatedField(many=True)
 
     def get_business_category(self, obj):
@@ -44,6 +56,7 @@ class CompanyListSerializer(serializers.ModelSerializer):
             "country",
             "business_category",
             "product_categories",
+            "ownership_markers",
             "sustainability_markers",
             "is_vegan_friendly",
             "is_gf_friendly",
@@ -53,6 +66,7 @@ class CompanyListSerializer(serializers.ModelSerializer):
 class CompanyDetailSerializer(serializers.ModelSerializer):
     business_category = BusinessCategorySerializer()
     product_categories = ProductCategorySerializer(many=True)
+    ownership_markers = OwnershipMarkerSerializer(many=True)
     sustainability_markers = SustainabilityMarkerSerializer(many=True)
 
     class Meta:
@@ -72,6 +86,7 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "country",
             "business_category",
             "product_categories",
+            "ownership_markers",
             "sustainability_markers",
             "instagram_handle",
             "facebook_page",

@@ -1,11 +1,21 @@
 from rest_framework import generics, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from .cities import canonicalize_city
 from .filters import CompanyFilterSet
-from .models import BusinessCategory, Company, ProductCategory, SustainabilityMarker
+from .models import (
+    BusinessCategory,
+    Company,
+    OwnershipMarker,
+    ProductCategory,
+    SustainabilityMarker,
+)
 from .serializers import (
     BusinessCategorySerializer,
     CompanyDetailSerializer,
     CompanyListSerializer,
+    OwnershipMarkerSerializer,
     ProductCategorySerializer,
     SustainabilityMarkerSerializer,
 )
@@ -22,7 +32,7 @@ class CompanyListView(generics.ListAPIView):
     def get_queryset(self):
         return (
             Company.objects.select_related("business_category")
-            .prefetch_related("product_categories", "sustainability_markers")
+            .prefetch_related("product_categories", "ownership_markers", "sustainability_markers")
             .distinct()
         )
 
@@ -35,6 +45,7 @@ class CompanyDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         return Company.objects.select_related("business_category").prefetch_related(
             "product_categories",
+            "ownership_markers",
             "sustainability_markers",
         )
 
@@ -53,8 +64,24 @@ class ProductCategoryListView(generics.ListAPIView):
     pagination_class = None
 
 
+class OwnershipMarkerListView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = OwnershipMarker.objects.all()
+    serializer_class = OwnershipMarkerSerializer
+    pagination_class = None
+
+
 class SustainabilityMarkerListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = SustainabilityMarker.objects.all()
     serializer_class = SustainabilityMarkerSerializer
     pagination_class = None
+
+
+class CityOptionListView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        raw_cities = Company.objects.exclude(city="").values_list("city", flat=True).distinct()
+        cities = sorted({canonicalize_city(city) for city in raw_cities if canonicalize_city(city)})
+        return Response(list(cities))

@@ -1,7 +1,13 @@
 from django.contrib import admin
 from django.db.models import Count, Q
 
-from .models import BusinessCategory, Company, ProductCategory, SustainabilityMarker
+from .models import (
+    BusinessCategory,
+    Company,
+    OwnershipMarker,
+    ProductCategory,
+    SustainabilityMarker,
+)
 
 
 class CompanyDataQualityFilter(admin.SimpleListFilter):
@@ -57,6 +63,19 @@ class ProductCategoryAdmin(admin.ModelAdmin):
         return obj.company_count_value
 
 
+@admin.register(OwnershipMarker)
+class OwnershipMarkerAdmin(admin.ModelAdmin):
+    list_display = ("name", "company_count", "id_hash", "created_at")
+    search_fields = ("name",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(company_count_value=Count("companies"))
+
+    @admin.display(ordering="company_count_value")
+    def company_count(self, obj):
+        return obj.company_count_value
+
+
 @admin.register(SustainabilityMarker)
 class SustainabilityMarkerAdmin(admin.ModelAdmin):
     list_display = ("name", "company_count", "id_hash", "created_at")
@@ -95,7 +114,7 @@ class CompanyAdmin(admin.ModelAdmin):
     )
     search_fields = ("name", "description", "city", "state", "country")
     prepopulated_fields = {"slug": ("name",)}
-    filter_horizontal = ("product_categories", "sustainability_markers")
+    filter_horizontal = ("product_categories", "ownership_markers", "sustainability_markers")
     list_editable = ("needs_editorial_review",)
 
     @admin.display(boolean=True)

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-import { CompanyCard } from "@/components/company-card";
-import { CompanyFilters } from "@/components/company-filters";
+import { CompanyDirectory } from "@/components/company-directory";
 import {
+  getCompany,
   hasActiveFilters,
   listBusinessCategories,
+  listCities,
   listCompanies,
-  listProductCategories,
+  listOwnershipMarkers,
   listSustainabilityMarkers,
 } from "@/lib/api";
 import { CompanySearchParams } from "@/types/company";
@@ -28,10 +29,12 @@ function normalizeSearchParams(searchParams: Record<string, string | string[] | 
     country: normalizeParam(searchParams.country),
     business_category: normalizeParam(searchParams.business_category),
     product_categories: normalizeParam(searchParams.product_categories),
+    ownership_markers: normalizeParam(searchParams.ownership_markers),
     sustainability_markers: normalizeParam(searchParams.sustainability_markers),
     is_vegan_friendly: normalizeParam(searchParams.is_vegan_friendly),
     is_gf_friendly: normalizeParam(searchParams.is_gf_friendly),
     ordering: normalizeParam(searchParams.ordering),
+    selected: normalizeParam(searchParams.selected),
   };
 }
 
@@ -45,7 +48,7 @@ export async function generateMetadata({
 
   return {
     title: isFiltered ? "Filtered companies" : "Browse companies",
-    description: "Browse curated companies across retail, food, and wellness.",
+    description: "Browse local-first businesses without the chain-store noise.",
     alternates: {
       canonical: "/companies",
     },
@@ -59,68 +62,27 @@ export default async function CompaniesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = normalizeSearchParams(await searchParams);
-  const [companies, businessCategories, productCategories, sustainabilityMarkers] = await Promise.all([
+  const [companies, cities, businessCategories, ownershipMarkers, sustainabilityMarkers] = await Promise.all([
     listCompanies(params),
+    listCities(),
     listBusinessCategories(),
-    listProductCategories(),
+    listOwnershipMarkers(),
     listSustainabilityMarkers(),
   ]);
-  const companiesWithDescriptions = companies.results.filter((company) => Boolean(company.description)).length;
-  const companiesWithCategories = companies.results.filter(
-    (company) => company.product_categories.length > 0
-  ).length;
+  const defaultSlug = params.selected ?? companies.results[0]?.slug;
+  const selectedCompany = defaultSlug ? await getCompany(defaultSlug).catch(() => null) : null;
 
   return (
-    <main className="page-shell">
-      <section className="hero">
-        <span className="badge">Directory</span>
-        <h1>Find companies by place, focus, and values.</h1>
-        <p>
-          Search a public directory of retail, food, and wellness businesses with
-          filters that stay reflected in the URL for discoverability and sharing.
-        </p>
-      </section>
-
-      <section className="directory-layout">
-        <CompanyFilters
-          businessCategories={businessCategories}
-          productCategories={productCategories}
-          searchParams={params}
-          sustainabilityMarkers={sustainabilityMarkers}
-        />
-
-        <div className="results-column">
-          <div className="panel results-header">
-            <span className="field-label">Results</span>
-            <div className="section-title">{companies.count} companies</div>
-            <div className="muted">
-              Core directory pages are indexable. Filtered results are still shareable, but marked
-              `noindex` to avoid thin SEO duplication.
-            </div>
-            <div className="filter-chip-row">
-              <span className="badge badge-outline">
-                {companiesWithDescriptions}/{companies.results.length || 0} with editorial descriptions
-              </span>
-              <span className="badge badge-outline">
-                {companiesWithCategories}/{companies.results.length || 0} with product taxonomy
-              </span>
-            </div>
-          </div>
-
-          {companies.results.length ? (
-            <div className="company-grid">
-              {companies.results.map((company) => (
-                <CompanyCard company={company} key={company.id} />
-              ))}
-            </div>
-          ) : (
-            <div className="panel empty-state">
-              <h2 className="section-title">No matches</h2>
-              <p className="lede">Try removing one or two filters or broadening your search terms.</p>
-            </div>
-          )}
-        </div>
-      </section>
+    <main className="page-shell directory-page-shell">
+      <CompanyDirectory
+        businessCategories={businessCategories}
+        cities={cities}
+        companies={companies.results}
+        ownershipMarkers={ownershipMarkers}
+        searchParams={params}
+        selectedCompany={selectedCompany}
+        sustainabilityMarkers={sustainabilityMarkers}
+      />
     </main>
   );
 }

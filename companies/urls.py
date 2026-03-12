@@ -18,8 +18,18 @@ urlpatterns = [
         name="product-category-list",
     ),
     path(
+        "ownership-markers/",
+        views.OwnershipMarkerListView.as_view(),
+        name="ownership-marker-list",
+    ),
+    path(
         "sustainability-markers/",
         views.SustainabilityMarkerListView.as_view(),
         name="sustainability-marker-list",
+    ),
+    path(
+        "cities/",
+        views.CityOptionListView.as_view(),
+        name="city-option-list",
     ),
 ]

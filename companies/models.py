@@ -31,6 +31,11 @@ class ProductCategory(NamedTaxonomy):
         verbose_name_plural = "Product categories"
 
 
+class OwnershipMarker(NamedTaxonomy):
+    class Meta(NamedTaxonomy.Meta):
+        verbose_name_plural = "Ownership markers"
+
+
 class Company(BaseModel):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
@@ -52,6 +57,11 @@ class Company(BaseModel):
     )
     product_categories = models.ManyToManyField(
         ProductCategory,
+        blank=True,
+        related_name="companies",
+    )
+    ownership_markers = models.ManyToManyField(
+        OwnershipMarker,
         blank=True,
         related_name="companies",
     )

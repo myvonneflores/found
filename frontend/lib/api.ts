@@ -33,7 +33,10 @@ async function fetchJson<T>(path: string, searchParams?: Record<string, string |
 }
 
 export function listCompanies(searchParams: CompanySearchParams) {
-  return fetchJson<PaginatedResponse<CompanyListItem>>("companies/", searchParams);
+  return fetchJson<PaginatedResponse<CompanyListItem>>("companies/", {
+    ...searchParams,
+    page_size: "200",
+  });
 }
 
 export function getCompany(slug: string) {
@@ -48,10 +51,18 @@ export function listProductCategories() {
   return fetchJson<TaxonomyItem[]>("product-categories/");
 }
 
+export function listOwnershipMarkers() {
+  return fetchJson<TaxonomyItem[]>("ownership-markers/");
+}
+
 export function listSustainabilityMarkers() {
   return fetchJson<TaxonomyItem[]>("sustainability-markers/");
 }
 
+export function listCities() {
+  return fetchJson<string[]>("cities/");
+}
+
 export function hasActiveFilters(searchParams: CompanySearchParams) {
-  return Object.values(searchParams).some(Boolean);
+  return Object.entries(searchParams).some(([key, value]) => key !== "selected" && Boolean(value));
 }

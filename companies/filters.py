@@ -1,5 +1,6 @@
 import django_filters
 
+from .cities import city_filter_variants
 from .models import Company
 
 
@@ -12,7 +13,7 @@ class CharInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
 
 
 class CompanyFilterSet(django_filters.FilterSet):
-    city = django_filters.CharFilter(field_name="city", lookup_expr="iexact")
+    city = django_filters.CharFilter(method="filter_city")
     state = django_filters.CharFilter(field_name="state", lookup_expr="iexact")
     country = django_filters.CharFilter(field_name="country", lookup_expr="iexact")
     business_category = django_filters.CharFilter(
@@ -21,6 +22,9 @@ class CompanyFilterSet(django_filters.FilterSet):
     )
     product_categories = CharInFilter(
         field_name="product_categories__name",
+    )
+    ownership_markers = CharInFilter(
+        field_name="ownership_markers__name",
     )
     sustainability_markers = CharInFilter(
         field_name="sustainability_markers__name",
@@ -47,3 +51,9 @@ class CompanyFilterSet(django_filters.FilterSet):
     class Meta:
         model = Company
         fields = []
+
+    def filter_city(self, queryset, name, value):
+        variants = city_filter_variants(value)
+        if not variants:
+            return queryset
+        return queryset.filter(city__in=variants)

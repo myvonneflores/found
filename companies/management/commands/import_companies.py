@@ -5,9 +5,11 @@ from urllib.parse import urlparse
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from companies.cities import canonicalize_city
 from companies.models import (
     BusinessCategory,
     Company,
+    OwnershipMarker,
     ProductCategory,
     SustainabilityMarker,
 )
@@ -40,6 +42,8 @@ EXCLUDED_PRODUCT_CATEGORIES = {
 }
 
 EXCLUDED_COMPANY_NAMES = {
+    "Alien Mermaid Cove",
+    "Revive Athletics",
     "Soren",
     "Soulful PDX",
 }
@@ -96,7 +100,7 @@ def normalize_product_categories(value):
 
 
 def normalize_city(value):
-    return clean_value(value)
+    return canonicalize_city(clean_value(value))
 
 
 def normalize_state(value, city):
@@ -214,6 +218,7 @@ class Command(BaseCommand):
     def prune_unused_taxonomies(self):
         BusinessCategory.objects.filter(companies__isnull=True).delete()
         ProductCategory.objects.filter(companies__isnull=True).delete()
+        OwnershipMarker.objects.filter(companies__isnull=True).delete()
         SustainabilityMarker.objects.filter(companies__isnull=True).delete()
 
     def iterate_rows(self, csv_path):
@@ -270,6 +275,7 @@ class Command(BaseCommand):
 
         business_category_name = normalize_business_category(row.get("business_category"))
         product_categories = normalize_product_categories(row.get("product_categories"))
+        ownership_markers = split_multi_value(row.get("owner_demographics"))
         sustainability_markers = split_multi_value(row.get("sustainability_markers"))
 
         if not persist:
@@ -294,6 +300,12 @@ class Command(BaseCommand):
                 [
                     ProductCategory.objects.get_or_create(name=category_name)[0]
                     for category_name in product_categories
+                ]
+            )
+            company.ownership_markers.set(
+                [
+                    OwnershipMarker.objects.get_or_create(name=marker_name)[0]
+                    for marker_name in ownership_markers
                 ]
             )
             company.sustainability_markers.set(

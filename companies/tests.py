@@ -6,7 +6,13 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import BusinessCategory, Company, ProductCategory, SustainabilityMarker
+from .models import (
+    BusinessCategory,
+    Company,
+    OwnershipMarker,
+    ProductCategory,
+    SustainabilityMarker,
+)
 
 
 class CompanyModelTests(APITestCase):
@@ -25,6 +31,8 @@ class CompanyApiTests(APITestCase):
         food = BusinessCategory.objects.create(name="Food")
         clothing = ProductCategory.objects.create(name="Clothing")
         gifts = ProductCategory.objects.create(name="Gifts")
+        woman_owned = OwnershipMarker.objects.create(name="Woman Owned")
+        bipoc_owned = OwnershipMarker.objects.create(name="BIPOC Owned")
         sustainable = SustainabilityMarker.objects.create(name="Sustainable Products")
         vintage = SustainabilityMarker.objects.create(name="Vintage Goods")
 
@@ -40,6 +48,7 @@ class CompanyApiTests(APITestCase):
             number_of_employees=12,
         )
         cls.company_one.product_categories.add(gifts)
+        cls.company_one.ownership_markers.add(woman_owned)
         cls.company_one.sustainability_markers.add(sustainable)
 
         cls.company_two = Company.objects.create(
@@ -54,6 +63,7 @@ class CompanyApiTests(APITestCase):
             number_of_employees=6,
         )
         cls.company_two.product_categories.add(clothing)
+        cls.company_two.ownership_markers.add(bipoc_owned)
         cls.company_two.sustainability_markers.add(vintage)
 
     def test_company_list_is_public(self):
@@ -77,6 +87,37 @@ class CompanyApiTests(APITestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Cedar Cloth")
 
+    def test_filters_by_canonical_city_include_aliases(self):
+        Company.objects.create(
+            name="Metro Alias Co",
+            city="Gresham",
+            state="OR",
+            country="United States",
+        )
+
+        response = self.client.get(reverse("companies:company-list"), {"city": "Portland"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
+        self.assertCountEqual(
+            [company["name"] for company in response.data["results"]],
+            ["North Star Market", "Metro Alias Co"],
+        )
+
+    def test_filters_by_new_york_include_brooklyn_aliases(self):
+        Company.objects.create(
+            name="Borough Alias Co",
+            city="Brooklyn",
+            state="NY",
+            country="United States",
+        )
+
+        response = self.client.get(reverse("companies:company-list"), {"city": "New York"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["name"], "Borough Alias Co")
+
     def test_filters_by_business_category(self):
         response = self.client.get(
             reverse("companies:company-list"),
@@ -93,6 +134,15 @@ class CompanyApiTests(APITestCase):
         )
 
         self.assertEqual(response.data["count"], 2)
+
+    def test_filters_by_ownership_markers(self):
+        response = self.client.get(
+            reverse("companies:company-list"),
+            {"ownership_markers": "Woman Owned"},
+        )
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["name"], "North Star Market")
 
     def test_search_and_range_filters_can_be_combined(self):
         response = self.client.get(
@@ -117,6 +167,22 @@ class CompanyApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
+        response = self.client.get(reverse("companies:ownership-marker-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        response = self.client.get(reverse("companies:city-option-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, ["Portland", "Seattle"])
+
+    def test_city_options_endpoint_collapses_city_aliases(self):
+        Company.objects.create(name="Metro Alias Co", city="Gresham")
+        Company.objects.create(name="Borough Alias Co", city="Brooklyn")
+        Company.objects.create(name="Neighborhood Alias Co", city="West Hollywood")
+
+        response = self.client.get(reverse("companies:city-option-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, ["Los Angeles", "New York", "Portland", "Seattle"])
 
 
 class CompanyImportCommandTests(APITestCase):
@@ -145,6 +211,7 @@ class CompanyImportCommandTests(APITestCase):
                 "annualrevenue",
                 "total_revenue",
                 "numberofemployees",
+                "owner_demographics",
                 "vegan_gf_friendly_",
             ],
         )
@@ -174,6 +241,7 @@ class CompanyImportCommandTests(APITestCase):
                     "linkedin_company_page": "www.linkedin.com/company/blossoming-lotus-portland-llc",
                     "annualrevenue": "1000000",
                     "numberofemployees": "10",
+                    "owner_demographics": "Woman Owned;BIPOC Owned",
                     "vegan_gf_friendly_": "Vegan Friendly;Gluten Free Friendly",
                 }
             ]
@@ -187,6 +255,10 @@ class CompanyImportCommandTests(APITestCase):
         self.assertEqual(company.business_category.name, "Food")
         self.assertTrue(company.is_vegan_friendly)
         self.assertTrue(company.is_gf_friendly)
+        self.assertCountEqual(
+            company.ownership_markers.values_list("name", flat=True),
+            ["BIPOC Owned", "Woman Owned"],
+        )
         self.assertFalse(company.needs_editorial_review)
         self.assertIsNone(company.annual_revenue)
         self.assertIsNone(company.number_of_employees)
@@ -239,6 +311,42 @@ class CompanyImportCommandTests(APITestCase):
             company.product_categories.values_list("name", flat=True),
             ["Accessories", "Clothing"],
         )
+
+    def test_import_companies_maps_city_aliases_to_major_city(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Metro Alias Co",
+                    "city": "Gresham",
+                    "state": "OR",
+                    "country": "United States",
+                    "business_category": "Retail",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        company = Company.objects.get(name="Metro Alias Co")
+        self.assertEqual(company.city, "Portland")
+
+    def test_import_companies_maps_brooklyn_to_new_york(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Borough Alias Co",
+                    "city": "Brooklyn",
+                    "state": "NY",
+                    "country": "United States",
+                    "business_category": "Retail",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        company = Company.objects.get(name="Borough Alias Co")
+        self.assertEqual(company.city, "New York")
 
     def test_import_companies_merges_and_removes_editorial_product_categories(self):
         csv_path = self.write_csv(
