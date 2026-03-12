@@ -65,6 +65,10 @@ export default async function CompaniesPage({
     listProductCategories(),
     listSustainabilityMarkers(),
   ]);
+  const companiesWithDescriptions = companies.results.filter((company) => Boolean(company.description)).length;
+  const companiesWithCategories = companies.results.filter(
+    (company) => company.product_categories.length > 0
+  ).length;
 
   return (
     <main className="page-shell">
@@ -92,6 +96,14 @@ export default async function CompaniesPage({
             <div className="muted">
               Core directory pages are indexable. Filtered results are still shareable, but marked
               `noindex` to avoid thin SEO duplication.
+            </div>
+            <div className="filter-chip-row">
+              <span className="badge badge-outline">
+                {companiesWithDescriptions}/{companies.results.length || 0} with editorial descriptions
+              </span>
+              <span className="badge badge-outline">
+                {companiesWithCategories}/{companies.results.length || 0} with product taxonomy
+              </span>
             </div>
           </div>
 

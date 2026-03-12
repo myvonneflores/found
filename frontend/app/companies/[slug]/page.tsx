@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { detailDescription } from "@/lib/company-copy";
 import { getCompany } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -52,11 +53,15 @@ export default async function CompanyDetailPage({
   try {
     const company = await getCompany(slug);
     const location = [company.city, company.state, company.country].filter(Boolean).join(", ");
+    const description = detailDescription(company);
+    const hasAnyLinks = Boolean(
+      company.website || company.facebook_page || company.linkedin_page || company.instagram_handle
+    );
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: company.name,
-      description: company.description,
+      description,
       url: company.website || absoluteSiteUrl(`/companies/${company.slug}`),
       address: {
         "@type": "PostalAddress",
@@ -83,9 +88,10 @@ export default async function CompanyDetailPage({
             {company.business_category ? <span className="badge">{company.business_category.name}</span> : null}
             {company.is_vegan_friendly ? <span className="badge">Vegan-friendly</span> : null}
             {company.is_gf_friendly ? <span className="badge">Gluten-free-friendly</span> : null}
+            {!company.description ? <span className="badge badge-muted">Curated summary pending</span> : null}
           </div>
           <h1>{company.name}</h1>
-          <p className="lede">{company.description || "Profile details coming soon."}</p>
+          <p className="lede">{description}</p>
           {location ? <div className="muted">{location}</div> : null}
         </section>
 
@@ -99,7 +105,8 @@ export default async function CompanyDetailPage({
           <article className="detail-card">
             <span className="field-label">Company details</span>
             <p>Founded: {company.founded_year ?? "Unknown"}</p>
-            <p>Employees: {company.number_of_employees ?? "Unknown"}</p>
+            <p>Website: {company.website ? "Available below" : "Not provided"}</p>
+            <p>Instagram: {company.instagram_handle ? `@${company.instagram_handle}` : "Not provided"}</p>
           </article>
 
           <article className="detail-card">
@@ -120,7 +127,18 @@ export default async function CompanyDetailPage({
                   LinkedIn
                 </a>
               ) : null}
+              {company.instagram_handle ? (
+                <a
+                  className="button button-secondary"
+                  href={`https://www.instagram.com/${company.instagram_handle}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Instagram
+                </a>
+              ) : null}
             </div>
+            {!hasAnyLinks ? <p className="muted">A public website or social profile has not been added yet.</p> : null}
           </article>
         </section>
 

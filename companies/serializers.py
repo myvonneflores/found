@@ -78,8 +78,6 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "linkedin_page",
             "is_vegan_friendly",
             "is_gf_friendly",
-            "annual_revenue",
-            "number_of_employees",
             "created_at",
             "updated_at",
         )

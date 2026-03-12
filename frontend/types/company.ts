@@ -42,8 +42,6 @@ export type CompanyDetail = {
   linkedin_page: string;
   is_vegan_friendly: boolean;
   is_gf_friendly: boolean;
-  annual_revenue: number | null;
-  number_of_employees: number | null;
   created_at: string;
   updated_at: string;
 };

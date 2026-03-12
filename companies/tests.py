@@ -187,8 +187,90 @@ class CompanyImportCommandTests(APITestCase):
         self.assertEqual(company.business_category.name, "Food")
         self.assertTrue(company.is_vegan_friendly)
         self.assertTrue(company.is_gf_friendly)
+        self.assertIsNone(company.annual_revenue)
+        self.assertIsNone(company.number_of_employees)
         self.assertEqual(company.product_categories.count(), 2)
         self.assertEqual(company.sustainability_markers.count(), 2)
+
+    def test_import_companies_normalizes_categories_and_backfills_us_country(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Mixed Category Co",
+                    "domain": "mixed.example",
+                    "state": "or",
+                    "business_category": "Retail;Health/Wellness & Beauty",
+                    "product_categories": "Kid's;Make Up/Skin Care;Music / Records",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        company = Company.objects.get(name="Mixed Category Co")
+        self.assertEqual(company.business_category.name, "Health/Wellness & Beauty")
+        self.assertEqual(company.country, "United States")
+        self.assertCountEqual(
+            company.product_categories.values_list("name", flat=True),
+            ["Makeup/Skincare", "Music/Records"],
+        )
+
+    def test_import_companies_drops_audience_labels_and_backfills_portland_state(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Audience Cleanup Co",
+                    "city": "Portland",
+                    "state": "",
+                    "country": "",
+                    "business_category": "Retail",
+                    "product_categories": "Women's;Men's;Unisex;Accessories;Clothing;Plus Size",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        company = Company.objects.get(name="Audience Cleanup Co")
+        self.assertEqual(company.state, "OR")
+        self.assertEqual(company.country, "United States")
+        self.assertCountEqual(
+            company.product_categories.values_list("name", flat=True),
+            ["Accessories", "Clothing"],
+        )
+
+    def test_import_companies_merges_and_removes_editorial_product_categories(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Category Cleanup Co",
+                    "business_category": "Retail",
+                    "product_categories": "Bags & Backpacks;Beauty;Consignment;Groceries;Rugs;Toys",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        company = Company.objects.get(name="Category Cleanup Co")
+        self.assertCountEqual(
+            company.product_categories.values_list("name", flat=True),
+            ["Accessories", "Makeup/Skincare", "Home Goods", "Gifts"],
+        )
+
+    def test_import_companies_skips_editorially_removed_companies(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Soren",
+                    "business_category": "Retail",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        self.assertFalse(Company.objects.filter(name="Soren").exists())
 
     def test_import_companies_updates_existing_company_by_name(self):
         Company.objects.create(name="Ink & Peat", city="Old City")
@@ -222,3 +304,36 @@ class CompanyImportCommandTests(APITestCase):
         call_command("import_companies", csv_path, "--dry-run")
 
         self.assertFalse(Company.objects.filter(name="Dry Run Co").exists())
+
+    def test_import_companies_can_optionally_include_private_metrics(self):
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Metrics Co",
+                    "annualrevenue": "1000000",
+                    "numberofemployees": "10",
+                    "business_category": "Retail",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path, "--include-private-metrics")
+
+        company = Company.objects.get(name="Metrics Co")
+        self.assertEqual(company.annual_revenue, 1000000)
+        self.assertEqual(company.number_of_employees, 10)
+
+    def test_import_companies_can_prune_unused_taxonomies(self):
+        stale = BusinessCategory.objects.create(name="Retail;Health/Wellness & Beauty")
+        csv_path = self.write_csv(
+            [
+                {
+                    "name": "Prune Co",
+                    "business_category": "Retail",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path, "--prune-unused-taxonomies")
+
+        self.assertFalse(BusinessCategory.objects.filter(pk=stale.pk).exists())

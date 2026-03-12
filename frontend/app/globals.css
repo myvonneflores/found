@@ -223,6 +223,17 @@ select {
   font-weight: 600;
 }
 
+.badge-outline {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.badge-muted {
+  background: rgba(95, 106, 100, 0.12);
+  color: var(--muted);
+}
+
 .detail-stack {
   display: grid;
   gap: 1rem;
