@@ -187,6 +187,7 @@ class CompanyImportCommandTests(APITestCase):
         self.assertEqual(company.business_category.name, "Food")
         self.assertTrue(company.is_vegan_friendly)
         self.assertTrue(company.is_gf_friendly)
+        self.assertFalse(company.needs_editorial_review)
         self.assertIsNone(company.annual_revenue)
         self.assertIsNone(company.number_of_employees)
         self.assertEqual(company.product_categories.count(), 2)
@@ -337,3 +338,35 @@ class CompanyImportCommandTests(APITestCase):
         call_command("import_companies", csv_path, "--prune-unused-taxonomies")
 
         self.assertFalse(BusinessCategory.objects.filter(pk=stale.pk).exists())
+
+
+class CompanyEditorialDescriptionCommandTests(APITestCase):
+    def test_generate_editorial_descriptions_fills_blank_descriptions_and_marks_review(self):
+        category = BusinessCategory.objects.create(name="Retail")
+        product = ProductCategory.objects.create(name="Accessories")
+        company = Company.objects.create(
+            name="Editorial Co",
+            city="Portland",
+            state="OR",
+            country="United States",
+            business_category=category,
+        )
+        company.product_categories.add(product)
+
+        call_command("generate_editorial_descriptions")
+
+        company.refresh_from_db()
+        self.assertTrue(company.description.startswith("Editorial Co is an independent retail business"))
+        self.assertTrue(company.needs_editorial_review)
+
+    def test_generate_editorial_descriptions_does_not_overwrite_by_default(self):
+        company = Company.objects.create(
+            name="Keep Copy Co",
+            description="Human-written description.",
+        )
+
+        call_command("generate_editorial_descriptions")
+
+        company.refresh_from_db()
+        self.assertEqual(company.description, "Human-written description.")
+        self.assertFalse(company.needs_editorial_review)

@@ -14,6 +14,7 @@ class CompanyDataQualityFilter(admin.SimpleListFilter):
             ("missing_website", "Missing website"),
             ("missing_description", "Missing description"),
             ("missing_core_fields", "Missing website or description"),
+            ("needs_editorial_review", "Needs editorial review"),
         )
 
     def queryset(self, request, queryset):
@@ -25,6 +26,8 @@ class CompanyDataQualityFilter(admin.SimpleListFilter):
             return queryset.filter(description="")
         if self.value() == "missing_core_fields":
             return queryset.filter(Q(website="") | Q(description=""))
+        if self.value() == "needs_editorial_review":
+            return queryset.filter(needs_editorial_review=True)
         return queryset
 
 
@@ -77,6 +80,7 @@ class CompanyAdmin(admin.ModelAdmin):
         "country",
         "has_description",
         "has_website",
+        "needs_editorial_review",
         "is_vegan_friendly",
         "is_gf_friendly",
     )
@@ -92,6 +96,7 @@ class CompanyAdmin(admin.ModelAdmin):
     search_fields = ("name", "description", "city", "state", "country")
     prepopulated_fields = {"slug": ("name",)}
     filter_horizontal = ("product_categories", "sustainability_markers")
+    list_editable = ("needs_editorial_review",)
 
     @admin.display(boolean=True)
     def has_description(self, obj):
