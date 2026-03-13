@@ -96,3 +96,19 @@ Create records using the values Fly shows for each certificate:
 - `https://api.found-places.com/api/health/`
 - `https://www.found-places.com/healthz`
 - `https://www.found-places.com/companies`
+
+## 9. Auto-deploy from GitHub
+
+This repository now includes a GitHub Actions workflow at `.github/workflows/fly-deploy.yml`.
+
+To enable auto-deploys on merge or push to `main`:
+
+1. In the GitHub repo settings, add a secret named `FLY_API_TOKEN`.
+2. Use a Fly token with permission to deploy both:
+   - `found-api`
+   - `found-web`
+3. Merge to `main` or run the workflow manually from the Actions tab.
+
+The workflow deploys:
+- the Django API from the repository root
+- the Next.js frontend from `frontend/`

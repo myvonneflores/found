@@ -7,6 +7,8 @@ export function ContactForm() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [website, setWebsite] = useState("");
+  const [submittedAt, setSubmittedAt] = useState(() => Date.now());
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [feedback, setFeedback] = useState("");
 
@@ -26,6 +28,8 @@ export function ContactForm() {
           lastName,
           email,
           message,
+          website,
+          submittedAt,
         }),
       });
 
@@ -40,6 +44,8 @@ export function ContactForm() {
       setLastName("");
       setEmail("");
       setMessage("");
+      setWebsite("");
+      setSubmittedAt(Date.now());
     } catch (error) {
       setStatus("error");
       setFeedback(error instanceof Error ? error.message : "We couldn't send your message just yet.");
@@ -92,6 +98,17 @@ export function ContactForm() {
           required
           rows={7}
           value={message}
+        />
+      </label>
+
+      <label aria-hidden="true" className="contact-field contact-field-honeypot" tabIndex={-1}>
+        <span className="contact-field-label">Website</span>
+        <input
+          autoComplete="off"
+          name="website"
+          onChange={(event) => setWebsite(event.target.value)}
+          tabIndex={-1}
+          value={website}
         />
       </label>
 

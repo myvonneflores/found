@@ -13,6 +13,12 @@ RUN poetry install --no-interaction --no-ansi --no-root
 
 COPY . .
 
+RUN SECRET_KEY=build-secret \
+    DEBUG=False \
+    ALLOWED_HOSTS=localhost \
+    DATABASE_URL=sqlite:////tmp/build.db \
+    python manage.py collectstatic --noinput
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

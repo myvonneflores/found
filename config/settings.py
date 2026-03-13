@@ -12,9 +12,18 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
-ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+ALLOWED_HOSTS = list(
+    dict.fromkeys(
+        [
+            *env("ALLOWED_HOSTS"),
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+        ]
+    )
+)
 if DEBUG:
-    ALLOWED_HOSTS = list(dict.fromkeys([*ALLOWED_HOSTS, "web", "0.0.0.0"]))
+    ALLOWED_HOSTS = list(dict.fromkeys([*ALLOWED_HOSTS, "web"]))
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
@@ -98,6 +107,7 @@ CORS_ALLOW_CREDENTIALS = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = not DEBUG
 SECURE_SSL_REDIRECT = not DEBUG
+SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = 3600 if not DEBUG else 0

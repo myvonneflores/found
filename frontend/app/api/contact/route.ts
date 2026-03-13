@@ -3,18 +3,42 @@ import { NextResponse } from "next/server";
 const HUBSPOT_PORTAL_ID = "47665661";
 const HUBSPOT_FORM_ID = "8bbf93f5-2478-4957-8094-7e3b7df8a8ca";
 const HUBSPOT_SUBMIT_URL = `https://api.hsforms.com/submissions/v3/integration/submit/${HUBSPOT_PORTAL_ID}/${HUBSPOT_FORM_ID}`;
+const MIN_FORM_FILL_MS = 1500;
+const MAX_FORM_AGE_MS = 1000 * 60 * 60 * 12;
 
 export async function POST(request: Request) {
   try {
-    const { firstName, lastName, email, message } = (await request.json()) as {
+    const requestUrl = new URL(request.url);
+    const origin = request.headers.get("origin");
+
+    if (origin && origin !== requestUrl.origin) {
+      return NextResponse.json({ error: "Invalid submission origin." }, { status: 403 });
+    }
+
+    const { firstName, lastName, email, message, website, submittedAt } = (await request.json()) as {
       firstName?: string;
       lastName?: string;
       email?: string;
       message?: string;
+      website?: string;
+      submittedAt?: number;
     };
 
     if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !message?.trim()) {
       return NextResponse.json({ error: "All fields are required." }, { status: 400 });
+    }
+
+    if (website?.trim()) {
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!submittedAt || !Number.isFinite(submittedAt)) {
+      return NextResponse.json({ error: "Invalid submission." }, { status: 400 });
+    }
+
+    const elapsedMs = Date.now() - submittedAt;
+    if (elapsedMs < MIN_FORM_FILL_MS || elapsedMs > MAX_FORM_AGE_MS) {
+      return NextResponse.json({ error: "Invalid submission timing." }, { status: 400 });
     }
 
     const hubspotResponse = await fetch(HUBSPOT_SUBMIT_URL, {
