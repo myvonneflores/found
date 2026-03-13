@@ -42,37 +42,42 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="site-footer-shell">
-        <div className="site-footer-mark">FOUND</div>
-        <nav aria-label="Footer" className="site-footer-nav">
-          <Link href="/">Home</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Contact</Link>
-          <Link href="/companies">Search</Link>
-          <Link href="/privacy-policy">Privacy Policy</Link>
-          <Link href="/terms-and-conditions">Terms &amp; Conditions</Link>
-        </nav>
-        <div className="site-footer-socials">
-          <a
-            aria-label="Instagram"
-            className="site-footer-social"
-            href={socialLinks.instagram}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <InstagramIcon />
-          </a>
-          <a
-            aria-label="LinkedIn"
-            className="site-footer-social"
-            href={socialLinks.linkedin}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <LinkedInIcon />
-          </a>
-          <span aria-label="Facebook coming soon" className="site-footer-social is-disabled" title="Facebook coming soon">
-            <FacebookIcon />
-          </span>
+        <div className="site-footer-topline">
+          <div className="site-footer-mark">FOUND</div>
+          <nav aria-label="Footer" className="site-footer-nav">
+            <Link href="/">Home</Link>
+            <Link href="/about">About</Link>
+            <Link href="/contact">Contact</Link>
+            <Link href="/companies">Search</Link>
+            <Link href="/privacy-policy">Privacy Policy</Link>
+            <Link href="/terms-and-conditions">Terms &amp; Conditions</Link>
+          </nav>
+          <div className="site-footer-socials">
+            <a
+              aria-label="Instagram"
+              className="site-footer-social"
+              href="https://www.instagram.com/found.in_/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <InstagramIcon />
+            </a>
+            <a
+              aria-label="LinkedIn"
+              className="site-footer-social"
+              href="https://www.linkedin.com/company/f-o-u-n-d/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <LinkedInIcon />
+            </a>
+            <span aria-label="Facebook coming soon" className="site-footer-social is-disabled" title="Facebook coming soon">
+              <FacebookIcon />
+            </span>
+          </div>
+        </div>
+        <div className="site-footer-brand">
+          <p className="site-footer-copy">A conscious discovery engine for local, independent, value-aligned businesses.</p>
         </div>
       </div>
     </footer>
