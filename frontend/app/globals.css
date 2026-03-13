@@ -18,7 +18,7 @@
   --shell-gutter: clamp(1rem, 2vw, 1.5rem);
   --directory-max-width: 1880px;
   --directory-gap: 1rem;
-  --directory-panel-padding: 1.15rem;
+  --directory-panel-padding: 1.4rem;
   --font-display: var(--font-poppins), "Trebuchet MS", sans-serif;
   --font-body: var(--font-poppins), "Trebuchet MS", sans-serif;
 }
@@ -1076,6 +1076,14 @@ select {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.directory-detail-layout.is-compact-copy {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.directory-detail-layout.is-compact-copy .directory-detail-media {
+  margin-top: 0;
+}
+
 .directory-detail-copy {
   display: grid;
   gap: 2rem;
@@ -1139,7 +1147,7 @@ select {
   align-content: stretch;
   align-self: stretch;
   min-height: 100%;
-  margin-top: -2.8rem;
+  margin-top: -1.6rem;
   transition: margin-top 180ms ease, width 180ms ease;
 }
 
