@@ -1,25 +1,50 @@
-import Link from "next/link";
+import { BodyClass } from "@/components/body-class";
+import { SiteHeader } from "@/components/site-header";
 
 export default function AboutPage() {
   return (
-    <main className="page-shell directory-page-shell">
+    <main className="page-shell directory-page-shell about-page-shell">
+      <BodyClass className="about-page-body" />
       <div className="directory-shell">
-        <div className="directory-brand-strip">Found</div>
-        <section className="directory-panel directory-panel-detail">
-          <div className="detail-stack">
-            <h1 className="section-title">About Us</h1>
-            <p className="lede">
-              Found is building a more thoughtful way to browse small businesses. This page is a placeholder while the
-              directory experience takes shape.
-            </p>
-            <p className="lede">
-              For now, the best way to experience Found is through the directory itself.
-            </p>
-            <div>
-              <Link className="button button-secondary" href="/companies">
-                Back to Search
-              </Link>
+        <SiteHeader resetKey="/about" />
+        <section className="about-layout">
+          <div className="about-intro-card">
+            <div className="about-hero">
+              <h1 className="about-title">About Us</h1>
+              <p className="about-tagline">Helping people discover locally owned businesses</p>
             </div>
+          </div>
+
+          <div className="about-section">
+            <div className="about-pill">why we built found</div>
+            <article className="about-card">
+              <p className="lede">
+                FOUND started with a simple problem: it&apos;s surprisingly hard to discover locally owned businesses
+                in a meaningful way. Search engines surface the same big box stores and chain restaurants, while the
+                independent shops, makers, and services that give a place its character are often harder to find.
+              </p>
+              <p className="lede">
+                FOUND was created to make those businesses easier to discover. Exclusively for locally owned
+                businesses, by organizing information about ownership, products, and business practices, we help people
+                search for and support the kinds of businesses they care about.
+              </p>
+            </article>
+          </div>
+
+          <div className="about-section">
+            <div className="about-pill">how found works</div>
+            <article className="about-card">
+              <p className="lede">
+                FOUND organizes locally owned businesses in a searchable directory that makes it easy to filter by what
+                matters to you. Instead of scrolling through long lists, you can quickly narrow your search by city,
+                business category, ownership, and other characteristics like locally made goods or sustainable
+                products.
+              </p>
+              <p className="lede">
+                The goal is simple: help people discover great local businesses and make it easier for those businesses
+                to connect with the people looking for them.
+              </p>
+            </article>
           </div>
         </section>
       </div>

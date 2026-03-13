@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BodyClass } from "@/components/body-class";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany } from "@/lib/api";
+import { SiteHeader } from "@/components/site-header";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +109,7 @@ function LinkLogo({
 }
 
 function absoluteSiteUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const base = process.env.SITE_URL ?? "http://localhost:3000";
   return new URL(path, base).toString();
 }
 
@@ -151,7 +153,6 @@ export default async function CompanyDetailPage({
 }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
-  const backToDirectoryHref = buildBackToDirectoryHref(resolvedSearchParams);
 
   try {
     const company = await getCompany(slug);
@@ -183,14 +184,16 @@ export default async function CompanyDetailPage({
     };
 
     return (
-      <main className="page-shell detail-stack">
+      <main className="page-shell detail-stack detail-page-shell">
+        <BodyClass className="detail-page-body" />
         <script
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           type="application/ld+json"
         />
-        <Link className="button button-secondary detail-back-link" href={backToDirectoryHref}>
-          Found
-        </Link>
+        <SiteHeader
+          initialSearch={normalizeParam(resolvedSearchParams.search) ?? ""}
+          resetKey={JSON.stringify(resolvedSearchParams)}
+        />
 
         <section className="detail-card detail-header">
           <h1>

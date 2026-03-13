@@ -6,7 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import { detailDescription, listDescription } from "@/lib/company-copy";
+import { SiteHeader } from "@/components/site-header";
 import { CompanyDetail, CompanyListItem, CompanySearchParams, TaxonomyItem } from "@/types/company";
+
+const MOBILE_STACK_BREAKPOINT = 760;
+const DETAIL_HEIGHT_SYNC_BREAKPOINT = 1280;
 
 function selectedValues(value?: string) {
   return new Set((value ?? "").split(",").filter(Boolean));
@@ -347,7 +351,6 @@ export function CompanyDirectory({
   const pathname = usePathname();
   const router = useRouter();
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const filtersPanelRef = useRef<HTMLElement | null>(null);
   const filtersSurfaceRef = useRef<HTMLDivElement | null>(null);
   const filtersFormRef = useRef<HTMLFormElement | null>(null);
@@ -356,7 +359,7 @@ export function CompanyDirectory({
   const viewportFrameRef = useRef<number | null>(null);
   const heightFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<number | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const sidePanelHeightRef = useRef<string | undefined>(undefined);
   const [searchValue, setSearchValue] = useState(searchParams.search ?? "");
   const [sidePanelHeight, setSidePanelHeight] = useState<string | undefined>(undefined);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
@@ -381,7 +384,8 @@ export function CompanyDirectory({
   const productSummary = productNames.map(displayLabel);
   const hasDetailListItems = detailListItems.length > 0;
   const hasCompactDetailList = detailListItems.length > 0 && detailListItems.length <= 2;
-  const isMobileStack = viewportWidth !== undefined && viewportWidth <= 760;
+  const isMobileStack = viewportWidth !== undefined && viewportWidth <= MOBILE_STACK_BREAKPOINT;
+  const headerResetKey = JSON.stringify(searchParams);
 
   const focusOptions = [
     ...sustainabilityMarkers.map((marker) => ({
@@ -469,27 +473,6 @@ export function CompanyDirectory({
   }
 
   useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  useEffect(() => {
     const updateViewportWidth = () => {
       setIsResizing(true);
       if (resizeTimeoutRef.current !== null) {
@@ -561,29 +544,26 @@ export function CompanyDirectory({
     }
 
     const updateHeight = () => {
+      const viewport = viewportWidth ?? window.innerWidth;
       const filtersSurfaceStyles = window.getComputedStyle(filtersSurface);
       const filtersVerticalPadding =
         Number.parseFloat(filtersSurfaceStyles.paddingTop) + Number.parseFloat(filtersSurfaceStyles.paddingBottom);
       const filtersHeight = Math.ceil(filtersForm.scrollHeight + filtersVerticalPadding);
+      let nextHeight: string | undefined;
 
-      if (window.innerWidth <= 760) {
-        setSidePanelHeight(undefined);
-        return;
+      if (viewport <= MOBILE_STACK_BREAKPOINT) {
+        nextHeight = undefined;
+      } else if (viewport <= DETAIL_HEIGHT_SYNC_BREAKPOINT || !selectedCompany) {
+        nextHeight = filtersHeight > 0 ? `${filtersHeight}px` : undefined;
+      } else {
+        const detailHeight = Math.ceil(detailSurface.scrollHeight);
+        nextHeight = Math.max(detailHeight, filtersHeight) > 0 ? `${Math.max(detailHeight, filtersHeight)}px` : undefined;
       }
 
-      if (window.innerWidth <= 1400) {
-        setSidePanelHeight(filtersHeight > 0 ? `${filtersHeight}px` : undefined);
-        return;
+      if (sidePanelHeightRef.current !== nextHeight) {
+        sidePanelHeightRef.current = nextHeight;
+        setSidePanelHeight(nextHeight);
       }
-
-      if (!selectedCompany) {
-        setSidePanelHeight(filtersHeight > 0 ? `${filtersHeight}px` : undefined);
-        return;
-      }
-
-      const detailHeight = Math.ceil(detailSurface.scrollHeight);
-      const nextHeight = Math.max(detailHeight, filtersHeight);
-      setSidePanelHeight(nextHeight > 0 ? `${nextHeight}px` : undefined);
     };
 
     const scheduleHeightUpdate = () => {
@@ -618,7 +598,7 @@ export function CompanyDirectory({
         cancelAnimationFrame(heightFrameRef.current);
       }
     };
-  }, [hasActiveFilters, selectedCompany, searchParams]);
+  }, [hasActiveFilters, selectedCompany, searchParams, viewportWidth]);
 
   const directoryGridStyle = {
     "--directory-side-panel-height": sidePanelHeight,
@@ -626,64 +606,17 @@ export function CompanyDirectory({
   const surfaceHeightStyle =
     sidePanelHeight &&
     viewportWidth !== undefined &&
-    viewportWidth > 760
+    viewportWidth > MOBILE_STACK_BREAKPOINT
       ? ({ height: sidePanelHeight, maxHeight: sidePanelHeight } as CSSProperties)
       : undefined;
   const detailSurfaceStyle =
-    sidePanelHeight && viewportWidth !== undefined && viewportWidth > 1280
+    sidePanelHeight && viewportWidth !== undefined && viewportWidth > DETAIL_HEIGHT_SYNC_BREAKPOINT
       ? ({ minHeight: sidePanelHeight } as CSSProperties)
       : undefined;
   return (
     <section className="directory-experience">
       <div className="directory-shell">
-        <div className="directory-brand-strip directory-brand-strip-menu">
-          <div aria-hidden="true" className="directory-header-balance" />
-          <span>Found</span>
-          <div className="directory-header-actions">
-            <div className="directory-menu" ref={menuRef}>
-              <button
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                className="directory-menu-trigger"
-                onClick={() => setMenuOpen((open) => !open)}
-                type="button"
-              >
-                <span />
-                <span />
-                <span />
-              </button>
-              {menuOpen ? (
-                <div className="directory-menu-popover" role="menu">
-                  <Link className="directory-menu-link" href="/" onClick={() => setMenuOpen(false)} role="menuitem">
-                    Home
-                  </Link>
-                  <Link className="directory-menu-link" href="/about" onClick={() => setMenuOpen(false)} role="menuitem">
-                    About
-                  </Link>
-                  <Link className="directory-menu-link" href="/contact" onClick={() => setMenuOpen(false)} role="menuitem">
-                    Contact
-                  </Link>
-                  <form
-                    className="directory-menu-search"
-                    onSubmit={(event) => {
-                      submitSearch(event);
-                      setMenuOpen(false);
-                    }}
-                    role="search"
-                  >
-                    <span className="directory-search-helper">Search</span>
-                    <input
-                      aria-label="Search businesses"
-                      onChange={(event) => setSearchValue(event.target.value)}
-                      placeholder="Find local gems"
-                      value={searchValue}
-                    />
-                  </form>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
+        <SiteHeader initialSearch={searchValue} resetKey={headerResetKey} />
 
         <div
           className={isResizing ? "directory-grid is-resizing" : "directory-grid"}
