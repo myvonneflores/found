@@ -7,6 +7,27 @@ import { getCompany } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
+function normalizeParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(",");
+  }
+  return value;
+}
+
+function buildBackToDirectoryHref(searchParams: Record<string, string | string[] | undefined>) {
+  const params = new URLSearchParams();
+
+  Object.entries(searchParams).forEach(([key, value]) => {
+    const normalized = normalizeParam(value);
+    if (normalized && key !== "selected") {
+      params.set(key, normalized);
+    }
+  });
+
+  const query = params.toString();
+  return query ? `/companies?${query}` : "/companies";
+}
+
 function displayLabel(value: string) {
   const labels: Record<string, string> = {
     "Carries Locally Made Goods": "Locally Made Goods",
@@ -123,10 +144,14 @@ export async function generateMetadata({
 
 export default async function CompanyDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const backToDirectoryHref = buildBackToDirectoryHref(resolvedSearchParams);
 
   try {
     const company = await getCompany(slug);
@@ -163,7 +188,7 @@ export default async function CompanyDetailPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           type="application/ld+json"
         />
-        <Link className="button button-secondary detail-back-link" href="/companies">
+        <Link className="button button-secondary detail-back-link" href={backToDirectoryHref}>
           Found
         </Link>
 

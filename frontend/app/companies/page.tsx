@@ -62,14 +62,15 @@ export default async function CompaniesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = normalizeSearchParams(await searchParams);
+  const isFiltered = hasActiveFilters(params);
   const [companies, cities, businessCategories, ownershipMarkers, sustainabilityMarkers] = await Promise.all([
-    listCompanies(params),
+    isFiltered ? listCompanies(params) : Promise.resolve({ count: 0, next: null, previous: null, results: [] }),
     listCities(),
     listBusinessCategories(),
     listOwnershipMarkers(),
     listSustainabilityMarkers(),
   ]);
-  const defaultSlug = params.selected ?? companies.results[0]?.slug;
+  const defaultSlug = isFiltered ? params.selected : undefined;
   const selectedCompany = defaultSlug ? await getCompany(defaultSlug).catch(() => null) : null;
 
   return (
@@ -78,6 +79,7 @@ export default async function CompaniesPage({
         businessCategories={businessCategories}
         cities={cities}
         companies={companies.results}
+        hasActiveFilters={isFiltered}
         ownershipMarkers={ownershipMarkers}
         searchParams={params}
         selectedCompany={selectedCompany}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { detailDescription, listDescription } from "@/lib/company-copy";
 import { CompanyDetail, CompanyListItem, CompanySearchParams, TaxonomyItem } from "@/types/company";
@@ -23,6 +24,17 @@ function buildDirectoryHref(searchParams: CompanySearchParams, selectedSlug?: st
   }
   const query = params.toString();
   return query ? `/companies?${query}` : "/companies";
+}
+
+function buildCompanyProfileHref(searchParams: CompanySearchParams, slug: string) {
+  const params = new URLSearchParams();
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (value && key !== "selected") {
+      params.set(key, value);
+    }
+  });
+  const query = params.toString();
+  return query ? `/companies/${slug}?${query}` : `/companies/${slug}`;
 }
 
 function locationLabel(company: { city: string; state: string; country: string }) {
@@ -57,6 +69,36 @@ function FilterSection({
       <h3>{title}</h3>
       <div className={className ?? "directory-filter-list"}>{children}</div>
     </section>
+  );
+}
+
+function MobilePanelToggle({
+  label,
+  isOpen,
+  isCollapsible,
+  onToggle,
+}: {
+  label: string;
+  isOpen: boolean;
+  isCollapsible: boolean;
+  onToggle: () => void;
+}) {
+  if (!isCollapsible) {
+    return <div className="directory-panel-mobile-title">{label}</div>;
+  }
+
+  return (
+    <button
+      aria-expanded={isOpen}
+      className="directory-panel-mobile-title directory-panel-mobile-toggle"
+      onClick={onToggle}
+      type="button"
+    >
+      <span>{label}</span>
+      <span aria-hidden="true" className={isOpen ? "directory-panel-mobile-chevron is-open" : "directory-panel-mobile-chevron"}>
+        +
+      </span>
+    </button>
   );
 }
 
@@ -287,6 +329,7 @@ export function CompanyDirectory({
   companies,
   selectedCompany,
   searchParams,
+  hasActiveFilters,
   cities,
   businessCategories,
   ownershipMarkers,
@@ -295,6 +338,7 @@ export function CompanyDirectory({
   companies: CompanyListItem[];
   selectedCompany: CompanyDetail | null;
   searchParams: CompanySearchParams;
+  hasActiveFilters: boolean;
   cities: string[];
   businessCategories: TaxonomyItem[];
   ownershipMarkers: TaxonomyItem[];
@@ -302,14 +346,28 @@ export function CompanyDirectory({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const filtersPanelRef = useRef<HTMLElement | null>(null);
+  const filtersSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const detailPanelRef = useRef<HTMLElement | null>(null);
+  const detailSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const viewportFrameRef = useRef<number | null>(null);
+  const heightFrameRef = useRef<number | null>(null);
+  const resizeTimeoutRef = useRef<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(searchParams.search ?? "");
+  const [sidePanelHeight, setSidePanelHeight] = useState<string | undefined>(undefined);
+  const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
+  const [isResizing, setIsResizing] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(true);
+  const [mobileFindsOpen, setMobileFindsOpen] = useState(false);
+  const [mobileFindOpen, setMobileFindOpen] = useState(false);
   const selectedOwnership = selectedValues(searchParams.ownership_markers);
   const selectedSustainability = selectedValues(searchParams.sustainability_markers);
   const selectedCity = searchParams.city ?? "";
   const selectedBusinessCategory = searchParams.business_category ?? "";
-  const selectedSlug = selectedCompany?.slug ?? searchParams.selected ?? companies[0]?.slug;
+  const selectedSlug = selectedCompany?.slug ?? searchParams.selected;
   const ownershipNames = selectedCompany ? names(selectedCompany.ownership_markers) : [];
   const sustainabilityNames = selectedCompany ? names(selectedCompany.sustainability_markers) : [];
   const productNames = selectedCompany ? names(selectedCompany.product_categories) : [];
@@ -321,6 +379,8 @@ export function CompanyDirectory({
   const detailListItems = [...ownershipNames, ...focusNames].map(displayLabel);
   const productSummary = productNames.map(displayLabel);
   const hasDetailListItems = detailListItems.length > 0;
+  const hasCompactDetailList = detailListItems.length > 0 && detailListItems.length <= 2;
+  const isMobileStack = viewportWidth !== undefined && viewportWidth <= 760;
 
   const focusOptions = [
     ...sustainabilityMarkers.map((marker) => ({
@@ -428,161 +488,340 @@ export function CompanyDirectory({
     };
   }, []);
 
+  useEffect(() => {
+    const updateViewportWidth = () => {
+      setIsResizing(true);
+      if (resizeTimeoutRef.current !== null) {
+        window.clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = window.setTimeout(() => {
+        setIsResizing(false);
+        resizeTimeoutRef.current = null;
+      }, 140);
+
+      if (viewportFrameRef.current !== null) {
+        cancelAnimationFrame(viewportFrameRef.current);
+      }
+
+      viewportFrameRef.current = window.requestAnimationFrame(() => {
+        setViewportWidth(window.innerWidth);
+        viewportFrameRef.current = null;
+      });
+    };
+
+    updateViewportWidth();
+    window.addEventListener("resize", updateViewportWidth);
+    return () => {
+      window.removeEventListener("resize", updateViewportWidth);
+      if (viewportFrameRef.current !== null) {
+        cancelAnimationFrame(viewportFrameRef.current);
+      }
+      if (resizeTimeoutRef.current !== null) {
+        window.clearTimeout(resizeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileStack) {
+      return;
+    }
+
+    if (!hasActiveFilters) {
+      setMobileFiltersOpen(true);
+      setMobileFindsOpen(false);
+      setMobileFindOpen(false);
+      return;
+    }
+
+    setMobileFindsOpen(true);
+    if (selectedCompany) {
+      setMobileFindOpen(true);
+    }
+  }, [hasActiveFilters, isMobileStack, selectedCompany]);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    const filtersPanel = filtersPanelRef.current;
+    const filtersSurface = filtersSurfaceRef.current;
+    const detailPanel = detailPanelRef.current;
+    const detailSurface = detailSurfaceRef.current;
+    if (!grid || !filtersPanel || !filtersSurface || !detailPanel || !detailSurface || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const updateHeight = () => {
+      const filtersHeight = Math.ceil(filtersSurface.scrollHeight);
+
+      if (window.innerWidth <= 760) {
+        setSidePanelHeight(undefined);
+        return;
+      }
+
+      if (window.innerWidth <= 1400) {
+        setSidePanelHeight(filtersHeight > 0 ? `${filtersHeight}px` : undefined);
+        return;
+      }
+
+      if (!selectedCompany) {
+        setSidePanelHeight(filtersHeight > 0 ? `${filtersHeight}px` : undefined);
+        return;
+      }
+
+      const detailHeight = Math.ceil(detailSurface.scrollHeight);
+      const nextHeight = Math.max(detailHeight, filtersHeight);
+      setSidePanelHeight(nextHeight > 0 ? `${nextHeight}px` : undefined);
+    };
+
+    const scheduleHeightUpdate = () => {
+      if (heightFrameRef.current !== null) {
+        cancelAnimationFrame(heightFrameRef.current);
+      }
+
+      heightFrameRef.current = window.requestAnimationFrame(() => {
+        updateHeight();
+        heightFrameRef.current = null;
+      });
+    };
+
+    scheduleHeightUpdate();
+
+    const observer = new ResizeObserver(() => {
+      scheduleHeightUpdate();
+    });
+
+    observer.observe(grid);
+    observer.observe(filtersPanel);
+    observer.observe(filtersSurface);
+    observer.observe(detailPanel);
+    observer.observe(detailSurface);
+    window.addEventListener("resize", scheduleHeightUpdate);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", scheduleHeightUpdate);
+      if (heightFrameRef.current !== null) {
+        cancelAnimationFrame(heightFrameRef.current);
+      }
+    };
+  }, [hasActiveFilters, selectedCompany, searchParams]);
+
+  const directoryGridStyle = {
+    "--directory-side-panel-height": sidePanelHeight,
+  } as CSSProperties;
+  const surfaceHeightStyle =
+    sidePanelHeight &&
+    viewportWidth !== undefined &&
+    viewportWidth > 760
+      ? ({ height: sidePanelHeight, maxHeight: sidePanelHeight } as CSSProperties)
+      : undefined;
+  const detailSurfaceStyle =
+    sidePanelHeight && viewportWidth !== undefined && viewportWidth > 1280
+      ? ({ minHeight: sidePanelHeight } as CSSProperties)
+      : undefined;
   return (
     <section className="directory-experience">
       <div className="directory-shell">
         <div className="directory-brand-strip directory-brand-strip-menu">
-          <form className="directory-header-search" onSubmit={submitSearch}>
-            <input
-              aria-label="Search businesses"
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Find local gems"
-              value={searchValue}
-            />
-          </form>
+          <div aria-hidden="true" className="directory-header-balance" />
           <span>Found</span>
-          <div className="directory-menu" ref={menuRef}>
-            <button
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              className="directory-menu-trigger"
-              onClick={() => setMenuOpen((open) => !open)}
-              type="button"
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-            {menuOpen ? (
-              <div className="directory-menu-popover" role="menu">
-                <Link className="directory-menu-link" href="/" onClick={() => setMenuOpen(false)} role="menuitem">
-                  Home
-                </Link>
-                <Link className="directory-menu-link" href="/about" onClick={() => setMenuOpen(false)} role="menuitem">
-                  About
-                </Link>
-                <Link className="directory-menu-link" href="/contact" onClick={() => setMenuOpen(false)} role="menuitem">
-                  Contact
-                </Link>
-              </div>
-            ) : null}
+          <div className="directory-header-actions">
+            <div className="directory-menu" ref={menuRef}>
+              <button
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                className="directory-menu-trigger"
+                onClick={() => setMenuOpen((open) => !open)}
+                type="button"
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+              {menuOpen ? (
+                <div className="directory-menu-popover" role="menu">
+                  <Link className="directory-menu-link" href="/" onClick={() => setMenuOpen(false)} role="menuitem">
+                    Home
+                  </Link>
+                  <Link className="directory-menu-link" href="/about" onClick={() => setMenuOpen(false)} role="menuitem">
+                    About
+                  </Link>
+                  <Link className="directory-menu-link" href="/contact" onClick={() => setMenuOpen(false)} role="menuitem">
+                    Contact
+                  </Link>
+                  <form
+                    className="directory-menu-search"
+                    onSubmit={(event) => {
+                      submitSearch(event);
+                      setMenuOpen(false);
+                    }}
+                    role="search"
+                  >
+                    <span className="directory-search-helper">Search</span>
+                    <input
+                      aria-label="Search businesses"
+                      onChange={(event) => setSearchValue(event.target.value)}
+                      placeholder="Find local gems"
+                      value={searchValue}
+                    />
+                  </form>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <div className="directory-tabs">
-          <div>filters</div>
-          <div>finds</div>
-          <div>find</div>
-        </div>
-
-        <div className="directory-grid">
-          <aside className="directory-panel directory-panel-filters">
-            <div className="directory-panel-mobile-title">filters</div>
-            <form
-              action="/companies"
-              className="directory-form"
-              method="get"
-              onChange={(event) => {
-                const target = event.target as HTMLInputElement | HTMLSelectElement;
-                if (target.name === "search") {
-                  return;
+        <div
+          className={isResizing ? "directory-grid is-resizing" : "directory-grid"}
+          ref={gridRef}
+          style={directoryGridStyle}
+        >
+          <aside className="directory-panel directory-panel-filters" ref={filtersPanelRef}>
+            <MobilePanelToggle
+              isOpen={!isMobileStack || mobileFiltersOpen}
+              isCollapsible={isMobileStack}
+              label="filters"
+              onToggle={() => setMobileFiltersOpen((open) => !open)}
+            />
+            <div className="directory-panel-surface" ref={filtersSurfaceRef} style={surfaceHeightStyle}>
+              <form
+                action="/companies"
+                className={
+                  !isMobileStack || mobileFiltersOpen
+                    ? "directory-form"
+                    : "directory-form directory-mobile-collapsed"
                 }
-                submitFilters(event.currentTarget);
-              }}
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitFilters(event.currentTarget);
-              }}
-            >
-              <FilterSection title="City">
-                <BrandedSelect
-                  name="city"
-                  onSelect={(value) => updateFilters({ city: value || undefined })}
-                  options={[
-                    { label: "Anywhere", value: "" },
-                    ...cities.map((city) => ({ label: city, value: city })),
-                  ]}
-                  placeholder="Anywhere"
-                  value={selectedCity}
-                />
-              </FilterSection>
+                method="get"
+                onChange={(event) => {
+                  const target = event.target as HTMLInputElement | HTMLSelectElement;
+                  if (target.name === "search") {
+                    return;
+                  }
+                  submitFilters(event.currentTarget);
+                }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  submitFilters(event.currentTarget);
+                }}
+              >
+                <FilterSection title="City">
+                  <BrandedSelect
+                    name="city"
+                    onSelect={(value) => updateFilters({ city: value || undefined })}
+                    options={[
+                      { label: "Anywhere", value: "" },
+                      ...cities.map((city) => ({ label: city, value: city })),
+                    ]}
+                    placeholder="Anywhere"
+                    value={selectedCity}
+                  />
+                </FilterSection>
 
-              <FilterSection title="Category">
-                <BrandedSelect
-                  name="business_category"
-                  onSelect={(value) => updateFilters({ business_category: value || undefined })}
-                  options={[
-                    { label: "All", value: "" },
-                    ...businessCategories.map((category) => ({
-                      label: category.name,
-                      value: category.name,
-                    })),
-                  ]}
-                  placeholder="All"
-                  value={selectedBusinessCategory}
-                />
-              </FilterSection>
+                <FilterSection title="Category">
+                  <BrandedSelect
+                    name="business_category"
+                    onSelect={(value) => updateFilters({ business_category: value || undefined })}
+                    options={[
+                      { label: "All", value: "" },
+                      ...businessCategories.map((category) => ({
+                        label: category.name,
+                        value: category.name,
+                      })),
+                    ]}
+                    placeholder="All"
+                    value={selectedBusinessCategory}
+                  />
+                </FilterSection>
 
-              <FilterSection title="Owned By">
-                <BrandedMultiSelect
-                  onToggle={toggleOwnershipMarker}
-                  options={ownershipMarkers.map((marker) => ({
-                    label: displayLabel(marker.name),
-                    value: marker.name,
-                  }))}
-                  placeholder="All"
-                  selected={selectedOwnership}
-                />
-              </FilterSection>
+                <FilterSection title="Owned By">
+                  <BrandedMultiSelect
+                    onToggle={toggleOwnershipMarker}
+                    options={ownershipMarkers.map((marker) => ({
+                      label: displayLabel(marker.name),
+                      value: marker.name,
+                    }))}
+                    placeholder="All"
+                    selected={selectedOwnership}
+                  />
+                </FilterSection>
 
-              <FilterSection title="Focus">
-                <BrandedMultiSelect
-                  onToggle={toggleFocusValue}
-                  options={focusOptions}
-                  placeholder="All"
-                  selected={selectedFocus}
-                />
-              </FilterSection>
+                <FilterSection title="Features">
+                  <BrandedMultiSelect
+                    onToggle={toggleFocusValue}
+                    options={focusOptions}
+                    placeholder="All"
+                    selected={selectedFocus}
+                  />
+                </FilterSection>
 
-              <div className="directory-form-actions">
-                <Link className="button button-secondary" href="/companies">
-                  Reset
-                </Link>
-              </div>
-            </form>
+                <div className="directory-form-actions">
+                  <Link className="button button-secondary" href="/companies">
+                    Reset
+                  </Link>
+                </div>
+              </form>
+            </div>
           </aside>
 
           <section className="directory-panel directory-panel-list">
-            <div className="directory-panel-mobile-title">finds</div>
-            <div className="directory-company-list">
-              {companies.length ? (
-                companies.map((company) => (
-                  <Link
-                    className={selectedSlug === company.slug ? "directory-company-row is-active" : "directory-company-row"}
-                    href={buildDirectoryHref(searchParams, company.slug)}
-                    key={company.id}
-                  >
-                    <span className="directory-company-name">{company.name}</span>
-                    <span className="directory-company-meta">{listDescription(company)}</span>
-                  </Link>
-                ))
-              ) : (
-                <div className="empty-state">
-                  <h2 className="section-title">No matches</h2>
-                  <p className="lede">Try broadening the city, category, or ownership filters.</p>
-                </div>
-              )}
+            <MobilePanelToggle
+              isOpen={!isMobileStack || mobileFindsOpen}
+              isCollapsible={isMobileStack}
+              label="finds"
+              onToggle={() => setMobileFindsOpen((open) => !open)}
+            />
+            <div className="directory-panel-surface" style={surfaceHeightStyle}>
+              <div
+                className={
+                  !isMobileStack || mobileFindsOpen
+                    ? "directory-company-list"
+                    : "directory-company-list directory-mobile-collapsed"
+                }
+              >
+                {companies.length ? (
+                  companies.map((company) => (
+                    <Link
+                      className={selectedSlug === company.slug ? "directory-company-row is-active" : "directory-company-row"}
+                      href={buildDirectoryHref(searchParams, company.slug)}
+                      key={company.id}
+                    >
+                      <span className="directory-company-name">{company.name}</span>
+                      <span className="directory-company-meta">{listDescription(company)}</span>
+                    </Link>
+                  ))
+                ) : hasActiveFilters ? (
+                  <div className="empty-state">
+                    <h2 className="section-title">No matches</h2>
+                    <p className="lede">Try broadening the city, category, or ownership filters.</p>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <h2 className="section-title">Start with filters</h2>
+                    <p className="lede">Choose a city, category, or feature to populate this list.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </section>
 
-          <section className="directory-panel directory-panel-detail">
-            <div className="directory-panel-mobile-title">find</div>
-            {selectedCompany ? (
-              <div className="directory-detail-body">
+          <section
+            className={hasDetailListItems ? "directory-panel directory-panel-detail" : "directory-panel directory-panel-detail is-media-only"}
+            ref={detailPanelRef}
+          >
+            <MobilePanelToggle
+              isOpen={!isMobileStack || mobileFindOpen}
+              isCollapsible={isMobileStack}
+              label="find"
+              onToggle={() => setMobileFindOpen((open) => !open)}
+            />
+            <div className="directory-panel-surface" ref={detailSurfaceRef} style={detailSurfaceStyle}>
+              {!isMobileStack || mobileFindOpen ? (
+                selectedCompany ? (
+                <div className="directory-detail-body">
                 <div className="directory-detail-header-grid">
                   <div className="directory-detail-head">
                     <h2>
-                      <Link href={`/companies/${selectedCompany.slug}`}>{selectedCompany.name}</Link>
+                      <Link href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}>{selectedCompany.name}</Link>
                     </h2>
                   </div>
 
@@ -618,17 +857,24 @@ export function CompanyDirectory({
                   </div>
                 </div>
 
-                <div className="directory-detail-layout">
-                  <div className={hasDetailListItems ? "directory-detail-copy" : "directory-detail-copy is-minimal"}>
-
-                    {hasDetailListItems ? (
+                <div
+                  className={
+                    hasDetailListItems
+                      ? hasCompactDetailList
+                        ? "directory-detail-layout is-compact-copy"
+                        : "directory-detail-layout"
+                      : "directory-detail-layout is-media-only"
+                  }
+                >
+                  {hasDetailListItems ? (
+                    <div className="directory-detail-copy">
                       <ul className="directory-detail-list">
                         {detailListItems.map((item) => (
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
 
                   <div className="directory-detail-media">
                     {selectedCompany.address || selectedCompany.city || selectedCompany.state ? (
@@ -663,13 +909,20 @@ export function CompanyDirectory({
                     ))}
                   </div>
                 ) : null}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <h2 className="section-title">No business selected</h2>
-                <p className="lede">Choose a business from the list to explore it here.</p>
-              </div>
-            )}
+                </div>
+              ) : hasActiveFilters ? (
+                <div className="empty-state">
+                  <h2 className="section-title">No business selected</h2>
+                  <p className="lede">Choose a business from the list to explore it here.</p>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <h2 className="section-title">Find a business</h2>
+                  <p className="lede">Set filters to load matching businesses and view their details here.</p>
+                </div>
+              )
+              ) : null}
+            </div>
           </section>
         </div>
       </div>
