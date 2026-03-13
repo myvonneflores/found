@@ -9,6 +9,7 @@ from companies.cities import canonicalize_city
 from companies.models import (
     BusinessCategory,
     Company,
+    CuisineType,
     OwnershipMarker,
     ProductCategory,
     SustainabilityMarker,
@@ -94,6 +95,17 @@ def normalize_product_categories(value):
         if cleaned in EXCLUDED_PRODUCT_CATEGORIES:
             continue
         if cleaned not in seen:
+            normalized.append(cleaned)
+            seen.add(cleaned)
+    return normalized
+
+
+def normalize_cuisine_types(value):
+    normalized = []
+    seen = set()
+    for item in split_multi_value(value):
+        cleaned = item.strip()
+        if cleaned and cleaned not in seen:
             normalized.append(cleaned)
             seen.add(cleaned)
     return normalized
@@ -218,6 +230,7 @@ class Command(BaseCommand):
     def prune_unused_taxonomies(self):
         BusinessCategory.objects.filter(companies__isnull=True).delete()
         ProductCategory.objects.filter(companies__isnull=True).delete()
+        CuisineType.objects.filter(companies__isnull=True).delete()
         OwnershipMarker.objects.filter(companies__isnull=True).delete()
         SustainabilityMarker.objects.filter(companies__isnull=True).delete()
 
@@ -275,6 +288,7 @@ class Command(BaseCommand):
 
         business_category_name = normalize_business_category(row.get("business_category"))
         product_categories = normalize_product_categories(row.get("product_categories"))
+        cuisine_types = normalize_cuisine_types(row.get("food_type"))
         ownership_markers = split_multi_value(row.get("owner_demographics"))
         sustainability_markers = split_multi_value(row.get("sustainability_markers"))
 
@@ -300,6 +314,12 @@ class Command(BaseCommand):
                 [
                     ProductCategory.objects.get_or_create(name=category_name)[0]
                     for category_name in product_categories
+                ]
+            )
+            company.cuisine_types.set(
+                [
+                    CuisineType.objects.get_or_create(name=category_name)[0]
+                    for category_name in cuisine_types
                 ]
             )
             company.ownership_markers.set(

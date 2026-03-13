@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
 
@@ -21,12 +23,12 @@ export default function AboutPage() {
               <p className="lede">
                 FOUND started with a simple problem: it&apos;s surprisingly hard to discover locally owned businesses
                 in a meaningful way. Search engines surface the same big box stores and chain restaurants, while the
-                independent shops, makers, and services that give a place its character are often harder to find.
+                independent shops, restaurants, and services that give a place its character are often harder to find.
               </p>
               <p className="lede">
-                FOUND was created to make those businesses easier to discover. Exclusively for locally owned
-                businesses, by organizing information about ownership, products, and business practices, we help people
-                search for and support the kinds of businesses they care about.
+                Exclusively for locally owned businesses, FOUND was created to make those businesses easier to
+                discover. By organizing information about ownership, products, and business practices, we help people
+                find and support the kinds of businesses they care about.
               </p>
             </article>
           </div>
@@ -44,6 +46,21 @@ export default function AboutPage() {
                 The goal is simple: help people discover great local businesses and make it easier for those businesses
                 to connect with the people looking for them.
               </p>
+            </article>
+          </div>
+
+          <div className="about-section">
+            <article className="about-card about-cta-card">
+              <div className="about-cta-copy">
+                <h2 className="about-cta-title">Know a business we should feature?</h2>
+                <p className="lede">
+                  Recommend a locally owned business for FOUND and help more people discover great spots in their
+                  community.
+                </p>
+              </div>
+              <Link className="about-cta-link" href="/contact">
+                Recommend a business
+              </Link>
             </article>
           </div>
         </section>

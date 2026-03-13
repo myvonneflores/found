@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { BodyClass } from "@/components/body-class";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany } from "@/lib/api";
+import { instagramProfileUrl } from "@/lib/social-links";
 import { SiteHeader } from "@/components/site-header";
 
 export const dynamic = "force-dynamic";
@@ -156,6 +157,7 @@ export default async function CompanyDetailPage({
 
   try {
     const company = await getCompany(slug);
+    const isFoodCompany = company.business_category?.name === "Food";
     const location = [company.city, company.state, company.country].filter(Boolean).join(", ");
     const mapQuery = [company.address, company.city, company.state, company.zip_code, company.country]
       .filter(Boolean)
@@ -263,7 +265,7 @@ export default async function CompanyDetailPage({
                 </LinkLogo>
               ) : null}
               {company.instagram_handle ? (
-                <LinkLogo href={`https://www.instagram.com/${company.instagram_handle}`} label="Instagram">
+                <LinkLogo href={instagramProfileUrl(company.instagram_handle)} label="Instagram">
                   <InstagramIcon />
                 </LinkLogo>
               ) : null}
@@ -274,16 +276,20 @@ export default async function CompanyDetailPage({
 
         <section className="detail-grid">
           <article className="detail-card">
-            <span className="field-label">Product categories</span>
+            <span className="field-label">
+              {isFoodCompany ? "What they're serving" : "What's in store"}
+            </span>
             <div className="filter-chip-row">
-              {company.product_categories.length ? (
-                company.product_categories.map((item) => (
+              {(isFoodCompany ? company.cuisine_types : company.product_categories).length ? (
+                (isFoodCompany ? company.cuisine_types : company.product_categories).map((item) => (
                   <span className="badge" key={item.id}>
                     {item.name}
                   </span>
                 ))
               ) : (
-                <span className="muted">No product categories yet.</span>
+                <span className="muted">
+                  {isFoodCompany ? "No cuisine types yet." : "No product categories yet."}
+                </span>
               )}
             </div>
           </article>

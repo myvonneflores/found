@@ -1,8 +1,10 @@
+from django.db.utils import OperationalError, ProgrammingError
 from rest_framework import serializers
 
 from .models import (
     BusinessCategory,
     Company,
+    CuisineType,
     OwnershipMarker,
     ProductCategory,
     SustainabilityMarker,
@@ -22,6 +24,11 @@ class BusinessCategorySerializer(TaxonomySerializer):
 class ProductCategorySerializer(TaxonomySerializer):
     class Meta(TaxonomySerializer.Meta):
         model = ProductCategory
+
+
+class CuisineTypeSerializer(TaxonomySerializer):
+    class Meta(TaxonomySerializer.Meta):
+        model = CuisineType
 
 
 class OwnershipMarkerSerializer(TaxonomySerializer):
@@ -66,8 +73,15 @@ class CompanyListSerializer(serializers.ModelSerializer):
 class CompanyDetailSerializer(serializers.ModelSerializer):
     business_category = BusinessCategorySerializer()
     product_categories = ProductCategorySerializer(many=True)
+    cuisine_types = serializers.SerializerMethodField()
     ownership_markers = OwnershipMarkerSerializer(many=True)
     sustainability_markers = SustainabilityMarkerSerializer(many=True)
+
+    def get_cuisine_types(self, obj):
+        try:
+            return CuisineTypeSerializer(obj.cuisine_types.all(), many=True).data
+        except (OperationalError, ProgrammingError):
+            return []
 
     class Meta:
         model = Company
@@ -86,6 +100,7 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "country",
             "business_category",
             "product_categories",
+            "cuisine_types",
             "ownership_markers",
             "sustainability_markers",
             "instagram_handle",

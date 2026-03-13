@@ -4,6 +4,7 @@ from django.db.models import Count, Q
 from .models import (
     BusinessCategory,
     Company,
+    CuisineType,
     OwnershipMarker,
     ProductCategory,
     SustainabilityMarker,
@@ -52,6 +53,19 @@ class BusinessCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(ProductCategory)
 class ProductCategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "company_count", "id_hash", "created_at")
+    search_fields = ("name",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(company_count_value=Count("companies"))
+
+    @admin.display(ordering="company_count_value")
+    def company_count(self, obj):
+        return obj.company_count_value
+
+
+@admin.register(CuisineType)
+class CuisineTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "company_count", "id_hash", "created_at")
     search_fields = ("name",)
 
@@ -114,7 +128,7 @@ class CompanyAdmin(admin.ModelAdmin):
     )
     search_fields = ("name", "description", "city", "state", "country")
     prepopulated_fields = {"slug": ("name",)}
-    filter_horizontal = ("product_categories", "ownership_markers", "sustainability_markers")
+    filter_horizontal = ("product_categories", "cuisine_types", "ownership_markers", "sustainability_markers")
     list_editable = ("needs_editorial_review",)
 
     @admin.display(boolean=True)

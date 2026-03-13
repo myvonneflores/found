@@ -7,6 +7,7 @@ from .filters import CompanyFilterSet
 from .models import (
     BusinessCategory,
     Company,
+    CuisineType,
     OwnershipMarker,
     ProductCategory,
     SustainabilityMarker,
@@ -15,6 +16,7 @@ from .serializers import (
     BusinessCategorySerializer,
     CompanyDetailSerializer,
     CompanyListSerializer,
+    CuisineTypeSerializer,
     OwnershipMarkerSerializer,
     ProductCategorySerializer,
     SustainabilityMarkerSerializer,
@@ -32,7 +34,11 @@ class CompanyListView(generics.ListAPIView):
     def get_queryset(self):
         return (
             Company.objects.select_related("business_category")
-            .prefetch_related("product_categories", "ownership_markers", "sustainability_markers")
+            .prefetch_related(
+                "product_categories",
+                "ownership_markers",
+                "sustainability_markers",
+            )
             .distinct()
         )
 
@@ -61,6 +67,13 @@ class ProductCategoryListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = ProductCategory.objects.all()
     serializer_class = ProductCategorySerializer
+    pagination_class = None
+
+
+class CuisineTypeListView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = CuisineType.objects.all()
+    serializer_class = CuisineTypeSerializer
     pagination_class = None
 
 

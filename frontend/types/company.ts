@@ -16,6 +16,7 @@ export type CompanyListItem = {
   country: string;
   business_category: string | null;
   product_categories: string[];
+  cuisine_types: string[];
   ownership_markers: string[];
   sustainability_markers: string[];
   is_vegan_friendly: boolean;
@@ -37,6 +38,7 @@ export type CompanyDetail = {
   country: string;
   business_category: TaxonomyItem | null;
   product_categories: TaxonomyItem[];
+  cuisine_types: TaxonomyItem[];
   ownership_markers: TaxonomyItem[];
   sustainability_markers: TaxonomyItem[];
   instagram_handle: string;

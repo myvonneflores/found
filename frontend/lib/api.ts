@@ -51,6 +51,10 @@ export function listProductCategories() {
   return fetchJson<TaxonomyItem[]>("product-categories/");
 }
 
+export function listCuisineTypes() {
+  return fetchJson<TaxonomyItem[]>("cuisine-types/");
+}
+
 export function listOwnershipMarkers() {
   return fetchJson<TaxonomyItem[]>("ownership-markers/");
 }

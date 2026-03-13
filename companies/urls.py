@@ -18,6 +18,11 @@ urlpatterns = [
         name="product-category-list",
     ),
     path(
+        "cuisine-types/",
+        views.CuisineTypeListView.as_view(),
+        name="cuisine-type-list",
+    ),
+    path(
         "ownership-markers/",
         views.OwnershipMarkerListView.as_view(),
         name="ownership-marker-list",

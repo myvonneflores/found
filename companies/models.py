@@ -31,6 +31,11 @@ class ProductCategory(NamedTaxonomy):
         verbose_name_plural = "Product categories"
 
 
+class CuisineType(NamedTaxonomy):
+    class Meta(NamedTaxonomy.Meta):
+        verbose_name_plural = "Cuisine types"
+
+
 class OwnershipMarker(NamedTaxonomy):
     class Meta(NamedTaxonomy.Meta):
         verbose_name_plural = "Ownership markers"
@@ -57,6 +62,11 @@ class Company(BaseModel):
     )
     product_categories = models.ManyToManyField(
         ProductCategory,
+        blank=True,
+        related_name="companies",
+    )
+    cuisine_types = models.ManyToManyField(
+        CuisineType,
         blank=True,
         related_name="companies",
     )
