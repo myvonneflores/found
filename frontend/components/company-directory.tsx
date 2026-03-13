@@ -350,6 +350,7 @@ export function CompanyDirectory({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const filtersPanelRef = useRef<HTMLElement | null>(null);
   const filtersSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const filtersFormRef = useRef<HTMLFormElement | null>(null);
   const detailPanelRef = useRef<HTMLElement | null>(null);
   const detailSurfaceRef = useRef<HTMLDivElement | null>(null);
   const viewportFrameRef = useRef<number | null>(null);
@@ -544,14 +545,26 @@ export function CompanyDirectory({
     const grid = gridRef.current;
     const filtersPanel = filtersPanelRef.current;
     const filtersSurface = filtersSurfaceRef.current;
+    const filtersForm = filtersFormRef.current;
     const detailPanel = detailPanelRef.current;
     const detailSurface = detailSurfaceRef.current;
-    if (!grid || !filtersPanel || !filtersSurface || !detailPanel || !detailSurface || typeof ResizeObserver === "undefined") {
+    if (
+      !grid ||
+      !filtersPanel ||
+      !filtersSurface ||
+      !filtersForm ||
+      !detailPanel ||
+      !detailSurface ||
+      typeof ResizeObserver === "undefined"
+    ) {
       return;
     }
 
     const updateHeight = () => {
-      const filtersHeight = Math.ceil(filtersSurface.scrollHeight);
+      const filtersSurfaceStyles = window.getComputedStyle(filtersSurface);
+      const filtersVerticalPadding =
+        Number.parseFloat(filtersSurfaceStyles.paddingTop) + Number.parseFloat(filtersSurfaceStyles.paddingBottom);
+      const filtersHeight = Math.ceil(filtersForm.scrollHeight + filtersVerticalPadding);
 
       if (window.innerWidth <= 760) {
         setSidePanelHeight(undefined);
@@ -593,6 +606,7 @@ export function CompanyDirectory({
     observer.observe(grid);
     observer.observe(filtersPanel);
     observer.observe(filtersSurface);
+    observer.observe(filtersForm);
     observer.observe(detailPanel);
     observer.observe(detailSurface);
     window.addEventListener("resize", scheduleHeightUpdate);
@@ -692,6 +706,7 @@ export function CompanyDirectory({
                     : "directory-form directory-mobile-collapsed"
                 }
                 method="get"
+                ref={filtersFormRef}
                 onChange={(event) => {
                   const target = event.target as HTMLInputElement | HTMLSelectElement;
                   if (target.name === "search") {
