@@ -2,6 +2,16 @@
 
 Last updated: March 13, 2026
 
+## Milestone
+
+Production deployment is now working end to end.
+
+- `found-api` is healthy on Fly and serving `https://api.found-places.com`
+- `found-web` is healthy on Fly and serving:
+  - `https://www.found-places.com`
+  - `https://found-places.com`
+- GitHub Actions is configured to auto-deploy both apps on merge or push to `main`
+
 ## What is live
 
 - Frontend custom domains are live:
@@ -26,8 +36,12 @@ Last updated: March 13, 2026
 - Fly config files exist:
   - `fly.toml`
   - `frontend/fly.toml`
+- GitHub Actions deploy workflow exists:
+  - `.github/workflows/fly-deploy.yml`
 - Frontend health check is in place and working:
   - `https://www.found-places.com/healthz`
+- Backend health check is in place and working:
+  - `https://api.found-places.com/api/health/`
 
 ### Domain + DNS
 
@@ -46,6 +60,10 @@ Last updated: March 13, 2026
 - Backend health endpoint exists at:
   - `/api/health/`
 - Entry point was updated to wait for Postgres over socket connection successfully on Fly.
+- Static files are collected during the Docker build.
+- Fly runs migrations through `release_command`.
+- The backend health endpoint is exempted from HTTPS redirect so Fly's machine checks can pass.
+- Fly's backend health check now sends the forwarded HTTPS header expected by Django.
 
 ### Frontend / product work
 
@@ -55,52 +73,8 @@ Last updated: March 13, 2026
 - About page was rewritten and styled.
 - Contact page was redesigned and connected to HubSpot through the custom form API route.
 
-## Current blocker
+## Outcome
 
-The backend deploy is hanging during Fly machine health validation.
-
-### What we know
-
-- The release command succeeds:
-  - `python manage.py migrate --noinput`
-- The web machine does start Gunicorn and bind to:
-  - `0.0.0.0:8000`
-- Fly still does not mark the machine healthy.
-- Because no machine is considered healthy, public API traffic is rejected with:
-  - `no known healthy instances found for route tcp/443`
-
-### Recent fixes already attempted
-
-- Added a backend Fly health check in `fly.toml`
-- Moved migrations to Fly `release_command`
-- Moved static file collection into the Docker build
-- Simplified runtime startup so the web process can start faster
-- Expanded Django `ALLOWED_HOSTS` to include:
-  - `localhost`
-  - `127.0.0.1`
-  - `0.0.0.0`
-- Added an explicit Fly health-check `Host` header:
-  - `Host = "api.found-places.com"`
-
-## Most likely current issue
-
-The app process appears healthy from startup logs, but Fly still does not accept the machine as healthy enough to route traffic.
-
-This likely needs one focused pass on Fly-side health behavior, not product code changes.
-
-## Recommended next debugging steps
-
-1. Check the current machine directly after deploy:
-   - `fly machine status <machine-id> -a found-api`
-2. Inspect Fly logs during the health-check window:
-   - `fly logs -a found-api`
-3. Confirm the health endpoint from inside the machine with an explicit host header if needed.
-4. If Fly still rejects the machine, consider one of these narrowed follow-ups:
-   - increase health check `grace_period`
-   - switch to a simpler top-level HTTP check shape if Fly's nested check config is not being interpreted as expected
-   - temporarily set `min_machines_running = 1` during stabilization
-   - verify whether Fly is probing with an unexpected host or over a different internal path than expected
-
-## Important note
-
-The site itself is mostly deployed and working. The remaining problem is backend health classification on Fly, not the overall domain setup or app wiring.
+- The backend health-check issue was resolved.
+- Fly now marks `found-api` healthy and routes production traffic correctly.
+- A backend-only deploy was used for the fix so unrelated frontend worktree changes were not shipped.

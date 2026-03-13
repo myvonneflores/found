@@ -1,5 +1,9 @@
 # Deployment
 
+Status on March 13, 2026:
+- Production deploy is live and healthy for both `found-api` and `found-web`
+- GitHub Actions auto-deploys both apps on merge or push to `main`
+
 ## Recommended topology
 - Fly app for the Django API: `found-api`
 - Fly app for the Next.js frontend: `found-web`
@@ -103,10 +107,12 @@ This repository now includes a GitHub Actions workflow at `.github/workflows/fly
 
 To enable auto-deploys on merge or push to `main`:
 
-1. In the GitHub repo settings, add a secret named `FLY_API_TOKEN`.
-2. Use a Fly token with permission to deploy both:
-   - `found-api`
-   - `found-web`
+1. In the GitHub repo settings, add these secrets:
+   - `FLY_API_TOKEN_FOUND_API`
+   - `FLY_API_TOKEN_FOUND_WEB`
+2. Use a token for each Fly app:
+   - `FLY_API_TOKEN_FOUND_API` should be authorized for `found-api`
+   - `FLY_API_TOKEN_FOUND_WEB` should be authorized for `found-web`
 3. Merge to `main` or run the workflow manually from the Actions tab.
 
 The workflow deploys:
