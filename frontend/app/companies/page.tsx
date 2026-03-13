@@ -77,6 +77,7 @@ export default async function CompaniesPage({
     <main className="page-shell directory-page-shell">
       <CompanyDirectory
         businessCategories={businessCategories}
+        brandHref="/"
         cities={cities}
         companies={companies.results}
         hasActiveFilters={isFiltered}

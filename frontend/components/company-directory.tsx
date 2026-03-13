@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import { detailDescription, listDescription } from "@/lib/company-copy";
+import { instagramProfileUrl } from "@/lib/social-links";
 import { SiteHeader } from "@/components/site-header";
 import { CompanyDetail, CompanyListItem, CompanySearchParams, TaxonomyItem } from "@/types/company";
 
@@ -338,6 +339,7 @@ export function CompanyDirectory({
   businessCategories,
   ownershipMarkers,
   sustainabilityMarkers,
+  brandHref = "/companies",
 }: {
   companies: CompanyListItem[];
   selectedCompany: CompanyDetail | null;
@@ -347,6 +349,7 @@ export function CompanyDirectory({
   businessCategories: TaxonomyItem[];
   ownershipMarkers: TaxonomyItem[];
   sustainabilityMarkers: TaxonomyItem[];
+  brandHref?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -616,7 +619,7 @@ export function CompanyDirectory({
   return (
     <section className="directory-experience">
       <div className="directory-shell">
-        <SiteHeader initialSearch={searchValue} resetKey={headerResetKey} />
+        <SiteHeader brandHref={brandHref} initialSearch={searchValue} resetKey={headerResetKey} />
 
         <div
           className={isResizing ? "directory-grid is-resizing" : "directory-grid"}
@@ -791,7 +794,7 @@ export function CompanyDirectory({
                     ) : null}
                     {selectedCompany.instagram_handle ? (
                       <QuickLinkLogo
-                        href={`https://www.instagram.com/${selectedCompany.instagram_handle}`}
+                        href={instagramProfileUrl(selectedCompany.instagram_handle)}
                         label="Instagram"
                       >
                         <InstagramIcon />

@@ -7,9 +7,11 @@ import { useEffect, useRef, useState } from "react";
 export function SiteHeader({
   initialSearch = "",
   resetKey = "",
+  brandHref = "/companies",
 }: {
   initialSearch?: string;
   resetKey?: string;
+  brandHref?: string;
 }) {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -57,7 +59,7 @@ export function SiteHeader({
   return (
     <div className="directory-brand-strip directory-brand-strip-menu">
       <div aria-hidden="true" className="directory-header-balance" />
-      <Link className="directory-brand-link" href="/companies">
+      <Link className="directory-brand-link" href={brandHref}>
         Found
       </Link>
       <div className="directory-header-actions">
@@ -83,6 +85,17 @@ export function SiteHeader({
           </button>
           {menuOpen ? (
             <div className="directory-menu-popover" role="menu">
+              <Link
+                className="directory-menu-link"
+                href="/"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setSearchValue("");
+                }}
+                role="menuitem"
+              >
+                Home
+              </Link>
               <Link
                 className="directory-menu-link"
                 href="/about"
