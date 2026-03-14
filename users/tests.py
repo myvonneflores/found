@@ -29,6 +29,9 @@ class UserRegistrationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["account_type"], User.AccountType.PERSONAL)
         self.assertEqual(response.data["display_name"], "Reader")
+        self.assertTrue(
+            PersonalProfile.objects.filter(user__email="reader@example.com").exists()
+        )
 
     def test_register_supports_business_account_type(self):
         response = self.client.post(
@@ -218,6 +221,31 @@ class PersonalProfileTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_personal_profile_patch_updates_visibility(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.patch(
+            reverse("users:me-profile"),
+            {
+                "bio": "Neighborhood favorites",
+                "location": "Portland, OR",
+                "avatar_url": "https://example.com/avatar.jpg",
+                "is_public": True,
+            },
+            format="json",
+        )
+
+        user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(user.personal_profile.is_public)
+        self.assertEqual(user.personal_profile.location, "Portland, OR")
+
 
 class PublicProfileTests(APITestCase):
     def test_public_profile_includes_public_lists(self):
@@ -227,7 +255,10 @@ class PublicProfileTests(APITestCase):
             account_type=User.AccountType.PERSONAL,
             display_name="Reader One",
         )
-        profile = PersonalProfile.objects.create(user=user, bio="Bookstores and coffee.", is_public=True)
+        profile = user.personal_profile
+        profile.bio = "Bookstores and coffee."
+        profile.is_public = True
+        profile.save(update_fields=["bio", "is_public"])
         company = Company.objects.create(name="North Star Market")
         curated_list = CuratedList.objects.create(user=user, title="Weekend favorites", is_public=True)
         curated_list.items.create(company=company, position=1)
@@ -248,7 +279,10 @@ class PublicProfileTests(APITestCase):
             account_type=User.AccountType.PERSONAL,
             display_name="Reader One",
         )
-        PersonalProfile.objects.create(user=user, bio="Bookstores and coffee.", is_public=True)
+        profile = user.personal_profile
+        profile.bio = "Bookstores and coffee."
+        profile.is_public = True
+        profile.save(update_fields=["bio", "is_public"])
         company = Company.objects.create(name="North Star Market")
         Recommendation.objects.create(
             user=user,
@@ -272,7 +306,10 @@ class PublicProfileTests(APITestCase):
             account_type=User.AccountType.PERSONAL,
             display_name="Reader One",
         )
-        PersonalProfile.objects.create(user=user, bio="Hidden", is_public=False)
+        profile = user.personal_profile
+        profile.bio = "Hidden"
+        profile.is_public = False
+        profile.save(update_fields=["bio", "is_public"])
 
         response = self.client.get(
             reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})

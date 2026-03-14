@@ -79,12 +79,13 @@ export default function AccountPage() {
   const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSavedMessage, setProfileSavedMessage] = useState("");
+  const [savedProfileIsPublic, setSavedProfileIsPublic] = useState(false);
   const [mobileFavoritesOpen, setMobileFavoritesOpen] = useState(true);
   const [mobileListsOpen, setMobileListsOpen] = useState(false);
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
-  const hasPublicPresence = profile.is_public || safeLists.some((list) => list.is_public);
+  const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
   const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
   const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
 
@@ -227,6 +228,7 @@ export default function AccountPage() {
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
         setProfile(nextProfile);
+        setSavedProfileIsPublic(nextProfile.is_public);
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
           signOut();
@@ -257,6 +259,7 @@ export default function AccountPage() {
     try {
       const nextProfile = await updatePersonalProfile(accessToken, profile);
       setProfile(nextProfile);
+      setSavedProfileIsPublic(nextProfile.is_public);
       setProfileSavedMessage("Profile updated.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update your profile.");
