@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # Local
     "core",
     "companies",
+    "community",
     "users",
 ]
 

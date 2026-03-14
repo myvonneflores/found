@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BodyClass } from "@/components/body-class";
+import { CompanySaveFlow } from "@/components/company-save-flow";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany } from "@/lib/api";
 import { instagramProfileUrl } from "@/lib/social-links";
@@ -198,6 +199,7 @@ export default async function CompanyDetailPage({
         />
 
         <section className="detail-card detail-header">
+          <CompanySaveFlow companyId={company.id} />
           <h1>
             {company.website ? (
               <a href={company.website} rel="noreferrer" target="_blank">

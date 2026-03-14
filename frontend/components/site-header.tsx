@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useAuth } from "@/components/auth-provider";
+
 export function SiteHeader({
   initialSearch = "",
   resetKey = "",
@@ -14,6 +16,7 @@ export function SiteHeader({
   brandHref?: string;
 }) {
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -117,6 +120,25 @@ export function SiteHeader({
                 role="menuitem"
               >
                 Contact
+              </Link>
+              <Link
+                className="directory-menu-link"
+                href={
+                  isAuthenticated
+                    ? user?.account_type === "business"
+                      ? user.is_business_verified
+                        ? "/business/dashboard"
+                        : "/business/pending"
+                      : "/account"
+                    : "/login"
+                }
+                onClick={() => {
+                  setMenuOpen(false);
+                  setSearchValue("");
+                }}
+                role="menuitem"
+              >
+                Dashboard
               </Link>
               <Link
                 className="directory-menu-link"

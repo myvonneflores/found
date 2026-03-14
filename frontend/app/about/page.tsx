@@ -43,6 +43,10 @@ export default function AboutPage() {
                 products.
               </p>
               <p className="lede">
+                Save the spots you love, build a list for your next trip, and share your recommendations with your
+                community.
+              </p>
+              <p className="lede">
                 The goal is simple: help people discover great local businesses and make it easier for those businesses
                 to connect with the people looking for them.
               </p>

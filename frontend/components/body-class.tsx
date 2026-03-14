@@ -4,10 +4,11 @@ import { useEffect } from "react";
 
 export function BodyClass({ className }: { className: string }) {
   useEffect(() => {
-    document.body.classList.add(className);
+    const classNames = className.split(/\s+/).filter(Boolean);
+    document.body.classList.add(...classNames);
 
     return () => {
-      document.body.classList.remove(className);
+      document.body.classList.remove(...classNames);
     };
   }, [className]);
 
