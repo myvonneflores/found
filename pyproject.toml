@@ -19,10 +19,32 @@ whitenoise = "^6.9"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.11"
+pytest = "^8.0"
+pytest-django = "^4.8"
+pytest-xdist = "^3.5"
+pytest-cov = "^6.0"
+factory-boy = "^3.3"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["--strict-markers", "--tb=short", "--reuse-db"]
+markers = ["slow: marks tests as slow"]
+
+[tool.coverage.run]
+source = ["core", "companies", "users", "config"]
+omit = ["*/migrations/*", "*/tests/*", "manage.py"]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.", "if TYPE_CHECKING:"]
 
 [tool.ruff]
 target-version = "py311"
