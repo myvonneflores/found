@@ -2,7 +2,7 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import migrations, models
+from django.db import connection, migrations, models
 
 
 def backfill_business_claim_workflow(apps, schema_editor):
@@ -74,19 +74,42 @@ class Migration(migrations.Migration):
             name='submitter_last_name',
             field=models.CharField(blank=True, max_length=120),
         ),
-        migrations.CreateModel(
-            name='BusinessClaimEvent',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type', models.CharField(choices=[('submitted', 'Submitted'), ('resubmitted', 'Resubmitted'), ('approved', 'Approved'), ('rejected', 'Rejected')], max_length=20)),
-                ('occurred_at', models.DateTimeField(auto_now_add=True)),
-                ('metadata', models.JSONField(blank=True, default=dict)),
-                ('actor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='business_claim_events', to=settings.AUTH_USER_MODEL)),
-                ('claim', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='history', to='users.businessclaim')),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.CreateModel(
+                    name='BusinessClaimEvent',
+                    fields=[
+                        ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                        ('event_type', models.CharField(choices=[('submitted', 'Submitted'), ('resubmitted', 'Resubmitted'), ('approved', 'Approved'), ('rejected', 'Rejected')], max_length=20)),
+                        ('occurred_at', models.DateTimeField(auto_now_add=True)),
+                        ('metadata', models.JSONField(blank=True, default=dict)),
+                        ('actor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='business_claim_events', to=settings.AUTH_USER_MODEL)),
+                        ('claim', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='history', to='users.businessclaim')),
+                    ],
+                    options={
+                        'ordering': ['occurred_at', 'pk'],
+                    },
+                ),
             ],
-            options={
-                'ordering': ['occurred_at', 'pk'],
-            },
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                    CREATE TABLE IF NOT EXISTS "users_businessclaimevent" (
+                        "id" bigserial NOT NULL PRIMARY KEY,
+                        "event_type" varchar(20) NOT NULL,
+                        "occurred_at" timestamp with time zone NOT NULL,
+                        "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+                        "actor_id" bigint NULL REFERENCES "users_user" ("id") DEFERRABLE INITIALLY DEFERRED,
+                        "claim_id" bigint NOT NULL REFERENCES "users_businessclaim" ("id") DEFERRABLE INITIALLY DEFERRED
+                    );
+                    CREATE INDEX IF NOT EXISTS "users_businessclaimevent_actor_id_idx"
+                        ON "users_businessclaimevent" ("actor_id");
+                    CREATE INDEX IF NOT EXISTS "users_businessclaimevent_claim_id_idx"
+                        ON "users_businessclaimevent" ("claim_id");
+                    """,
+                    reverse_sql='DROP TABLE IF EXISTS "users_businessclaimevent";',
+                ),
+            ],
         ),
         migrations.RunPython(backfill_business_claim_workflow, migrations.RunPython.noop),
     ]
