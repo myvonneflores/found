@@ -220,7 +220,7 @@ export default async function CompanyDetailPage({
         <CompanyOwnerEditor autoEdit={autoEdit} company={company} />
 
         <section className="detail-card detail-header">
-          <CompanySaveFlow companyId={company.id} />
+          <CompanySaveFlow companyId={company.id} companySlug={company.slug} />
           <h1>
             {company.website ? (
               <a href={company.website} rel="noreferrer" target="_blank">

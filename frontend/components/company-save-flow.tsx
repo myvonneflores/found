@@ -10,6 +10,7 @@ import {
   createCuratedList,
   createFavorite,
   deleteFavorite,
+  getCompany,
   listCuratedLists,
   listFavorites,
 } from "@/lib/api";
@@ -71,9 +72,16 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export function CompanySaveFlow({ companyId }: { companyId: number }) {
+export function CompanySaveFlow({
+  companyId,
+  companySlug,
+}: {
+  companyId: number;
+  companySlug: string;
+}) {
   const { accessToken, getValidAccessToken, isAuthenticated, isReady, signOut, user } = useAuth();
   const heartButtonRef = useRef<HTMLElement | null>(null);
+  const [resolvedCompanyId, setResolvedCompanyId] = useState(companyId);
   const [favoriteId, setFavoriteId] = useState<number | null>(null);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [selectedListId, setSelectedListId] = useState("");
@@ -85,7 +93,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
   const [showFavoritePrompt, setShowFavoritePrompt] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
   const [isCreatingList, setIsCreatingList] = useState(false);
-  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [favoritePromptPosition, setFavoritePromptPosition] = useState({ top: 96, left: 16 });
 
@@ -93,6 +101,15 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
   const canMakePublicLists = Boolean(user?.account_type === "personal" || user?.is_business_verified);
   const safeLists = normalizeLists(lists);
   const isFavorited = favoriteId !== null;
+
+  function isMissingCompanyError(message: string) {
+    const normalized = message.toLowerCase();
+    return normalized.includes("invalid pk") && normalized.includes("object does not exist");
+  }
+
+  useEffect(() => {
+    setResolvedCompanyId(companyId);
+  }, [companyId]);
 
   useEffect(() => {
     async function loadSavedState() {
@@ -118,7 +135,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
         ]);
         const normalizedFavorites = normalizeFavorites(nextFavorites);
         const normalizedLists = normalizeLists(nextLists);
-        const match = normalizedFavorites.find((favorite) => favorite.company.id === companyId);
+        const match = normalizedFavorites.find((favorite) => favorite.company.id === resolvedCompanyId);
         setFavoriteId(match?.id ?? null);
         setLists(normalizedLists);
         if (normalizedLists.length > 0) {
@@ -127,9 +144,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
           signOut();
-          setError("Your session expired. Please log in again to save businesses.");
-        } else {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load your save tools.");
+          setActionError("Your session expired. Please log in again to save businesses.");
         }
       } finally {
         setIsLoading(false);
@@ -137,7 +152,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
     }
 
     void loadSavedState();
-  }, [accessToken, canUseSaveTools, companyId, isAuthenticated, isReady, signOut]);
+  }, [accessToken, canUseSaveTools, isAuthenticated, isReady, resolvedCompanyId, signOut]);
 
   useEffect(() => {
     if (!successMessage) {
@@ -182,14 +197,14 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
 
   async function handleFavoriteClick() {
     setIsSavingFavorite(true);
-    setError("");
+    setActionError("");
     setSuccessMessage("");
 
     try {
       const token = await getValidAccessToken();
       if (!token) {
         signOut();
-        setError("Your session expired. Please log in again to save businesses.");
+        setActionError("Your session expired. Please log in again to save businesses.");
         return;
       }
 
@@ -199,16 +214,27 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
         setShowFavoritePrompt(false);
         setShowListModal(false);
       } else {
-        const favorite = await createFavorite(token, companyId);
+        let favorite;
+        try {
+          favorite = await createFavorite(token, resolvedCompanyId);
+        } catch (saveError) {
+          if (!(saveError instanceof Error) || !isMissingCompanyError(saveError.message)) {
+            throw saveError;
+          }
+
+          const latestCompany = await getCompany(companySlug);
+          setResolvedCompanyId(latestCompany.id);
+          favorite = await createFavorite(token, latestCompany.id);
+        }
         setFavoriteId(favorite.id);
         setShowFavoritePrompt(true);
       }
     } catch (saveError) {
       if (saveError instanceof Error && isTokenError(saveError.message)) {
         signOut();
-        setError("Your session expired. Please log in again to save businesses.");
+        setActionError("Your session expired. Please log in again to save businesses.");
       } else {
-        setError(saveError instanceof Error ? saveError.message : "Unable to update favorite.");
+        setActionError(saveError instanceof Error ? saveError.message : "Unable to update favorite.");
       }
     } finally {
       setIsSavingFavorite(false);
@@ -219,7 +245,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
     event.preventDefault();
 
     setIsSavingList(true);
-    setError("");
+    setActionError("");
     setSuccessMessage("");
     let createdListId: string | null = null;
 
@@ -227,7 +253,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       const token = await getValidAccessToken();
       if (!token) {
         signOut();
-        setError("Your session expired. Please log in again to save businesses.");
+        setActionError("Your session expired. Please log in again to save businesses.");
         return;
       }
 
@@ -251,7 +277,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
 
       const targetId = Number(targetListId);
       const alreadyInList = safeLists.some(
-        (list) => list.id === targetId && list.items.some((item) => item.company.id === companyId)
+        (list) => list.id === targetId && list.items.some((item) => item.company.id === resolvedCompanyId)
       );
 
       if (alreadyInList) {
@@ -261,9 +287,24 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
         return;
       }
 
-      const newItem = await addCuratedListItem(token, targetId, {
-        company_id: companyId,
-      });
+      let nextCompanyId = resolvedCompanyId;
+      let newItem;
+      try {
+        newItem = await addCuratedListItem(token, targetId, {
+          company_id: nextCompanyId,
+        });
+      } catch (saveError) {
+        if (!(saveError instanceof Error) || !isMissingCompanyError(saveError.message)) {
+          throw saveError;
+        }
+
+        const latestCompany = await getCompany(companySlug);
+        nextCompanyId = latestCompany.id;
+        setResolvedCompanyId(nextCompanyId);
+        newItem = await addCuratedListItem(token, targetId, {
+          company_id: nextCompanyId,
+        });
+      }
 
       setLists((current) =>
         normalizeLists(current).map((list) =>
@@ -288,9 +329,9 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       }
       if (saveError instanceof Error && isTokenError(saveError.message)) {
         signOut();
-        setError("Your session expired. Please log in again to save businesses.");
+        setActionError("Your session expired. Please log in again to save businesses.");
       } else {
-        setError(saveError instanceof Error ? saveError.message : "Unable to add this business to a list.");
+        setActionError(saveError instanceof Error ? saveError.message : "Unable to add this business to a list.");
       }
     } finally {
       setIsSavingList(false);
@@ -426,15 +467,15 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       )
     : null;
 
-  const errorToast = error
+  const errorToast = actionError
     ? createPortal(
         <div
           className="detail-save-toast detail-save-toast-error"
           role="alert"
         >
           <div className="detail-save-toast-copy">
-            <p>{error}</p>
-            {error.includes("Please log in again") ? (
+            <p>{actionError}</p>
+            {actionError.includes("Please log in again") ? (
               <Link className="detail-save-toast-link" href="/login">
                 Log in
               </Link>
