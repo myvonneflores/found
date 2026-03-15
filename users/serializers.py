@@ -65,6 +65,7 @@ class PersonalProfileSerializer(serializers.ModelSerializer):
 class BusinessClaimSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     company_slug = serializers.CharField(source="company.slug", read_only=True)
+    website = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = BusinessClaim
@@ -88,6 +89,14 @@ class BusinessClaimSerializer(serializers.ModelSerializer):
             "reviewed_at",
         )
         read_only_fields = ("id", "status", "review_notes", "submitted_at", "reviewed_at")
+
+    def validate_website(self, value):
+        value = value.strip()
+        if not value:
+            return ""
+        if "://" not in value:
+            value = f"https://{value}"
+        return value
 
     def validate(self, attrs):
         user = self.context["request"].user
