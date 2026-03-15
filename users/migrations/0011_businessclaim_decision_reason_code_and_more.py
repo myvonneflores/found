@@ -2,7 +2,17 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import connection, migrations, models
+from django.db import migrations, models
+
+
+def create_businessclaimevent_if_missing(apps, schema_editor):
+    """Create the table only when it doesn't already exist (idempotent)."""
+    table_names = schema_editor.connection.introspection.table_names()
+    if "users_businessclaimevent" in table_names:
+        return
+    BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
+    with schema_editor.connection.schema_editor() as editor:
+        editor.create_model(BusinessClaimEvent)
 
 
 def backfill_business_claim_workflow(apps, schema_editor):
@@ -92,23 +102,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             database_operations=[
-                migrations.RunSQL(
-                    sql="""
-                    CREATE TABLE IF NOT EXISTS "users_businessclaimevent" (
-                        "id" bigserial NOT NULL PRIMARY KEY,
-                        "event_type" varchar(20) NOT NULL,
-                        "occurred_at" timestamp with time zone NOT NULL,
-                        "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
-                        "actor_id" bigint NULL REFERENCES "users_user" ("id") DEFERRABLE INITIALLY DEFERRED,
-                        "claim_id" bigint NOT NULL REFERENCES "users_businessclaim" ("id") DEFERRABLE INITIALLY DEFERRED
-                    );
-                    CREATE INDEX IF NOT EXISTS "users_businessclaimevent_actor_id_idx"
-                        ON "users_businessclaimevent" ("actor_id");
-                    CREATE INDEX IF NOT EXISTS "users_businessclaimevent_claim_id_idx"
-                        ON "users_businessclaimevent" ("claim_id");
-                    """,
-                    reverse_sql='DROP TABLE IF EXISTS "users_businessclaimevent";',
-                ),
+                migrations.RunPython(create_businessclaimevent_if_missing, migrations.RunPython.noop),
             ],
         ),
         migrations.RunPython(backfill_business_claim_workflow, migrations.RunPython.noop),
