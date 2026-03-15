@@ -39,6 +39,7 @@ export interface BusinessClaim {
   id: number;
   company: number | null;
   company_name?: string;
+  company_slug?: string;
   status: Exclude<VerificationStatus, null>;
   business_name: string;
   business_email: string;

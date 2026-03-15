@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (isReady && isAuthenticated && user) {
@@ -66,13 +67,42 @@ export default function LoginPage() {
 
               <label className="contact-field">
                 <span className="contact-field-label">Password</span>
-                <input
-                  minLength={8}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  type="password"
-                  value={password}
-                />
+                <div className="auth-password-field">
+                  <input
+                    minLength={8}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                  />
+                  <button
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((current) => !current)}
+                    type="button"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path
+                        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                      <circle cx="12" cy="12" fill="none" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+                      {showPassword ? (
+                        <path
+                          d="M4 20 20 4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="1.8"
+                        />
+                      ) : null}
+                    </svg>
+                  </button>
+                </div>
               </label>
 
               {error ? <p className="contact-form-note is-error">{error}</p> : null}

@@ -64,6 +64,7 @@ class PersonalProfileSerializer(serializers.ModelSerializer):
 
 class BusinessClaimSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
+    company_slug = serializers.CharField(source="company.slug", read_only=True)
 
     class Meta:
         model = BusinessClaim
@@ -71,6 +72,7 @@ class BusinessClaimSerializer(serializers.ModelSerializer):
             "id",
             "company",
             "company_name",
+            "company_slug",
             "status",
             "business_name",
             "business_email",

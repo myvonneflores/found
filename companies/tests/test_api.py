@@ -1,7 +1,11 @@
 import pytest
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 from companies.models import Company
+from users.models import BusinessClaim
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -130,3 +134,119 @@ class TestTaxonomyAndCityApis:
 
         assert response.status_code == 200
         assert response.data == ["Los Angeles", "New York", "Portland", "Seattle"]
+
+
+@pytest.mark.django_db
+class TestManagedBusinessProfileApi:
+    def test_verified_business_user_can_get_and_update_managed_company(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="verified-business@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        get_response = api_client.get(reverse("companies:company-manage-current"))
+
+        assert get_response.status_code == 200
+        assert get_response.data["name"] == company.name
+
+        patch_response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {"description": "Fresh profile copy", "city": "Portland", "state": "OR"},
+        )
+
+        assert patch_response.status_code == 200
+        company.refresh_from_db()
+        assert company.description == "Fresh profile copy"
+        assert company.city == "Portland"
+        assert company.state == "OR"
+
+    def test_pending_business_user_cannot_manage_company(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="pending-business@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.PENDING,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.get(reverse("companies:company-manage-current"))
+
+        assert response.status_code == 403
+
+    def test_verified_business_user_can_create_managed_company_when_claim_has_no_company(
+        self, api_client, taxonomy_set
+    ):
+        user = User.objects.create_user(
+            email="new-business@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        claim = BusinessClaim.objects.create(
+            user=user,
+            business_name="Fresh Company",
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-manage-current"),
+            {
+                "name": "Fresh Company",
+                "description": "A brand-new company profile.",
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        claim.refresh_from_db()
+        assert claim.company is not None
+        assert claim.company.name == "Fresh Company"
+        assert response.data["slug"] == claim.company.slug
+
+    def test_verified_business_user_post_returns_existing_company_if_already_linked(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="existing-business@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-manage-current"),
+            {
+                "name": "Ignored Name",
+                "description": "Ignored",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["slug"] == company.slug

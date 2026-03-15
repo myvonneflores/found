@@ -1,21 +1,135 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
+import { BusinessProfileCard } from "@/components/business-profile-card";
+import { CreateListModal } from "@/components/create-list-modal";
+import { FavoriteChipActions } from "@/components/favorite-chip-actions";
+import { ListManager } from "@/components/list-manager";
 import { SiteHeader } from "@/components/site-header";
-import { listBusinessClaims } from "@/lib/api";
-import { BusinessClaim } from "@/types/auth";
+import { listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
+import type { BusinessClaim } from "@/types/auth";
+import type { CuratedList, Favorite } from "@/types/community";
+
+function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
+  if (Array.isArray(value)) {
+    return value as Favorite[];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "results" in value &&
+    Array.isArray((value as { results?: unknown }).results)
+  ) {
+    return (value as { results: Favorite[] }).results;
+  }
+
+  return [];
+}
+
+function normalizeLists(value: CuratedList[] | unknown): CuratedList[] {
+  if (Array.isArray(value)) {
+    return value as CuratedList[];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "results" in value &&
+    Array.isArray((value as { results?: unknown }).results)
+  ) {
+    return (value as { results: CuratedList[] }).results;
+  }
+
+  return [];
+}
+
+function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
+  if (Array.isArray(value)) {
+    return value as BusinessClaim[];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "results" in value &&
+    Array.isArray((value as { results?: unknown }).results)
+  ) {
+    return (value as { results: BusinessClaim[] }).results;
+  }
+
+  return [];
+}
+
+function isTokenError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("token") ||
+    normalized.includes("not authenticated") ||
+    normalized.includes("authentication credentials were not provided") ||
+    normalized.includes("request failed: 401")
+  );
+}
 
 export default function BusinessPendingPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, refreshUser, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
+  const [mobileFavoritesOpen, setMobileFavoritesOpen] = useState(true);
+  const [mobileListsOpen, setMobileListsOpen] = useState(false);
+  const [mobileShareOpen, setMobileShareOpen] = useState(false);
+
+  const safeFavorites = normalizeFavorites(favorites);
+  const safeLists = normalizeLists(lists);
+  const latestClaim = claims.find((claim) => claim.status === "verified") ?? claims[0] ?? null;
+
+  const favoritesContent = (
+    <>
+      {isLoading ? <p className="lede">Loading your saved businesses...</p> : null}
+      {!isLoading && safeFavorites.length === 0 ? (
+        <p className="lede">No favorites yet. Start saving businesses you want to stay close to while we review your claim.</p>
+      ) : null}
+      {!isLoading && safeFavorites.length > 0 ? (
+        <div className="dashboard-stack">
+          {safeFavorites.map((favorite) => (
+            <FavoriteChipActions favorite={favorite} key={favorite.id} />
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+
+  const listsContent = (
+    <>
+      <p className="lede">Build private lists now. Public sharing unlocks after your business is verified.</p>
+      {isLoading ? <p className="lede">Loading your lists...</p> : null}
+      {!isLoading ? (
+        <ListManager
+          emptyMessage="No lists yet. Start one now so your curation is ready to share once verification is complete."
+          lists={safeLists}
+          onCreateList={() => setIsCreateListModalOpen(true)}
+        />
+      ) : null}
+    </>
+  );
+
+  const shareContent = (
+    <>
+      <p className="lede">
+        Once you&apos;re verified, you&apos;ll be able to make lists public, share your FOUND profile, and invite people into the way your business discovers locally.
+      </p>
+      <p className="muted">For now, keep building privately. We&apos;ll unlock public sharing as soon as your claim is approved.</p>
+    </>
+  );
 
   useEffect(() => {
     if (!isReady) {
@@ -45,89 +159,144 @@ export default function BusinessPendingPage() {
       }
 
       try {
-        const [nextClaims] = await Promise.all([listBusinessClaims(accessToken), refreshUser()]);
-        setClaims(nextClaims);
+        const [nextFavorites, nextLists, nextClaims] = await Promise.all([
+          listFavorites(accessToken),
+          listCuratedLists(accessToken),
+          listBusinessClaims(accessToken),
+        ]);
+        setFavorites(normalizeFavorites(nextFavorites));
+        setLists(normalizeLists(nextLists));
+        setClaims(normalizeClaims(nextClaims));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Unable to load your verification status.");
+        if (loadError instanceof Error && isTokenError(loadError.message)) {
+          signOut();
+          router.replace("/login");
+          return;
+        }
+        setError(loadError instanceof Error ? loadError.message : "Unable to load your business dashboard.");
       } finally {
         setIsLoading(false);
       }
     }
 
     void loadData();
-  }, [accessToken, refreshUser, user]);
+  }, [accessToken, router, signOut, user]);
 
-  if (!isReady || !user || user.account_type !== "business") {
+  function handleDashboardSignOut() {
+    signOut();
+    router.push("/");
+  }
+
+  if (!isReady || !user || user.account_type !== "business" || user.is_business_verified) {
     return null;
   }
 
-  const latestClaim = claims[0];
-
   return (
-    <main className="page-shell directory-page-shell auth-page-shell">
-      <BodyClass className="auth-page-body" />
+    <main className="page-shell directory-page-shell auth-page-shell dashboard-page-shell">
+      <BodyClass className="auth-page-body dashboard-page-body" />
       <div className="directory-shell">
         <SiteHeader resetKey="/business/pending" />
 
         <section className="dashboard-stage">
-          <article className="auth-card dashboard-hero-card">
-            <div className="auth-kicker">Verification in progress</div>
-            <h1 className="auth-title">Your business tools are warming up.</h1>
+          <article className="panel dashboard-banner dashboard-banner-business">
+            <h1 className="home-hero-title">Dashboard</h1>
             <p className="lede">
-              You can sign in and track progress here while we verify your relationship to the business. Once approved,
-              this account will unlock listing management and community curation tools.
+              Save favorites, start private lists, and get your community voice ready. Public sharing and listing edits unlock after verification.
             </p>
           </article>
 
-          <div className="dashboard-grid">
-            <article className="auth-card dashboard-card">
-              <h2>Status</h2>
-              {isLoading ? <p className="lede">Checking your claim status...</p> : null}
-              {!isLoading && latestClaim ? (
-                <>
-                  <div className="auth-status-item">
-                    <div>
-                      <strong>{latestClaim.business_name}</strong>
-                      <p>Submitted {new Date(latestClaim.submitted_at).toLocaleDateString()}</p>
-                    </div>
-                    <span className={`badge ${latestClaim.status === "rejected" ? "badge-muted" : "badge-outline"}`}>
-                      {latestClaim.status}
-                    </span>
-                  </div>
-                  <p className="lede">
-                    {latestClaim.status === "rejected"
-                      ? latestClaim.review_notes || "This claim needs updates before it can be approved."
-                      : "We’ll use the details you submitted to review and verify this business account."}
-                  </p>
-                </>
-              ) : null}
-              {!isLoading && !latestClaim ? (
-                <p className="lede">You have not submitted a claim yet. Submit one now to start verification.</p>
-              ) : null}
-              {error ? <p className="contact-form-note is-error">{error}</p> : null}
-            </article>
+          <BusinessProfileCard isVerified={false} latestClaim={latestClaim} />
 
-            <article className="auth-card dashboard-card">
-              <h2>What unlocks after approval</h2>
-              <div className="auth-bullet-list">
-                <p>Manage your FOUND business profile and keep your public details fresh.</p>
-                <p>Create business-curated lists, favorites, and community recommendations.</p>
-                <p>Build a more active local presence without waiting for the admin team to make routine edits.</p>
-              </div>
-            </article>
+          <div className="dashboard-column-headings">
+            <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>
+            <div className="dashboard-column-heading dashboard-column-heading-lists">lists</div>
+            <div className="dashboard-column-heading dashboard-column-heading-profile">share</div>
           </div>
 
-          <article className="auth-card dashboard-footer-card">
-            <div>
-              <h2>{latestClaim ? "Need to submit another claim?" : "Ready to submit your first claim?"}</h2>
-              <p className="lede">If your listing is new or your status changed, you can send us fresh details here.</p>
-            </div>
-            <Link className="contact-submit" href="/business/claim">
-              {latestClaim ? "Submit another claim" : "Start claim"}
-            </Link>
+          <section className="dashboard-board">
+            <article className="panel dashboard-panel dashboard-panel-favorites">{favoritesContent}</article>
+            <article className="panel dashboard-panel dashboard-panel-lists">{listsContent}</article>
+            <aside className="dashboard-sidebar">
+              <article className="panel dashboard-panel dashboard-panel-share">{shareContent}</article>
+            </aside>
+          </section>
+
+          <section className="dashboard-mobile-sections">
+            <article className="dashboard-mobile-section">
+              <button
+                aria-expanded={mobileFavoritesOpen}
+                className="dashboard-column-heading dashboard-column-heading-favorites directory-panel-mobile-toggle"
+                onClick={() => setMobileFavoritesOpen((open) => !open)}
+                type="button"
+              >
+                <span>favorites</span>
+                <span aria-hidden="true" className={mobileFavoritesOpen ? "directory-panel-mobile-chevron is-open" : "directory-panel-mobile-chevron"}>
+                  +
+                </span>
+              </button>
+              <div className={mobileFavoritesOpen ? "" : "directory-mobile-collapsed"}>
+                <article className="panel dashboard-panel dashboard-panel-favorites">{favoritesContent}</article>
+              </div>
+            </article>
+
+            <article className="dashboard-mobile-section">
+              <button
+                aria-expanded={mobileListsOpen}
+                className="dashboard-column-heading dashboard-column-heading-lists directory-panel-mobile-toggle"
+                onClick={() => setMobileListsOpen((open) => !open)}
+                type="button"
+              >
+                <span>lists</span>
+                <span aria-hidden="true" className={mobileListsOpen ? "directory-panel-mobile-chevron is-open" : "directory-panel-mobile-chevron"}>
+                  +
+                </span>
+              </button>
+              <div className={mobileListsOpen ? "" : "directory-mobile-collapsed"}>
+                <article className="panel dashboard-panel dashboard-panel-lists">{listsContent}</article>
+              </div>
+            </article>
+
+            <article className="dashboard-mobile-section">
+              <button
+                aria-expanded={mobileShareOpen}
+                className="dashboard-column-heading dashboard-column-heading-profile directory-panel-mobile-toggle"
+                onClick={() => setMobileShareOpen((open) => !open)}
+                type="button"
+              >
+                <span>share</span>
+                <span aria-hidden="true" className={mobileShareOpen ? "directory-panel-mobile-chevron is-open" : "directory-panel-mobile-chevron"}>
+                  +
+                </span>
+              </button>
+              <div className={mobileShareOpen ? "" : "directory-mobile-collapsed"}>
+                <article className="panel dashboard-panel dashboard-panel-share">{shareContent}</article>
+              </div>
+            </article>
+          </section>
+
+          <article className="panel dashboard-logout-strip">
+            <button className="dashboard-logout dashboard-logout-button" onClick={handleDashboardSignOut} type="button">
+              Log out
+            </button>
           </article>
+
+          {error ? (
+            <article className="panel dashboard-panel">
+              <p className="contact-form-note is-error">{error}</p>
+            </article>
+          ) : null}
         </section>
       </div>
+
+      <CreateListModal
+        accessToken={accessToken}
+        canMakePublic={false}
+        isOpen={isCreateListModalOpen}
+        onClose={() => setIsCreateListModalOpen(false)}
+        onCreated={(nextList) => {
+          setLists((current) => [nextList, ...normalizeLists(current)]);
+        }}
+      />
     </main>
   );
 }

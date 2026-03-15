@@ -111,3 +111,56 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+
+class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
+    business_category = serializers.PrimaryKeyRelatedField(
+        queryset=BusinessCategory.objects.all(),
+        allow_null=True,
+        required=False,
+    )
+    product_categories = serializers.PrimaryKeyRelatedField(
+        queryset=ProductCategory.objects.all(),
+        many=True,
+        required=False,
+    )
+    cuisine_types = serializers.PrimaryKeyRelatedField(
+        queryset=CuisineType.objects.all(),
+        many=True,
+        required=False,
+    )
+    ownership_markers = serializers.PrimaryKeyRelatedField(
+        queryset=OwnershipMarker.objects.all(),
+        many=True,
+        required=False,
+    )
+    sustainability_markers = serializers.PrimaryKeyRelatedField(
+        queryset=SustainabilityMarker.objects.all(),
+        many=True,
+        required=False,
+    )
+
+    class Meta:
+        model = Company
+        fields = (
+            "id",
+            "slug",
+            "name",
+            "description",
+            "website",
+            "address",
+            "city",
+            "state",
+            "zip_code",
+            "business_category",
+            "product_categories",
+            "cuisine_types",
+            "ownership_markers",
+            "sustainability_markers",
+            "instagram_handle",
+            "facebook_page",
+            "linkedin_page",
+            "is_vegan_friendly",
+            "is_gf_friendly",
+        )
+        read_only_fields = ("id", "slug")

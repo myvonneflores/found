@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BodyClass } from "@/components/body-class";
+import { CompanyOwnerEditor } from "@/components/company-owner-editor";
 import { CompanySaveFlow } from "@/components/company-save-flow";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany } from "@/lib/api";
@@ -155,11 +156,12 @@ export default async function CompanyDetailPage({
 }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
+  const autoEdit = normalizeParam(resolvedSearchParams.edit) === "1";
 
   try {
     const company = await getCompany(slug);
     const isFoodCompany = company.business_category?.name === "Food";
-    const location = [company.city, company.state, company.country].filter(Boolean).join(", ");
+    const location = [company.city, company.state].filter(Boolean).join(", ");
     const mapQuery = [company.address, company.city, company.state, company.zip_code, company.country]
       .filter(Boolean)
       .join(", ");
@@ -211,7 +213,6 @@ export default async function CompanyDetailPage({
           </h1>
           <div className="detail-meta">
             {location ? <div className="muted">{location}</div> : null}
-            <div className="muted">Founded: {company.founded_year ?? "Unknown"}</div>
           </div>
           <div className="filter-chip-row detail-chip-row">
             {company.business_category ? <span className="badge badge-outline">{company.business_category.name}</span> : null}
@@ -226,6 +227,8 @@ export default async function CompanyDetailPage({
           </div>
           <p className="lede">{description}</p>
         </section>
+
+        <CompanyOwnerEditor autoEdit={autoEdit} company={company} />
 
         <section className="detail-grid">
           <article className="detail-card detail-map-card">

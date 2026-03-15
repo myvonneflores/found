@@ -4,7 +4,6 @@ import Link from "next/link";
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
 import { getCompany, listCompanies } from "@/lib/api";
-import { listDescription } from "@/lib/company-copy";
 import { CompanyDetail, CompanyListItem } from "@/types/company";
 
 export const metadata: Metadata = {
@@ -270,11 +269,10 @@ export default async function HomePage() {
             <div className="home-featured-grid">
               {featuredCompanies.map((company) => (
                 <Link className="home-feature-card" href={`/companies/${company.slug}`} key={company.slug}>
-                  <div className="home-feature-copy">
-                    <h3>{company.name}</h3>
-                    <span>{companyLocation(company)}</span>
-                    <p>{listDescription(company)}</p>
-                  </div>
+                <div className="home-feature-copy">
+                  <h3>{company.name}</h3>
+                  <span>{companyLocation(company)}</span>
+                </div>
                   <div className="home-pill-row">
                     {featureTags(company).map((tag) => (
                       <span className="badge badge-outline home-feature-pill" key={`${company.slug}-${tag}`}>

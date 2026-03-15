@@ -12,6 +12,7 @@ import { Recommendation } from "@/types/recommendation";
 import {
   CompanyDetail,
   CompanyListItem,
+  ManagedBusinessProfile,
   CompanySearchParams,
   PaginatedResponse,
   TaxonomyItem,
@@ -98,6 +99,40 @@ export function getCompany(slug: string) {
   return fetchJson<CompanyDetail>(`companies/${slug}/`);
 }
 
+export function getManagedBusinessProfile(token: string) {
+  return requestJson<ManagedBusinessProfile>("companies/manage/current/", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function updateManagedBusinessProfile(
+  token: string,
+  payload: Omit<ManagedBusinessProfile, "id">
+) {
+  return requestJson<ManagedBusinessProfile>("companies/manage/current/", {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createManagedBusinessProfile(
+  token: string,
+  payload: Omit<ManagedBusinessProfile, "id" | "slug">
+) {
+  return requestJson<ManagedBusinessProfile>("companies/manage/current/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listBusinessCategories() {
   return fetchJson<TaxonomyItem[]>("business-categories/");
 }
@@ -156,11 +191,11 @@ export function getCurrentUser(token: string) {
 }
 
 export function listBusinessClaims(token: string) {
-  return requestJson<BusinessClaim[]>("users/business-claims/", {
+  return requestJson<BusinessClaim[] | PaginatedResponse<BusinessClaim>>("users/business-claims/", {
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  });
+  }).then(unwrapListResponse);
 }
 
 export function createBusinessClaim(token: string, payload: BusinessClaimPayload) {

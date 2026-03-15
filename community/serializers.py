@@ -50,6 +50,14 @@ class CuratedListSerializer(serializers.ModelSerializer):
         fields = ("id", "id_hash", "title", "description", "is_public", "created_at", "updated_at", "items")
         read_only_fields = ("id", "id_hash", "created_at", "updated_at", "items")
 
+    def validate(self, attrs):
+        request = self.context["request"]
+        user = request.user
+        is_public = attrs.get("is_public", getattr(self.instance, "is_public", False))
+        if user.account_type == user.AccountType.BUSINESS and not user.is_business_verified and is_public:
+            raise serializers.ValidationError({"is_public": "Public lists unlock after your business is verified."})
+        return attrs
+
     def create(self, validated_data):
         return CuratedList.objects.create(user=self.context["request"].user, **validated_data)
 
@@ -94,6 +102,16 @@ class RecommendationSerializer(serializers.ModelSerializer):
         model = Recommendation
         fields = ("id", "id_hash", "company", "company_id", "title", "body", "is_public", "created_at", "updated_at")
         read_only_fields = ("id", "id_hash", "company", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        user = request.user
+        is_public = attrs.get("is_public", getattr(self.instance, "is_public", True))
+        if user.account_type == user.AccountType.BUSINESS and not user.is_business_verified and is_public:
+            raise serializers.ValidationError(
+                {"is_public": "Public recommendations unlock after your business is verified."}
+            )
+        return attrs
 
     def create(self, validated_data):
         return Recommendation.objects.create(user=self.context["request"].user, **validated_data)

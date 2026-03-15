@@ -69,7 +69,7 @@ class CommunityApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Favorite.objects.filter(user=self.personal_user, company=self.company).count(), 1)
 
-    def test_pending_business_user_cannot_create_favorite(self):
+    def test_pending_business_user_can_create_favorite(self):
         self.client.force_authenticate(user=self.pending_business_user)
 
         response = self.client.post(
@@ -78,7 +78,8 @@ class CommunityApiTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Favorite.objects.get().user, self.pending_business_user)
 
     def test_verified_business_user_can_create_favorite(self):
         self.client.force_authenticate(user=self.verified_business_user)
@@ -112,6 +113,30 @@ class CommunityApiTests(APITestCase):
 
         self.assertEqual(item_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(CuratedListItem.objects.get().company, self.company)
+
+    def test_pending_business_user_can_create_private_list(self):
+        self.client.force_authenticate(user=self.pending_business_user)
+
+        response = self.client.post(
+            reverse("community:list-list"),
+            {"title": "Quiet favorites", "description": "For later", "is_public": False},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(CuratedList.objects.get().user, self.pending_business_user)
+
+    def test_pending_business_user_cannot_create_public_list(self):
+        self.client.force_authenticate(user=self.pending_business_user)
+
+        response = self.client.post(
+            reverse("community:list-list"),
+            {"title": "Quiet favorites", "description": "For later", "is_public": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Public lists unlock", response.data["is_public"][0])
 
     def test_user_can_delete_own_favorite(self):
         favorite = Favorite.objects.create(user=self.personal_user, company=self.company)
@@ -262,7 +287,8 @@ class CommunityApiTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Public recommendations unlock", response.data["is_public"][0])
 
     def test_user_can_update_recommendation(self):
         recommendation = Recommendation.objects.create(

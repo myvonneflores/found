@@ -34,7 +34,7 @@ class User(AbstractUser):
 
     @property
     def can_use_community_features(self):
-        return self.account_type == self.AccountType.PERSONAL or self.is_business_verified
+        return self.account_type in {self.AccountType.PERSONAL, self.AccountType.BUSINESS}
 
     @property
     def business_verification_status(self):

@@ -1201,6 +1201,141 @@ body.contact-page-body {
   justify-content: center;
 }
 
+.business-claim-stage {
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  align-items: start;
+}
+
+.business-claim-copy {
+  gap: 1.2rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 252, 247, 0) 46%),
+    #eedcc6;
+  color: #b5624d;
+  border: 1px solid rgba(181, 98, 77, 0.08);
+}
+
+.business-claim-copy .auth-title,
+.business-claim-copy .auth-kicker,
+.business-claim-copy .home-hero-lede {
+  color: inherit;
+}
+
+.business-claim-points {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.business-claim-point {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 1.1rem;
+  border-radius: 24px;
+  background: rgba(255, 251, 247, 0.28);
+  border: 1px solid rgba(181, 98, 77, 0.08);
+}
+
+.business-claim-point strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.business-claim-point p {
+  margin: 0;
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.business-claim-side {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.business-claim-form-card {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 252, 247, 0) 40%),
+    #f4e7d7;
+  border: 1px solid rgba(158, 113, 92, 0.08);
+  color: #9e715c;
+}
+
+.business-claim-form-card .contact-field-label,
+.business-claim-form-card .auth-text-link,
+.business-claim-form-card .contact-form-note,
+.business-claim-form-card .lede {
+  color: #9e715c;
+}
+
+.business-claim-form-card .contact-submit {
+  background: #d68e81;
+  color: #fff8f2;
+}
+
+.business-claim-form-card .contact-submit:hover {
+  background: #c96f86;
+}
+
+.business-claim-form-card .auth-form-actions {
+  justify-content: flex-end;
+}
+
+.business-claim-form-card .auth-form input,
+.business-claim-form-card .auth-form textarea {
+  background: rgba(255, 248, 239, 0.9);
+  border-color: rgba(181, 98, 77, 0.12);
+  color: #9e715c;
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.business-claim-form-card .auth-form textarea {
+  min-height: 8.5rem;
+}
+
+.business-claim-form-card .auth-form input::placeholder,
+.business-claim-form-card .auth-form textarea::placeholder {
+  color: rgba(158, 113, 92, 0.8);
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.business-claim-form-card .auth-form textarea::placeholder {
+  color: rgba(158, 113, 92, 0.82);
+}
+
+.business-claim-status-card {
+  background:
+    radial-gradient(circle at top left, rgba(255, 247, 244, 0.16), transparent 28%),
+    #d68e81;
+  color: #fff8f2;
+}
+
+.business-claim-status-card h2,
+.business-claim-status-card .lede,
+.business-claim-status-card .auth-status-item strong,
+.business-claim-status-card .auth-status-item p {
+  color: inherit;
+}
+
+.business-claim-status-card .auth-status-item {
+  background: rgba(255, 251, 247, 0.14);
+  border-color: rgba(255, 248, 242, 0.28);
+}
+
+.business-claim-status-card .badge {
+  background: rgba(255, 248, 242, 0.2);
+  color: #fff8f2;
+}
+
+.business-claim-status-card .badge-outline {
+  background: rgba(255, 248, 242, 0.12);
+  border-color: rgba(255, 248, 242, 0.42);
+  color: #fff8f2;
+}
+
 .auth-card {
   display: grid;
   gap: 1rem;
@@ -1219,6 +1354,16 @@ body.contact-page-body {
   color: #8f4c09;
 }
 
+.auth-hero-card-signup {
+  background: rgba(247, 225, 198, 0.96);
+  border: 1px solid rgba(179, 101, 7, 0.14);
+  color: #8a4f06;
+}
+
+.auth-signup-account-toggle {
+  margin-top: 0.45rem;
+}
+
 .dashboard-hero-card-business {
   background:
     radial-gradient(circle at top right, rgba(247, 245, 219, 0.85), transparent 34%),
@@ -1233,6 +1378,10 @@ body.contact-page-body {
   background: rgba(247, 225, 198, 0.96);
   border: 1px solid rgba(179, 101, 7, 0.14);
   color: #8a4f06;
+}
+
+.auth-form-card-signup {
+  align-content: start;
 }
 
 .auth-kicker {
@@ -1256,9 +1405,19 @@ body.contact-page-body {
   gap: 0.9rem;
 }
 
+.auth-business-intent {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.auth-hero-card-signup .auth-business-intent .auth-inline-note {
+  min-height: 0;
+}
+
 .auth-toggle {
   display: grid;
   gap: 0.45rem;
+  min-height: 4.5rem;
   padding: 1rem 1.1rem;
   border: 1px solid rgba(179, 101, 7, 0.16);
   border-radius: 24px;
@@ -1266,7 +1425,7 @@ body.contact-page-body {
   color: #9c5c13;
   cursor: pointer;
   text-align: left;
-  transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
 .auth-toggle strong {
@@ -1274,16 +1433,30 @@ body.contact-page-body {
   font-size: 1.25rem;
 }
 
+.auth-toggle-intent {
+  min-height: 4rem;
+}
+
+.auth-toggle-intent strong {
+  font-size: 1.02rem;
+  line-height: 1.2;
+}
+
 .auth-toggle span {
   font-size: 0.96rem;
   line-height: 1.45;
 }
 
-.auth-toggle:hover,
-.auth-toggle.is-active {
-  transform: translateY(-1px);
+.auth-toggle:hover {
   background: #f2dec7;
   border-color: rgba(179, 101, 7, 0.28);
+}
+
+.auth-toggle.is-active {
+  background: #b36507;
+  border-color: #b36507;
+  color: #fff8ef;
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 239, 0.08);
 }
 
 .auth-form {
@@ -1310,6 +1483,52 @@ body.contact-page-body {
   min-height: 10rem;
 }
 
+.auth-password-field {
+  position: relative;
+}
+
+.auth-password-field input {
+  padding-right: 3.6rem;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #9c5c13;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.auth-password-toggle:hover {
+  background: rgba(179, 101, 7, 0.08);
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid rgba(179, 101, 7, 0.22);
+  outline-offset: 2px;
+}
+
+.auth-password-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.auth-form input::placeholder,
+.auth-form textarea::placeholder {
+  color: #9c5c13;
+  opacity: 1;
+}
+
 .auth-form textarea:focus {
   outline: 2px solid rgba(179, 101, 7, 0.22);
   outline-offset: 2px;
@@ -1334,8 +1553,14 @@ body.contact-page-body {
 
 .auth-inline-note {
   margin: 0;
+  min-height: 3rem;
   font-size: 0.96rem;
   line-height: 1.5;
+}
+
+.business-claim-intent-note {
+  min-height: 0;
+  color: #c97262;
 }
 
 .auth-text-link {
@@ -1401,6 +1626,10 @@ body.contact-page-body {
   background: #6cab4c;
 }
 
+.dashboard-banner-business .lede {
+  max-width: 42rem;
+}
+
 .dashboard-board {
   display: grid;
   width: 100%;
@@ -1419,14 +1648,13 @@ body.contact-page-body {
 
 .dashboard-column-heading {
   width: 100%;
-  min-height: 3.9rem;
   padding: 0.75rem 1rem;
   border-radius: 14px;
   border: 0;
   font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1;
   text-transform: lowercase;
   text-align: center;
   box-shadow: none;
@@ -1552,6 +1780,124 @@ body.contact-page-body {
   color: #fff7f1;
 }
 
+.dashboard-panel-business-profile {
+  width: 100%;
+  padding: 0.95rem 1.15rem 1.1rem;
+  background: #90c176;
+  color: #fff8ef;
+  border: 0;
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+}
+
+.dashboard-panel-business-profile h2,
+.dashboard-panel-business-profile p,
+.dashboard-panel-business-profile .lede,
+.dashboard-panel-business-profile .contact-field-label,
+.dashboard-panel-business-profile .contact-form-note,
+.dashboard-panel-business-profile .muted {
+  color: inherit;
+}
+
+.dashboard-panel-business-profile .dashboard-panel-header {
+  gap: 0.22rem;
+  margin-bottom: 0.2rem;
+}
+
+.dashboard-panel-business-profile h2 {
+  margin: 0;
+  line-height: 0.98;
+}
+
+.dashboard-panel-business-profile .contact-field input,
+.dashboard-panel-business-profile .contact-field textarea {
+  background: rgba(255, 248, 239, 0.92);
+  color: #7d4707;
+}
+
+.dashboard-panel-business-profile .lede {
+  color: rgba(255, 248, 239, 0.96);
+}
+
+.dashboard-business-profile-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.dashboard-business-profile-form .auth-form-grid {
+  align-items: start;
+}
+
+.dashboard-business-location-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
+}
+
+.dashboard-business-profile-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.dashboard-business-profile-save {
+  justify-self: end;
+}
+
+.dashboard-business-profile-locked-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.8rem;
+}
+
+.dashboard-business-claim-strip {
+  background: #d9c5ee;
+  border: 1px solid rgba(187, 116, 160, 0.18);
+  border-radius: 42px;
+  color: #7b4d97;
+}
+
+.dashboard-logout-strip.dashboard-business-claim-strip {
+  background: #d9c5ee;
+  border-color: rgba(123, 77, 151, 0.18);
+  color: #7b4d97;
+}
+
+.dashboard-business-claim-link {
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dashboard-business-claim-strip:hover,
+.dashboard-business-claim-strip:focus-within {
+  background: #bb74a0;
+  color: #fff3ef;
+}
+
+.dashboard-business-claim-strip-static:hover,
+.dashboard-business-claim-strip-static:focus-within {
+  background: #d9c5ee;
+  color: #7b4d97;
+}
+
+.dashboard-business-claim-link:hover,
+.dashboard-business-claim-link:focus-visible {
+  background: transparent;
+  color: inherit;
+  outline: none;
+}
+
+.dashboard-business-claim-link-static {
+  cursor: default;
+  pointer-events: none;
+}
+
 .dashboard-panel-profile-combined {
   justify-items: stretch;
   text-align: left;
@@ -1560,6 +1906,7 @@ body.contact-page-body {
 .dashboard-panel.dashboard-panel-share.dashboard-panel-profile-combined {
   justify-items: stretch;
   text-align: left;
+  padding-top: calc(var(--directory-panel-padding) - 0.45rem);
 }
 
 .dashboard-panel-share h2,
@@ -1609,7 +1956,8 @@ body.contact-page-body {
 
 .dashboard-profile-form {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.75rem;
+  margin-top: -0.15rem;
   width: 100%;
 }
 
@@ -1628,6 +1976,10 @@ body.contact-page-body {
 .dashboard-profile-form .contact-field textarea::placeholder,
 .dashboard-profile-form .contact-field input::placeholder {
   font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.dashboard-profile-form .contact-field textarea {
   font-weight: 400;
 }
 
@@ -1680,6 +2032,10 @@ body.contact-page-body {
 .dashboard-panel-profile-combined .contact-field-label,
 .dashboard-panel-profile-combined .lede {
   color: inherit;
+}
+
+.dashboard-panel-business-profile .detail-list-field-meta {
+  color: #9c5c13;
 }
 
 .dashboard-panel-profile-combined > .lede {
@@ -1920,9 +2276,66 @@ body.contact-page-body {
   box-shadow: 0 18px 40px rgba(70, 35, 14, 0.18);
 }
 
+.detail-save-popover-floating {
+  position: fixed;
+  z-index: 120;
+}
+
 .detail-save-popover p,
 .detail-save-feedback {
   margin: 0;
+}
+
+.detail-save-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: max-content;
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.8rem 1rem 0.8rem 0.85rem;
+  border-radius: 999px;
+  background: #fff3ef;
+  box-shadow: 0 18px 40px rgba(70, 35, 14, 0.16);
+  color: #914d13;
+  z-index: 120;
+  pointer-events: none;
+}
+
+.detail-save-toast-success {
+  border: 1px solid rgba(225, 129, 139, 0.22);
+}
+
+.detail-save-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: #f7d2d5;
+  color: #d06c75;
+  flex-shrink: 0;
+}
+
+.detail-save-toast-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.detail-save-toast p {
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-save-popover-actions,
@@ -2230,6 +2643,216 @@ body.contact-page-body {
   display: grid;
   gap: var(--directory-gap);
   padding: 0 0 2rem;
+}
+
+.public-profile-page-body {
+  background: #ddb4ac;
+}
+
+.public-profile-stage {
+  display: grid;
+  gap: var(--directory-gap);
+  padding: 0 0 2rem;
+}
+
+.public-profile-browser {
+  padding-bottom: 2rem;
+}
+
+.public-profile-browser-hero {
+  background: #6cab4c;
+  color: #fff8ef;
+  min-height: 10.5rem;
+}
+
+.public-profile-browser-hero-copy {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 46rem);
+}
+
+.public-profile-browser-hero .home-hero-title,
+.public-profile-browser-hero .lede {
+  color: #fff8ef;
+}
+
+.public-profile-browser-headings {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.public-profile-browser-board {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.public-profile-browser-panel {
+  min-height: clamp(30rem, 62vh, 42rem);
+}
+
+.public-profile-browser-list-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.public-profile-browser-list-copy h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 2.2vw, 2.35rem);
+  line-height: 0.96;
+  color: inherit;
+}
+
+.public-profile-browser-list-copy p {
+  margin: 0;
+  color: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.public-profile-browser-list-rail,
+.public-profile-browser-company-rail {
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+}
+
+.public-profile-browser-chip {
+  display: grid;
+  gap: 0.12rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 248, 239, 0.18);
+  border-radius: 24px;
+  background: rgba(255, 248, 239, 0.22);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.public-profile-browser-chip:hover,
+.public-profile-browser-chip:focus-visible {
+  background: rgba(255, 248, 239, 0.3);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.public-profile-browser-chip.is-active {
+  background: rgba(255, 248, 239, 0.36);
+}
+
+.public-profile-browser-chip-name,
+.public-profile-browser-chip-meta {
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-profile-browser-chip-name {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.public-profile-browser-chip-meta {
+  font-size: 0.92rem;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+.public-profile-browser-detail {
+  color: #fff7f1;
+  justify-items: stretch;
+  text-align: left;
+}
+
+.public-profile-browser-detail .directory-detail-body {
+  gap: 1rem;
+}
+
+.public-profile-browser-detail .directory-detail-header-grid {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.85rem;
+  row-gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+
+.public-profile-browser-detail .directory-socials {
+  gap: 0.45rem;
+}
+
+.public-profile-browser-detail .directory-link-logo {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+
+.public-profile-browser-detail .directory-link-logo-mark {
+  width: 2.05rem;
+  height: 2.05rem;
+}
+
+.public-profile-browser-detail .directory-detail-head h2 {
+  font-size: clamp(1.8rem, 2.15vw, 2.35rem);
+  line-height: 0.98;
+  text-decoration: none;
+  white-space: normal;
+}
+
+.public-profile-browser-detail .directory-detail-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.public-profile-browser-detail .directory-detail-copy {
+  gap: 1rem;
+  margin-top: 0;
+}
+
+.public-profile-browser-detail .directory-detail-media {
+  margin-top: 0;
+}
+
+.public-profile-browser-detail .directory-detail-head h2 a,
+.public-profile-browser-detail .directory-detail-head h2,
+.public-profile-browser-detail .directory-detail-address p,
+.public-profile-browser-detail .directory-detail-list,
+.public-profile-browser-detail .directory-detail-products .badge-outline,
+.public-profile-browser-detail .directory-link-logo {
+  color: inherit;
+}
+
+.public-profile-browser-detail .directory-link-logo:hover {
+  color: #fff2e5;
+}
+
+.public-profile-browser-detail .directory-detail-address p,
+.public-profile-browser-detail .directory-detail-head p,
+.public-profile-browser-detail .directory-detail-list {
+  font-size: 0.98rem;
+}
+
+.public-profile-browser-detail .directory-detail-map {
+  background: rgba(255, 248, 238, 0.94);
+}
+
+@media (max-width: 980px) {
+  .public-profile-browser-headings,
+  .public-profile-browser-board {
+    grid-template-columns: 1fr;
+  }
+
+  .public-profile-browser-panel {
+    min-height: auto;
+  }
 }
 
 .public-list-hero-card {
@@ -2664,8 +3287,6 @@ body.contact-page-body {
   line-height: 1.55;
 }
 
-.public-profile-section,
-.public-profile-section-heading,
 .recommendation-manager,
 .recommendation-list {
   display: grid;
@@ -3059,7 +3680,7 @@ body.contact-page-body {
   align-items: center;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1080px) {
   .contact-feature-header {
     grid-template-columns: 1fr;
   }
@@ -3148,9 +3769,11 @@ body.contact-page-body {
 
   .auth-stage,
   .auth-stage-login,
+  .business-claim-stage,
   .dashboard-grid,
   .dashboard-board,
   .public-list-grid,
+  .public-profile-grid,
   .auth-toggle-grid,
   .auth-form-grid {
     grid-template-columns: 1fr;
@@ -3181,11 +3804,40 @@ body.contact-page-body {
     grid-template-columns: 1fr;
   }
 
+  .public-profile-hero-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .public-profile-badge-link-wrap {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .public-profile-browse-link {
+    width: 100%;
+  }
+
   .auth-form-actions,
   .dashboard-footer-card,
-  .auth-status-item {
+  .auth-status-item,
+  .dashboard-business-profile-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .dashboard-business-profile-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-business-profile-save,
+  .dashboard-business-claim-link {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .dashboard-business-profile-locked-actions {
+    justify-items: stretch;
+    width: 100%;
   }
 
   .contact-card {
@@ -4245,7 +4897,7 @@ body.contact-page-body {
   }
 }
 
-@media (min-width: 761px) and (max-width: 1280px) {
+@media (min-width: 761px) and (max-width: 1080px) {
   .directory-panel-list {
     display: flex;
     flex-direction: column;

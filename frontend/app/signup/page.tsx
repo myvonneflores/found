@@ -10,16 +10,27 @@ import { SiteHeader } from "@/components/site-header";
 import { loginUser, registerUser } from "@/lib/api";
 import { AccountType } from "@/types/auth";
 
-const accountOptions: Array<{ value: AccountType; title: string; description: string }> = [
+type BusinessIntent = "existing" | "new";
+
+const accountOptions: Array<{ value: AccountType; title: string }> = [
   {
     value: "personal",
     title: "Personal",
-    description: "Create favorites, build lists, and shape a public profile inspired by discovery communities.",
   },
   {
     value: "business",
     title: "Business",
-    description: "Claim your FOUND listing, keep details current, and participate in local recommendations.",
+  },
+];
+
+const businessIntentOptions: Array<{ value: BusinessIntent; title: string }> = [
+  {
+    value: "existing",
+    title: "Claim an existing business",
+  },
+  {
+    value: "new",
+    title: "Add a new business",
   },
 ];
 
@@ -27,20 +38,30 @@ export default function SignupPage() {
   const router = useRouter();
   const { signIn } = useAuth();
   const [accountType, setAccountType] = useState<AccountType>("personal");
+  const [businessIntent, setBusinessIntent] = useState<BusinessIntent>("existing");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     displayName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
     setError("");
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       await registerUser({
@@ -58,7 +79,7 @@ export default function SignupPage() {
       });
 
       signIn(session);
-      router.push(accountType === "business" ? "/business/claim" : "/account");
+      router.push(accountType === "business" ? `/business/claim?intent=${businessIntent}` : "/account");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Something went wrong while creating your account.");
     } finally {
@@ -73,17 +94,14 @@ export default function SignupPage() {
         <SiteHeader resetKey="/signup" />
 
         <section className="auth-stage">
-          <article className="auth-card auth-hero-card">
-            <div className="auth-kicker">Join Found</div>
-            <h1 className="auth-title">Choose the kind of presence you want to build.</h1>
+          <article className="auth-card auth-hero-card auth-hero-card-signup">
+            <h1 className="auth-title">Save your favorites and share with friends.</h1>
             <p className="lede">
               Personal accounts are for discovery and curation. Business accounts are for claiming your listing and
-              contributing to the local community as a verified business.
+              building community.
             </p>
-          </article>
 
-          <article className="auth-card auth-form-card">
-            <div className="auth-toggle-grid" role="radiogroup" aria-label="Account type">
+            <div className="auth-toggle-grid auth-signup-account-toggle" role="radiogroup" aria-label="Account type">
               {accountOptions.map((option) => (
                 <button
                   key={option.value}
@@ -92,11 +110,30 @@ export default function SignupPage() {
                   type="button"
                 >
                   <strong>{option.title}</strong>
-                  <span>{option.description}</span>
                 </button>
               ))}
             </div>
 
+            {accountType === "business" ? (
+              <div className="auth-business-intent">
+                <p className="auth-inline-note">Are you claiming an existing business or adding a new one?</p>
+                <div className="auth-toggle-grid" role="radiogroup" aria-label="Business intent">
+                  {businessIntentOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`auth-toggle auth-toggle-intent ${businessIntent === option.value ? "is-active" : ""}`}
+                      onClick={() => setBusinessIntent(option.value)}
+                      type="button"
+                    >
+                      <strong>{option.title}</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </article>
+
+          <article className="auth-card auth-form-card auth-form-card-signup">
             <form className="auth-form" onSubmit={handleSubmit}>
               <div className="auth-form-grid">
                 <label className="contact-field">
@@ -121,7 +158,13 @@ export default function SignupPage() {
                 <span className="contact-field-label">Display name</span>
                 <input
                   onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
-                  placeholder={accountType === "business" ? "How your name should appear" : "What people should call you"}
+                  placeholder={
+                    accountType === "business"
+                      ? businessIntent === "new"
+                        ? "what's your business name?"
+                        : "what business are you claiming?"
+                      : "what should we call you?"
+                  }
                   value={form.displayName}
                 />
               </label>
@@ -138,18 +181,87 @@ export default function SignupPage() {
 
               <label className="contact-field">
                 <span className="contact-field-label">Password</span>
-                <input
-                  minLength={8}
-                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                  required
-                  type="password"
-                  value={form.password}
-                />
+                <div className="auth-password-field">
+                  <input
+                    minLength={8}
+                    onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                  />
+                  <button
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((current) => !current)}
+                    type="button"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path
+                        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                      <circle cx="12" cy="12" fill="none" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+                      {showPassword ? (
+                        <path
+                          d="M4 20 20 4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="1.8"
+                        />
+                      ) : null}
+                    </svg>
+                  </button>
+                </div>
+              </label>
+
+              <label className="contact-field">
+                <span className="contact-field-label">Confirm password</span>
+                <div className="auth-password-field">
+                  <input
+                    minLength={8}
+                    onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                    required
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={form.confirmPassword}
+                  />
+                  <button
+                    aria-label={showConfirmPassword ? "Hide password confirmation" : "Show password confirmation"}
+                    className="auth-password-toggle"
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    type="button"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path
+                        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                      <circle cx="12" cy="12" fill="none" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+                      {showConfirmPassword ? (
+                        <path
+                          d="M4 20 20 4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="1.8"
+                        />
+                      ) : null}
+                    </svg>
+                  </button>
+                </div>
               </label>
 
               <p className="auth-inline-note">
                 {accountType === "business"
-                  ? "Business accounts can sign in right away, then submit their listing claim for verification."
+                  ? "Business accounts can sign in right away, then submit their listing claim for review."
                   : "Personal accounts can start saving favorites and building lists right away."}
               </p>
 

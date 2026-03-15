@@ -8,6 +8,7 @@ import { CuratedList, CuratedListItem } from "@/types/community";
 
 export function EditListModal({
   accessToken,
+  canMakePublic = true,
   isOpen,
   list,
   onClose,
@@ -15,6 +16,7 @@ export function EditListModal({
   onItemRemoved,
 }: {
   accessToken: string | null;
+  canMakePublic?: boolean;
   isOpen: boolean;
   list: CuratedList | null;
   onClose: () => void;
@@ -33,12 +35,12 @@ export function EditListModal({
     if (isOpen && list) {
       setTitle(list.title);
       setDescription(list.description);
-      setIsPublic(list.is_public);
+      setIsPublic(canMakePublic ? list.is_public : false);
       setError("");
       setIsSaving(false);
       setRemovingItemId(null);
     }
-  }, [isOpen, list]);
+  }, [canMakePublic, isOpen, list]);
 
   if (!isOpen || !list) {
     return null;
@@ -59,7 +61,7 @@ export function EditListModal({
       const nextList = await updateCuratedList(accessToken, list.id, {
         title,
         description: description.slice(0, descriptionLimit),
-        is_public: isPublic,
+        is_public: canMakePublic ? isPublic : false,
       });
       onUpdated(nextList);
       onClose();
@@ -154,19 +156,23 @@ export function EditListModal({
             </div>
           </div>
 
-          <label className="detail-save-toggle-row">
-            <button
-              aria-pressed={isPublic}
-              className={isPublic ? "detail-save-toggle is-active" : "detail-save-toggle"}
-              onClick={() => setIsPublic((current) => !current)}
-              type="button"
-            >
-              <span className="detail-save-toggle-knob" />
-            </button>
-            <span className="detail-save-toggle-copy">
-              {isPublic ? "you went public!" : "Make this list public"}
-            </span>
-          </label>
+          {canMakePublic ? (
+            <label className="detail-save-toggle-row">
+              <button
+                aria-pressed={isPublic}
+                className={isPublic ? "detail-save-toggle is-active" : "detail-save-toggle"}
+                onClick={() => setIsPublic((current) => !current)}
+                type="button"
+              >
+                <span className="detail-save-toggle-knob" />
+              </button>
+              <span className="detail-save-toggle-copy">
+                {isPublic ? "you went public!" : "Make this list public"}
+              </span>
+            </label>
+          ) : (
+            <p className="detail-list-field-meta">Public lists unlock after your business is verified.</p>
+          )}
 
           {error ? <p className="contact-form-note is-error">{error}</p> : null}
 

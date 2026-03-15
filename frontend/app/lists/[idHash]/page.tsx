@@ -8,7 +8,6 @@ import { BodyClass } from "@/components/body-class";
 import { useAuth } from "@/components/auth-provider";
 import { EditListModal } from "@/components/edit-list-modal";
 import { SiteHeader } from "@/components/site-header";
-import { detailDescription } from "@/lib/company-copy";
 import {
   deleteCuratedList,
   getCompany,
@@ -267,6 +266,7 @@ export default function CuratedListPage() {
   }, [selectedItem]);
 
   const isOwner = Boolean(list && user && list.owner.public_slug === user.public_slug);
+  const canMakePublic = Boolean(user?.account_type === "personal" || user?.is_business_verified);
   const ownerDisplayName = list?.owner.display_name || "Curator";
   const ownerProfileHref = list?.owner.public_slug ? `/profiles/${list.owner.public_slug}` : null;
   const selectedLocation = selectedCompany ? locationLabel(selectedCompany) : "";
@@ -456,7 +456,6 @@ export default function CuratedListPage() {
                             {detailListItems.length ? (
                               <div className="directory-detail-copy">
                                 <ul className="directory-detail-list">
-                                  <li>{detailDescription(selectedCompany)}</li>
                                   {detailListItems.map((item) => (
                                     <li key={item}>{item}</li>
                                   ))}
@@ -551,6 +550,7 @@ export default function CuratedListPage() {
 
               <EditListModal
                 accessToken={accessToken}
+                canMakePublic={canMakePublic}
                 isOpen={isEditOpen}
                 list={list}
                 onClose={() => setIsEditOpen(false)}

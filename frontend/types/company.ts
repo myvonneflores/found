@@ -50,6 +50,28 @@ export type CompanyDetail = {
   updated_at: string;
 };
 
+export type ManagedBusinessProfile = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  website: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  business_category: number | null;
+  product_categories: number[];
+  cuisine_types: number[];
+  ownership_markers: number[];
+  sustainability_markers: number[];
+  instagram_handle: string;
+  facebook_page: string;
+  linkedin_page: string;
+  is_vegan_friendly: boolean;
+  is_gf_friendly: boolean;
+};
+
 export type PaginatedResponse<T> = {
   count: number;
   next: string | null;

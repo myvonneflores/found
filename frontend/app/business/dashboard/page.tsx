@@ -6,11 +6,13 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
+import { BusinessProfileCard } from "@/components/business-profile-card";
 import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
 import { SiteHeader } from "@/components/site-header";
-import { listCuratedLists, listFavorites } from "@/lib/api";
+import { listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
+import type { BusinessClaim } from "@/types/auth";
 import { CuratedList, Favorite } from "@/types/community";
 
 function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
@@ -47,6 +49,23 @@ function normalizeLists(value: CuratedList[] | unknown): CuratedList[] {
   return [];
 }
 
+function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
+  if (Array.isArray(value)) {
+    return value as BusinessClaim[];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "results" in value &&
+    Array.isArray((value as { results?: unknown }).results)
+  ) {
+    return (value as { results: BusinessClaim[] }).results;
+  }
+
+  return [];
+}
+
 function isTokenError(message: string) {
   const normalized = message.toLowerCase();
   return (
@@ -62,6 +81,7 @@ export default function BusinessDashboardPage() {
   const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
+  const [claims, setClaims] = useState<BusinessClaim[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
@@ -70,14 +90,13 @@ export default function BusinessDashboardPage() {
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
-  const hasPublicPresence = safeLists.some((list) => list.is_public);
-  const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
+  const latestClaim = claims.find((claim) => claim.status === "verified") ?? claims[0] ?? null;
 
   const favoritesContent = (
     <>
       {isLoading ? <p className="lede">Loading your business favorites...</p> : null}
       {!isLoading && safeFavorites.length === 0 ? (
-        <p className="lede">No favorites yet. Save aligned local businesses directly from their detail pages.</p>
+        <p className="lede">No favorites yet. Save the local businesses you want to keep close.</p>
       ) : null}
       {!isLoading && safeFavorites.length > 0 ? (
         <div className="dashboard-stack">
@@ -91,11 +110,11 @@ export default function BusinessDashboardPage() {
 
   const listsContent = (
     <>
-      <p className="lede">Create themed lists you can text, email, or link from your socials.</p>
+      <p className="lede">Build public lists you can text, email, or link anywhere your community finds you.</p>
       {isLoading ? <p className="lede">Loading your lists...</p> : null}
       {!isLoading ? (
         <ListManager
-          emptyMessage="No lists yet. Use them to spotlight neighboring businesses and local favorites."
+          emptyMessage="No lists yet. Use them to spotlight neighboring businesses and share your local taste."
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
         />
@@ -106,16 +125,10 @@ export default function BusinessDashboardPage() {
   const shareContent = (
     <>
       <p className="lede">
-        Every public list gets its own page, so you can send it directly to customers or drop it into a Linktree,
-        newsletter, or story.
+        Every public list gets its own page, so you can text it, email it, or link it anywhere your community finds
+        you.
       </p>
-      {hasPublicPresence && profileHref ? (
-        <Link className="button button-secondary" href={profileHref}>
-          View public profile
-        </Link>
-      ) : (
-        <p className="muted">Make a list public to create something shareable from your FOUND dashboard.</p>
-      )}
+      <p className="muted">Open any public list from the lists column to grab the shareable page.</p>
     </>
   );
 
@@ -147,12 +160,14 @@ export default function BusinessDashboardPage() {
       }
 
       try {
-        const [nextFavorites, nextLists] = await Promise.all([
+        const [nextFavorites, nextLists, nextClaims] = await Promise.all([
           listFavorites(accessToken),
           listCuratedLists(accessToken),
+          listBusinessClaims(accessToken),
         ]);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
+        setClaims(normalizeClaims(nextClaims));
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
           signOut();
@@ -187,10 +202,12 @@ export default function BusinessDashboardPage() {
           <article className="panel dashboard-banner dashboard-banner-business">
             <h1 className="home-hero-title">Dashboard</h1>
             <p className="lede">
-              Build public lists your followers can open anywhere, save favorite local businesses, and share the parts
-              of your brand taste you want people to discover.
+              Save your favorite local businesses, build shareable lists, and grow a FOUND presence people can actually
+              pass along.
             </p>
           </article>
+
+          <BusinessProfileCard isVerified latestClaim={latestClaim} />
 
           <div className="dashboard-column-headings">
             <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>
@@ -208,22 +225,7 @@ export default function BusinessDashboardPage() {
             </article>
 
             <aside className="dashboard-sidebar">
-              <article className="panel dashboard-panel dashboard-panel-share">
-                {shareContent}
-              </article>
-
-              <article className="panel dashboard-panel dashboard-panel-profile">
-                <p className="lede">
-                  Your profile already aggregates public lists. Business profile editing can stay separate from this
-                  curation dashboard.
-                </p>
-                <Link className="contact-submit" href="/companies">
-                  Browse businesses
-                </Link>
-                <button className="dashboard-logout" onClick={handleDashboardSignOut} type="button">
-                  Log out
-                </button>
-              </article>
+              <article className="panel dashboard-panel dashboard-panel-share">{shareContent}</article>
             </aside>
           </section>
 
@@ -280,6 +282,12 @@ export default function BusinessDashboardPage() {
             </article>
           </section>
 
+          <article className="panel dashboard-logout-strip">
+            <button className="dashboard-logout dashboard-logout-button" onClick={handleDashboardSignOut} type="button">
+              Log out
+            </button>
+          </article>
+
           {error ? (
             <article className="panel dashboard-panel">
               <p className="contact-form-note is-error">{error}</p>
@@ -291,6 +299,7 @@ export default function BusinessDashboardPage() {
 
       <CreateListModal
         accessToken={accessToken}
+        canMakePublic
         isOpen={isCreateListModalOpen}
         onClose={() => setIsCreateListModalOpen(false)}
         onCreated={(nextList) => {

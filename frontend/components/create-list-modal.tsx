@@ -8,11 +8,13 @@ import { CuratedList } from "@/types/community";
 
 export function CreateListModal({
   accessToken,
+  canMakePublic = true,
   isOpen,
   onClose,
   onCreated,
 }: {
   accessToken: string | null;
+  canMakePublic?: boolean;
   isOpen: boolean;
   onClose: () => void;
   onCreated: (list: CuratedList) => void;
@@ -49,7 +51,7 @@ export function CreateListModal({
       const nextList = await createCuratedList(accessToken, {
         title,
         description: description.slice(0, descriptionLimit),
-        is_public: isPublic,
+        is_public: canMakePublic ? isPublic : false,
       });
       onCreated(nextList);
       onClose();
@@ -94,19 +96,23 @@ export function CreateListModal({
             <span className="detail-list-field-meta">{description.length}/{descriptionLimit}</span>
           </label>
 
-          <label className="detail-save-toggle-row">
-            <button
-              aria-pressed={isPublic}
-              className={isPublic ? "detail-save-toggle is-active" : "detail-save-toggle"}
-              onClick={() => setIsPublic((current) => !current)}
-              type="button"
-            >
-              <span className="detail-save-toggle-knob" />
-            </button>
-            <span className="detail-save-toggle-copy">
-              {isPublic ? "you went public!" : "Make this list public"}
-            </span>
-          </label>
+          {canMakePublic ? (
+            <label className="detail-save-toggle-row">
+              <button
+                aria-pressed={isPublic}
+                className={isPublic ? "detail-save-toggle is-active" : "detail-save-toggle"}
+                onClick={() => setIsPublic((current) => !current)}
+                type="button"
+              >
+                <span className="detail-save-toggle-knob" />
+              </button>
+              <span className="detail-save-toggle-copy">
+                {isPublic ? "you went public!" : "Make this list public"}
+              </span>
+            </label>
+          ) : (
+            <p className="detail-list-field-meta">Public lists unlock after your business is verified.</p>
+          )}
 
           {error ? <p className="contact-form-note is-error">{error}</p> : null}
 

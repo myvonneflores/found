@@ -6,6 +6,7 @@ app_name = "companies"
 
 urlpatterns = [
     path("companies/", views.CompanyListView.as_view(), name="company-list"),
+    path("companies/manage/current/", views.ManagedBusinessCompanyView.as_view(), name="company-manage-current"),
     path("companies/<slug:slug>/", views.CompanyDetailView.as_view(), name="company-detail"),
     path(
         "business-categories/",

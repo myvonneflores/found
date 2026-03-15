@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useAuth } from "@/components/auth-provider";
@@ -73,6 +73,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 
 export function CompanySaveFlow({ companyId }: { companyId: number }) {
   const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const heartButtonRef = useRef<HTMLElement | null>(null);
   const [favoriteId, setFavoriteId] = useState<number | null>(null);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [selectedListId, setSelectedListId] = useState("");
@@ -86,8 +87,10 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [favoritePromptPosition, setFavoritePromptPosition] = useState({ top: 96, left: 16 });
 
-  const canUseSaveTools = Boolean(user?.account_type === "personal" || user?.is_business_verified);
+  const canUseSaveTools = Boolean(user?.account_type === "personal" || user?.account_type === "business");
+  const canMakePublicLists = Boolean(user?.account_type === "personal" || user?.is_business_verified);
   const safeLists = normalizeLists(lists);
   const isFavorited = favoriteId !== null;
 
@@ -129,6 +132,47 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
 
     void loadSavedState();
   }, [accessToken, canUseSaveTools, companyId, isAuthenticated, isReady, signOut]);
+
+  useEffect(() => {
+    if (!successMessage) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setSuccessMessage(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (!showFavoritePrompt) {
+      return undefined;
+    }
+
+    function updateFavoritePromptPosition() {
+      const trigger = heartButtonRef.current;
+      if (!trigger) {
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const promptWidth = Math.min(336, window.innerWidth - 32);
+      const left = Math.min(
+        Math.max(16, rect.right - promptWidth),
+        Math.max(16, window.innerWidth - promptWidth - 16)
+      );
+      const top = Math.min(rect.bottom + 12, window.innerHeight - 180);
+
+      setFavoritePromptPosition({ top, left });
+    }
+
+    updateFavoritePromptPosition();
+    window.addEventListener("resize", updateFavoritePromptPosition);
+    window.addEventListener("scroll", updateFavoritePromptPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateFavoritePromptPosition);
+      window.removeEventListener("scroll", updateFavoritePromptPosition, true);
+    };
+  }, [showFavoritePrompt]);
 
   async function handleFavoriteClick() {
     if (!accessToken) {
@@ -181,7 +225,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
         const nextList = await createCuratedList(accessToken, {
           title: newListTitle,
           description: newListDescription,
-          is_public: true,
+          is_public: canMakePublicLists,
         });
         setLists((current) => [nextList, ...normalizeLists(current)]);
         targetListId = String(nextList.id);
@@ -281,10 +325,6 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
                   Log in
                 </Link>
               </div>
-            ) : !canUseSaveTools ? (
-              <div className="detail-save-login">
-                <p>Lists unlock after your business account has been verified.</p>
-              </div>
             ) : (
               <form className="detail-save-modal-form" onSubmit={handleListSubmit}>
                 {!isCreatingList ? (
@@ -321,6 +361,9 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
                         value={newListDescription}
                       />
                     </label>
+                    {!canMakePublicLists ? (
+                      <p className="detail-list-field-meta">Lists created during verification stay private until your business is approved.</p>
+                    ) : null}
                   </>
                 )}
 
@@ -359,6 +402,46 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       )
     : null;
 
+  const successToast = successMessage
+    ? createPortal(
+        <div className="detail-save-toast detail-save-toast-success" role="status">
+          <div className="detail-save-toast-icon" aria-hidden="true">
+            <HeartIcon filled />
+          </div>
+          <p>{successMessage}</p>
+        </div>,
+        document.body
+      )
+    : null;
+
+  const favoritePrompt = showFavoritePrompt
+    ? createPortal(
+        <div
+          className="detail-save-popover detail-save-popover-floating"
+          role="status"
+          style={{
+            left: `${favoritePromptPosition.left}px`,
+            top: `${favoritePromptPosition.top}px`,
+          }}
+        >
+          <p>Added to favorites! Wanna add it to a list too?</p>
+          <div className="detail-save-popover-actions">
+            <button className="button button-primary" onClick={openListModal} type="button">
+              yes please
+            </button>
+            <button
+              className="button button-secondary"
+              onClick={() => setShowFavoritePrompt(false)}
+              type="button"
+            >
+              maybe later
+            </button>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <>
       <div className="detail-save-shell">
@@ -368,33 +451,25 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
             className={isFavorited ? "detail-save-heart is-active" : "detail-save-heart"}
             disabled={isLoading || isSavingFavorite}
             onClick={handleFavoriteClick}
+            ref={(node) => {
+              heartButtonRef.current = node;
+            }}
             type="button"
           >
             <HeartIcon filled={isFavorited} />
           </button>
         ) : (
-          <Link aria-label="Log in to save" className="detail-save-heart" href="/login">
+          <Link
+            aria-label="Log in to save"
+            className="detail-save-heart"
+            href="/login"
+            ref={(node) => {
+              heartButtonRef.current = node;
+            }}
+          >
             <HeartIcon filled={false} />
           </Link>
         )}
-
-        {showFavoritePrompt ? (
-          <div className="detail-save-popover" role="status">
-            <p>Added to favorites! Wanna add it to a list too?</p>
-            <div className="detail-save-popover-actions">
-              <button className="button button-primary" onClick={openListModal} type="button">
-                yes please
-              </button>
-              <button
-                className="button button-secondary"
-                onClick={() => setShowFavoritePrompt(false)}
-                type="button"
-              >
-                maybe later
-              </button>
-            </div>
-          </div>
-        ) : null}
 
         {error ? (
           <div className="detail-save-feedback detail-save-feedback-error">
@@ -406,10 +481,11 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
             ) : null}
           </div>
         ) : null}
-        {successMessage ? <p className="contact-form-note is-success detail-save-feedback">{successMessage}</p> : null}
       </div>
 
       {listModal}
+      {favoritePrompt}
+      {successToast}
     </>
   );
 }

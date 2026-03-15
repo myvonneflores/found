@@ -120,11 +120,6 @@ export default function AccountPage() {
 
   const shareContent = (
     <>
-      <p className="lede">
-        Sharing is caring. Your lists are meant to travel. Text them to a friend, link them in your bio, or drop them
-        into a newsletter.
-      </p>
-
       <form className="auth-form dashboard-profile-form" onSubmit={handleProfileSave}>
         <label className="contact-field">
           <span className="contact-field-label">Name</span>
@@ -142,29 +137,6 @@ export default function AccountPage() {
             value={profile.bio}
           />
         </label>
-        <label className="contact-field">
-          <span className="contact-field-label">Location</span>
-          <input
-            onChange={(event) => {
-              setProfile((current) => ({ ...current, location: event.target.value }));
-              setProfileSavedMessage("");
-            }}
-            placeholder="Portland, OR"
-            value={profile.location}
-          />
-        </label>
-        <label className="contact-field">
-          <span className="contact-field-label">Profile Photo</span>
-          <input
-            onChange={(event) => {
-              setProfile((current) => ({ ...current, avatar_url: event.target.value }));
-              setProfileSavedMessage("");
-            }}
-            placeholder="https://example.com/avatar.jpg"
-            value={profile.avatar_url}
-          />
-        </label>
-
         <div className="dashboard-profile-actions">
           <label className="detail-save-toggle-row dashboard-profile-toggle-row">
             <button

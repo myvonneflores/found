@@ -1,31 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
-import { createBusinessClaim, listBusinessClaims } from "@/lib/api";
-import { BusinessClaim } from "@/types/auth";
+import { createBusinessClaim } from "@/lib/api";
 
 export default function BusinessClaimPage() {
   const router = useRouter();
   const { accessToken, isAuthenticated, isReady, user } = useAuth();
-  const [claims, setClaims] = useState<BusinessClaim[]>([]);
-  const [isLoadingClaims, setIsLoadingClaims] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     businessName: "",
+    firstName: "",
+    lastName: "",
     businessEmail: user?.email ?? "",
     businessPhone: "",
-    website: "",
-    instagramHandle: "",
-    facebookPage: "",
-    linkedinPage: "",
-    roleTitle: "",
+    businessDomain: "",
+    jobTitle: "",
     claimMessage: "",
   });
 
@@ -51,31 +46,18 @@ export default function BusinessClaimPage() {
   }, [isAuthenticated, isReady, router, user]);
 
   useEffect(() => {
-    if (!user?.email) {
+    if (!user) {
       return;
     }
-    setForm((current) => ({ ...current, businessEmail: current.businessEmail || user.email }));
-  }, [user?.email]);
 
-  useEffect(() => {
-    async function loadClaims() {
-      if (!accessToken || !user || user.account_type !== "business") {
-        setIsLoadingClaims(false);
-        return;
-      }
-
-      try {
-        const nextClaims = await listBusinessClaims(accessToken);
-        setClaims(nextClaims);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Unable to load your business claims.");
-      } finally {
-        setIsLoadingClaims(false);
-      }
-    }
-
-    void loadClaims();
-  }, [accessToken, user]);
+    setForm((current) => ({
+      ...current,
+      firstName: current.firstName || user.first_name || "",
+      lastName: current.lastName || user.last_name || "",
+      businessName: current.businessName || user.display_name || "",
+      businessEmail: current.businessEmail || user.email || "",
+    }));
+  }, [user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,19 +71,25 @@ export default function BusinessClaimPage() {
     setError("");
 
     try {
+      const trimmedClaimMessage = form.claimMessage.trim();
+      const composedClaimMessage = [
+        `First name: ${form.firstName.trim()}`,
+        `Last name: ${form.lastName.trim()}`,
+        `Business domain: ${form.businessDomain.trim()}`,
+        trimmedClaimMessage ? `Claim message: ${trimmedClaimMessage}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       const claim = await createBusinessClaim(accessToken, {
         business_name: form.businessName,
         business_email: form.businessEmail,
         business_phone: form.businessPhone,
-        website: form.website,
-        instagram_handle: form.instagramHandle,
-        facebook_page: form.facebookPage,
-        linkedin_page: form.linkedinPage,
-        role_title: form.roleTitle,
-        claim_message: form.claimMessage,
+        website: form.businessDomain,
+        role_title: form.jobTitle,
+        claim_message: composedClaimMessage,
       });
 
-      setClaims((current) => [claim, ...current]);
       router.push("/business/pending");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to submit your business claim.");
@@ -115,37 +103,101 @@ export default function BusinessClaimPage() {
   }
 
   return (
-    <main className="page-shell directory-page-shell auth-page-shell">
-      <BodyClass className="auth-page-body" />
+    <main className="page-shell directory-page-shell home-page-shell business-claim-page-shell">
+      <BodyClass className="home-page-body" />
       <div className="directory-shell">
         <SiteHeader resetKey="/business/claim" />
 
-        <section className="dashboard-stage">
-          <article className="auth-card dashboard-hero-card">
-            <div className="auth-kicker">Business verification</div>
-            <h1 className="auth-title">Claim your FOUND presence.</h1>
-            <p className="lede">
-              Tell us who you are, how to verify the business, and how you want to contribute to the community. Once
-              approved, you’ll unlock business editing and community tools.
+        <section className="auth-stage business-claim-stage">
+          <article className="auth-card home-hero-card home-hero-copy business-claim-copy">
+            <h1 className="auth-title">Claim your business.</h1>
+            <p className="home-hero-lede">
+              Claim an existing FOUND listing or start a brand-new company profile. Once your claim is approved,
+              you&apos;ll unlock business editing and community tools.
             </p>
+
+            <div className="business-claim-points">
+              <div className="business-claim-point">
+                <strong>Step one</strong>
+                <p>Sign up with an email containing your company domain.</p>
+              </div>
+              <div className="business-claim-point">
+                <strong>Step two</strong>
+                <p>Submit your claim and we&apos;ll review it manually.</p>
+              </div>
+              <div className="business-claim-point">
+                <strong>Step three</strong>
+                <p>Build favorites and private lists while we review. Public sharing unlocks after verification.</p>
+              </div>
+            </div>
           </article>
 
-          <article className="auth-card auth-form-card">
-            <form className="auth-form" onSubmit={handleSubmit}>
-              <label className="contact-field">
-                <span className="contact-field-label">Business name</span>
-                <input
-                  onChange={(event) => setForm((current) => ({ ...current, businessName: event.target.value }))}
-                  required
-                  value={form.businessName}
-                />
-              </label>
+          <div className="business-claim-side">
+            <article className="auth-card home-section-card home-section-cream business-claim-form-card">
+              <form className="auth-form" onSubmit={handleSubmit}>
+                <label className="contact-field">
+                  <span className="contact-field-label">Business name</span>
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, businessName: event.target.value }))}
+                    required
+                    value={form.businessName}
+                  />
+                </label>
 
-              <div className="auth-form-grid">
+                <div className="auth-form-grid">
+                  <label className="contact-field">
+                    <span className="contact-field-label">First name</span>
+                    <input
+                      onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
+                      required
+                      value={form.firstName}
+                    />
+                  </label>
+
+                  <label className="contact-field">
+                    <span className="contact-field-label">Last name</span>
+                    <input
+                      onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
+                      required
+                      value={form.lastName}
+                    />
+                  </label>
+                </div>
+
+                <div className="auth-form-grid">
+                  <label className="contact-field">
+                    <span className="contact-field-label">Job title</span>
+                    <input
+                      onChange={(event) => setForm((current) => ({ ...current, jobTitle: event.target.value }))}
+                      placeholder="Owner, founder, manager"
+                      value={form.jobTitle}
+                    />
+                  </label>
+
+                  <label className="contact-field">
+                    <span className="contact-field-label">Phone</span>
+                    <input
+                      onChange={(event) => setForm((current) => ({ ...current, businessPhone: event.target.value }))}
+                      value={form.businessPhone}
+                    />
+                  </label>
+                </div>
+
+                <label className="contact-field">
+                  <span className="contact-field-label">Business domain</span>
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, businessDomain: event.target.value }))}
+                    placeholder="yourbusiness.com"
+                    required
+                    value={form.businessDomain}
+                  />
+                </label>
+
                 <label className="contact-field">
                   <span className="contact-field-label">Business email</span>
                   <input
                     onChange={(event) => setForm((current) => ({ ...current, businessEmail: event.target.value }))}
+                    placeholder="info@domain.com"
                     required
                     type="email"
                     value={form.businessEmail}
@@ -153,106 +205,25 @@ export default function BusinessClaimPage() {
                 </label>
 
                 <label className="contact-field">
-                  <span className="contact-field-label">Role title</span>
-                  <input
-                    onChange={(event) => setForm((current) => ({ ...current, roleTitle: event.target.value }))}
-                    placeholder="Owner, founder, manager"
-                    value={form.roleTitle}
-                  />
-                </label>
-              </div>
-
-              <div className="auth-form-grid">
-                <label className="contact-field">
-                  <span className="contact-field-label">Website</span>
-                  <input
-                    onChange={(event) => setForm((current) => ({ ...current, website: event.target.value }))}
-                    placeholder="https://"
-                    value={form.website}
+                  <span className="contact-field-label">Claim message</span>
+                  <textarea
+                    onChange={(event) => setForm((current) => ({ ...current, claimMessage: event.target.value }))}
+                    placeholder="Tell us how you're connected to the business and what you'd like to manage."
+                    rows={5}
+                    value={form.claimMessage}
                   />
                 </label>
 
-                <label className="contact-field">
-                  <span className="contact-field-label">Phone</span>
-                  <input
-                    onChange={(event) => setForm((current) => ({ ...current, businessPhone: event.target.value }))}
-                    value={form.businessPhone}
-                  />
-                </label>
-              </div>
+                {error ? <p className="contact-form-note is-error">{error}</p> : null}
 
-              <div className="auth-form-grid">
-                <label className="contact-field">
-                  <span className="contact-field-label">Instagram</span>
-                  <input
-                    onChange={(event) => setForm((current) => ({ ...current, instagramHandle: event.target.value }))}
-                    placeholder="handle"
-                    value={form.instagramHandle}
-                  />
-                </label>
-
-                <label className="contact-field">
-                  <span className="contact-field-label">Facebook page</span>
-                  <input
-                    onChange={(event) => setForm((current) => ({ ...current, facebookPage: event.target.value }))}
-                    placeholder="https://facebook.com/yourpage"
-                    value={form.facebookPage}
-                  />
-                </label>
-              </div>
-
-              <label className="contact-field">
-                <span className="contact-field-label">LinkedIn page</span>
-                <input
-                  onChange={(event) => setForm((current) => ({ ...current, linkedinPage: event.target.value }))}
-                  placeholder="https://linkedin.com/company/yourcompany"
-                  value={form.linkedinPage}
-                />
-              </label>
-
-              <label className="contact-field">
-                <span className="contact-field-label">Claim message</span>
-                <textarea
-                  onChange={(event) => setForm((current) => ({ ...current, claimMessage: event.target.value }))}
-                  placeholder="Tell us how you're connected to the business and what you'd like to manage."
-                  rows={6}
-                  value={form.claimMessage}
-                />
-              </label>
-
-              {error ? <p className="contact-form-note is-error">{error}</p> : null}
-
-              <div className="auth-form-actions">
-                <button className="contact-submit" disabled={isSubmitting} type="submit">
-                  {isSubmitting ? "Submitting..." : "Submit claim"}
-                </button>
-                <Link className="auth-text-link" href="/business/pending">
-                  View verification status
-                </Link>
-              </div>
-            </form>
-          </article>
-
-          <article className="auth-card dashboard-card">
-            <h2>Recent submissions</h2>
-            {isLoadingClaims ? <p className="lede">Loading your existing claims...</p> : null}
-            {!isLoadingClaims && claims.length === 0 ? (
-              <p className="lede">No claims submitted yet. Once you send one in, it will show up here.</p>
-            ) : null}
-            {!isLoadingClaims && claims.length > 0 ? (
-              <div className="auth-status-list">
-                {claims.map((claim) => (
-                  <div className="auth-status-item" key={claim.id}>
-                    <div>
-                      <strong>{claim.business_name}</strong>
-                      <p>{claim.business_email}</p>
-                    </div>
-                    <span className={`badge ${claim.status === "verified" ? "" : "badge-outline"}`}>{claim.status}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </article>
+                <div className="auth-form-actions">
+                  <button className="contact-submit" disabled={isSubmitting} type="submit">
+                    {isSubmitting ? "Submitting..." : "Submit claim"}
+                  </button>
+                </div>
+              </form>
+            </article>
+          </div>
         </section>
       </div>
     </main>

@@ -42,7 +42,8 @@ export function AddCompanyToList({
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const canUseLists = Boolean(user?.account_type === "personal" || user?.is_business_verified);
+  const canUseLists = Boolean(user?.account_type === "personal" || user?.account_type === "business");
+  const canMakePublic = Boolean(user?.account_type === "personal" || user?.is_business_verified);
   const safeLists = normalizeLists(lists);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export function AddCompanyToList({
         const nextList = await createCuratedList(accessToken, {
           title: newListTitle,
           description: newListDescription,
-          is_public: true,
+          is_public: canMakePublic,
         });
         setLists((current) => [nextList, ...normalizeLists(current)]);
         targetListId = String(nextList.id);
@@ -156,7 +157,7 @@ export function AddCompanyToList({
   if (!canUseLists) {
     return (
       <div className="detail-community-action detail-community-secondary">
-        <p className="muted">Lists unlock after your business account has been verified.</p>
+        <p className="muted">Lists aren&apos;t available on this account yet.</p>
       </div>
     );
   }
@@ -223,6 +224,7 @@ export function AddCompanyToList({
             >
               Use an existing list
             </button>
+            {!canMakePublic ? <p className="detail-list-field-meta">Public lists unlock after verification.</p> : null}
           </>
         )}
 
