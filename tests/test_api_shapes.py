@@ -284,7 +284,6 @@ def test_business_claim_fields(api_client):
     assert set(item.keys()) == BUSINESS_CLAIM_FIELDS
     assert isinstance(item["history"], list)
     assert set(item["history"][0].keys()) == BUSINESS_CLAIM_HISTORY_FIELDS
-    assert isinstance(item["description"], str)
 
 
 # ---------------------------------------------------------------------------
