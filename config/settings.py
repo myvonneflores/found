@@ -1,6 +1,5 @@
 import environ
 from pathlib import Path
-from datetime import timedelta
 
 env = environ.Env(
     DEBUG=(bool, True),
@@ -135,11 +134,3 @@ REST_FRAMEWORK = {
 
 # Auth
 AUTH_USER_MODEL = "users.User"
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
-    "REFRESH_TOKEN_LIFETIME": timedelta(hours=8),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
-    "UPDATE_LAST_LOGIN": False,
-}

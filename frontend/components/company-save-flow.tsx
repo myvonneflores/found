@@ -72,7 +72,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 }
 
 export function CompanySaveFlow({ companyId }: { companyId: number }) {
-  const { accessToken, getValidAccessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
   const heartButtonRef = useRef<HTMLElement | null>(null);
   const [favoriteId, setFavoriteId] = useState<number | null>(null);
   const [lists, setLists] = useState<CuratedList[]>([]);
@@ -106,15 +106,9 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       }
 
       try {
-        const token = await getValidAccessToken();
-        if (!token) {
-          setIsLoading(false);
-          return;
-        }
-
         const [nextFavorites, nextLists] = await Promise.all([
-          listFavorites(token),
-          listCuratedLists(token),
+          listFavorites(accessToken),
+          listCuratedLists(accessToken),
         ]);
         const normalizedFavorites = normalizeFavorites(nextFavorites);
         const normalizedLists = normalizeLists(nextLists);
@@ -181,25 +175,22 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
   }, [showFavoritePrompt]);
 
   async function handleFavoriteClick() {
+    if (!accessToken) {
+      return;
+    }
+
     setIsSavingFavorite(true);
     setError("");
     setSuccessMessage("");
 
     try {
-      const token = await getValidAccessToken();
-      if (!token) {
-        signOut();
-        setError("Your session expired. Please log in again to save businesses.");
-        return;
-      }
-
       if (favoriteId) {
-        await deleteFavorite(token, favoriteId);
+        await deleteFavorite(accessToken, favoriteId);
         setFavoriteId(null);
         setShowFavoritePrompt(false);
         setShowListModal(false);
       } else {
-        const favorite = await createFavorite(token, companyId);
+        const favorite = await createFavorite(accessToken, companyId);
         setFavoriteId(favorite.id);
         setShowFavoritePrompt(true);
       }
@@ -218,23 +209,20 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
   async function handleListSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!accessToken) {
+      return;
+    }
+
     setIsSavingList(true);
     setError("");
     setSuccessMessage("");
     let createdListId: string | null = null;
 
     try {
-      const token = await getValidAccessToken();
-      if (!token) {
-        signOut();
-        setError("Your session expired. Please log in again to save businesses.");
-        return;
-      }
-
       let targetListId = selectedListId;
 
       if (isCreatingList) {
-        const nextList = await createCuratedList(token, {
+        const nextList = await createCuratedList(accessToken, {
           title: newListTitle,
           description: newListDescription,
           is_public: canMakePublicLists,
@@ -261,7 +249,7 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
         return;
       }
 
-      const newItem = await addCuratedListItem(token, targetId, {
+      const newItem = await addCuratedListItem(accessToken, targetId, {
         company_id: companyId,
       });
 
@@ -426,25 +414,6 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
       )
     : null;
 
-  const errorToast = error
-    ? createPortal(
-        <div
-          className="detail-save-toast detail-save-toast-error"
-          role="alert"
-        >
-          <div className="detail-save-toast-copy">
-            <p>{error}</p>
-            {error.includes("Please log in again") ? (
-              <Link className="detail-save-toast-link" href="/login">
-                Log in
-              </Link>
-            ) : null}
-          </div>
-        </div>,
-        document.body
-      )
-    : null;
-
   const favoritePrompt = showFavoritePrompt
     ? createPortal(
         <div
@@ -501,12 +470,22 @@ export function CompanySaveFlow({ companyId }: { companyId: number }) {
             <HeartIcon filled={false} />
           </Link>
         )}
+
+        {error ? (
+          <div className="detail-save-feedback detail-save-feedback-error">
+            <p className="contact-form-note is-error">{error}</p>
+            {error.includes("Please log in again") ? (
+              <Link className="auth-text-link" href="/login">
+                Log in
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {listModal}
       {favoritePrompt}
       {successToast}
-      {errorToast}
     </>
   );
 }

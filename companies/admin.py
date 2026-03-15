@@ -128,13 +128,7 @@ class CompanyAdmin(admin.ModelAdmin):
     )
     search_fields = ("name", "description", "city", "state", "country")
     prepopulated_fields = {"slug": ("name",)}
-    filter_horizontal = (
-        "business_categories",
-        "product_categories",
-        "cuisine_types",
-        "ownership_markers",
-        "sustainability_markers",
-    )
+    filter_horizontal = ("product_categories", "cuisine_types", "ownership_markers", "sustainability_markers")
     list_editable = ("needs_editorial_review",)
 
     @admin.display(boolean=True)

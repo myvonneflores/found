@@ -27,14 +27,9 @@ function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
   return [];
 }
 
-function isMissingManagedProfileError(message: string) {
+function isNotFoundError(message: string) {
   const normalized = message.toLowerCase();
-  return (
-    normalized.includes("404") ||
-    normalized.includes("not found") ||
-    normalized.includes("no company") ||
-    normalized.includes("verified business profile to manage yet")
-  );
+  return normalized.includes("404") || normalized.includes("not found") || normalized.includes("no company");
 }
 
 export default function BusinessCompanyPage() {
@@ -96,7 +91,7 @@ export default function BusinessCompanyPage() {
             return;
           }
 
-          if (!isMissingManagedProfileError(managedError instanceof Error ? managedError.message : "")) {
+          if (!isNotFoundError(managedError instanceof Error ? managedError.message : "")) {
             setError(
               managedError instanceof Error
                 ? managedError.message
@@ -133,35 +128,33 @@ export default function BusinessCompanyPage() {
   }
 
   return (
-    <main className="page-shell directory-page-shell detail-page-shell auth-page-shell dashboard-page-shell">
-      <BodyClass className="detail-page-body dashboard-page-body" />
-      <div className="directory-shell">
-        <SiteHeader resetKey="/business/company" />
+    <main className="page-shell detail-page-shell">
+      <BodyClass className="detail-page-body" />
+      <SiteHeader resetKey="/business/company" />
 
-        <section className="dashboard-stage business-company-stage">
-          <article className="panel dashboard-banner business-company-banner">
-            <h1 className="home-hero-title">Create your company profile</h1>
-            <p className="lede">
-              Build the actual FOUND business page your community will see. Once it&apos;s live, you&apos;ll edit the
-              company profile directly.
-            </p>
+      <section className="detail-stack business-company-stage">
+        <article className="detail-card detail-header">
+          <h1>Create your company profile</h1>
+          <p className="lede">
+            Build the actual FOUND business page your community will see. Once it&apos;s live, you&apos;ll edit the
+            company profile directly.
+          </p>
+        </article>
+
+        {isLoading ? (
+          <article className="detail-card">
+            <p className="lede">Loading your business profile workspace...</p>
           </article>
+        ) : null}
 
-          {isLoading ? (
-            <article className="detail-card">
-              <p className="lede">Loading your business profile workspace...</p>
-            </article>
-          ) : null}
+        {!isLoading && error ? (
+          <article className="detail-card">
+            <p className="contact-form-note is-error">{error}</p>
+          </article>
+        ) : null}
 
-          {!isLoading && error ? (
-            <article className="detail-card">
-              <p className="contact-form-note is-error">{error}</p>
-            </article>
-          ) : null}
-
-          {!isLoading && !error ? <CompanyProfileCreationForm latestClaim={latestClaim} /> : null}
-        </section>
-      </div>
+        {!isLoading && !error ? <CompanyProfileCreationForm latestClaim={latestClaim} /> : null}
+      </section>
     </main>
   );
 }

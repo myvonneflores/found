@@ -123,9 +123,9 @@ function QuickLinkLogo({
 
 function shareLabel(ownerName: string) {
   if (!ownerName.trim()) {
-    return "Curated by FOUND";
+    return "FOUND list";
   }
-  return `Curated by ${ownerName}`;
+  return `${ownerName}'s list`;
 }
 
 export default function CuratedListPage() {
@@ -285,6 +285,8 @@ export default function CuratedListPage() {
     ? [
         ...selectedCompany.ownership_markers.map((item) => displayLabel(item.name)),
         ...selectedCompany.sustainability_markers.map((item) => displayLabel(item.name)),
+        ...(selectedCompany.is_vegan_friendly ? ["Vegan-friendly"] : []),
+        ...(selectedCompany.is_gf_friendly ? ["Gluten-free-friendly"] : []),
       ]
     : [];
   const productSummary = selectedCompany
@@ -370,7 +372,7 @@ export default function CuratedListPage() {
                   <aside className="list-browser-sidebar">
                     <div className="list-browser-sidebar-copy">
                       <h1>{list.title}</h1>
-                      {list.description ? <p>{list.description}</p> : null}
+                      <p>{list.description || "A city guide for the spots worth sharing."}</p>
                     </div>
 
                     <div className="list-browser-company-list">

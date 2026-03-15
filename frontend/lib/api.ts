@@ -32,14 +32,9 @@ function buildUrl(path: string, searchParams?: Record<string, string | undefined
   return url.toString();
 }
 
-async function fetchJson<T>(
-  path: string,
-  searchParams?: Record<string, string | undefined>,
-  init?: RequestInit
-): Promise<T> {
+async function fetchJson<T>(path: string, searchParams?: Record<string, string | undefined>): Promise<T> {
   const response = await fetch(buildUrl(path, searchParams), {
-    ...(init ?? {}),
-    ...(init?.cache ? {} : { next: { revalidate: 300 } }),
+    next: { revalidate: 300 },
   });
 
   if (!response.ok) {
@@ -101,9 +96,7 @@ export function listCompanies(searchParams: CompanySearchParams) {
 }
 
 export function getCompany(slug: string) {
-  return fetchJson<CompanyDetail>(`companies/${slug}/`, undefined, {
-    cache: "no-store",
-  });
+  return fetchJson<CompanyDetail>(`companies/${slug}/`);
 }
 
 export function getManagedBusinessProfile(token: string) {

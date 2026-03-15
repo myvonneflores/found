@@ -23,7 +23,6 @@ const fallbackFeaturedCompanies = [
     state: "OR",
     country: "USA",
     business_category: "Retail",
-    business_categories: ["Retail"],
     ownership_markers: ["Woman Owned"],
     sustainability_markers: ["Vintage", "Sustainable"],
     product_categories: [],
@@ -41,7 +40,6 @@ const fallbackFeaturedCompanies = [
     state: "OR",
     country: "USA",
     business_category: "Retail",
-    business_categories: ["Retail"],
     ownership_markers: ["Woman Owned"],
     sustainability_markers: ["Vintage", "Independent Designers"],
     product_categories: [],
@@ -59,7 +57,6 @@ const fallbackFeaturedCompanies = [
     state: "OR",
     country: "USA",
     business_category: "Retail",
-    business_categories: ["Retail"],
     ownership_markers: ["Independent"],
     sustainability_markers: ["Sustainable"],
     product_categories: [],
@@ -77,7 +74,6 @@ const fallbackFeaturedCompanies = [
     state: "OR",
     country: "USA",
     business_category: "Retail",
-    business_categories: ["Retail"],
     ownership_markers: ["Family Owned"],
     sustainability_markers: ["Independent Designers"],
     product_categories: [],
@@ -251,14 +247,11 @@ export default async function HomePage() {
               <div className="home-hero-text">
                 <h1 className="home-hero-title">Find the good stuff nearby</h1>
                 <p className="home-hero-lede">
-                  Discover locally owned businesses based on what matters to you, then save favorites, create lists,
-                  and share the spots you want more people to know about.
+                  Discover locally owned businesses based on what matters to you, from independent makers to
+                  sustainable products and vintage finds.
                 </p>
               </div>
               <div className="home-hero-actions">
-                <Link className="about-cta-link" href="/signup">
-                  Create Account
-                </Link>
                 <Link className="about-cta-link" href="/companies">
                   Start Finding
                 </Link>

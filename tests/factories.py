@@ -70,15 +70,6 @@ class CompanyFactory(factory.django.DjangoModelFactory):
     business_category = factory.SubFactory(BusinessCategoryFactory)
 
     @factory.post_generation
-    def business_categories(self, create, extracted, **kwargs):
-        if not create:
-            return
-        if extracted:
-            self.business_categories.add(*extracted)
-        elif self.business_category_id:
-            self.business_categories.add(self.business_category)
-
-    @factory.post_generation
     def product_categories(self, create, extracted, **kwargs):
         if not create or not extracted:
             return

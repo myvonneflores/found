@@ -15,7 +15,6 @@ export type CompanyListItem = {
   state: string;
   country: string;
   business_category: string | null;
-  business_categories: string[];
   product_categories: string[];
   cuisine_types: string[];
   ownership_markers: string[];
@@ -38,7 +37,6 @@ export type CompanyDetail = {
   zip_code: string;
   country: string;
   business_category: TaxonomyItem | null;
-  business_categories: TaxonomyItem[];
   product_categories: TaxonomyItem[];
   cuisine_types: TaxonomyItem[];
   ownership_markers: TaxonomyItem[];
@@ -63,7 +61,6 @@ export type ManagedBusinessProfile = {
   state: string;
   zip_code: string;
   business_category: number | null;
-  business_categories: number[];
   product_categories: number[];
   cuisine_types: number[];
   ownership_markers: number[];
