@@ -145,6 +145,8 @@ export function CompanySaveFlow({
         if (loadError instanceof Error && isTokenError(loadError.message)) {
           signOut();
           setActionError("Your session expired. Please log in again to save businesses.");
+        } else {
+          setActionError(loadError instanceof Error ? loadError.message : "Unable to load your save tools.");
         }
       } finally {
         setIsLoading(false);

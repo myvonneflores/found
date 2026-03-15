@@ -81,11 +81,12 @@ class BusinessClaimDetailView(generics.RetrieveUpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
-        serializer = BusinessClaimSerializer(
-            self.get_object(),
+        instance = self.get_object()
+        response.data = BusinessClaimSerializer(
+            instance,
             context=self.get_serializer_context(),
-        )
-        return Response(serializer.data, status=response.status_code)
+        ).data
+        return response
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

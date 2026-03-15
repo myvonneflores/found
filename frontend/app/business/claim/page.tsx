@@ -318,22 +318,26 @@ function BusinessClaimPageContent() {
               <form className="auth-form" onSubmit={handleSubmit}>
                 <div className="auth-toggle-grid" role="radiogroup" aria-label="Claim intent">
                   <button
+                    aria-checked={isExistingIntent}
                     className={`auth-toggle auth-toggle-intent ${isExistingIntent ? "is-active" : ""}`}
                     onClick={() => {
                       setIntent("existing");
                       setError("");
                     }}
+                    role="radio"
                     type="button"
                   >
                     <strong>Claim an existing business</strong>
                   </button>
                   <button
+                    aria-checked={!isExistingIntent}
                     className={`auth-toggle auth-toggle-intent ${!isExistingIntent ? "is-active" : ""}`}
                     onClick={() => {
                       setIntent("new");
                       setSelectedCompany(null);
                       setError("");
                     }}
+                    role="radio"
                     type="button"
                   >
                     <strong>Add a new business</strong>

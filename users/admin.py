@@ -192,6 +192,13 @@ class BusinessClaimAdmin(admin.ModelAdmin):
             obj.refresh_from_db()
             return
 
+        if desired_status == BusinessClaim.VerificationStatus.PENDING and previous.status != desired_status:
+            obj.decision_reason_code = ""
+            obj.review_checklist = []
+            obj.review_notes = ""
+            obj.reviewed_at = None
+            obj.reviewed_by = None
+
         super().save_model(request, obj, form, change)
 
     @admin.display(description="History")
