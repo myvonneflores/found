@@ -131,7 +131,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardResultsSetPagination",
     "PAGE_SIZE": 20,
-    "EXCEPTION_HANDLER": "core.views.debug_exception_handler",
 }
 
 # Auth
