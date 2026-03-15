@@ -1,4 +1,11 @@
-from django.db import migrations
+from django.db import connection, migrations
+
+
+def drop_orphaned_columns(apps, schema_editor):
+    if connection.vendor != 'postgresql':
+        return
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute('ALTER TABLE users_businessclaim DROP COLUMN IF EXISTS decision_reason_code;')
 
 
 class Migration(migrations.Migration):
@@ -8,12 +15,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql='ALTER TABLE users_businessclaim DROP COLUMN IF EXISTS decision_reason_code;',
-            reverse_sql=migrations.RunSQL.noop,
-        ),
-        migrations.RunSQL(
-            sql='ALTER TABLE users_businessclaim DROP COLUMN IF EXISTS intent;',
-            reverse_sql=migrations.RunSQL.noop,
-        ),
+        migrations.RunPython(drop_orphaned_columns, migrations.RunPython.noop),
     ]
