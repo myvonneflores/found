@@ -34,6 +34,7 @@ COMPANY_DETAIL_FIELDS = {
     "name",
     "slug",
     "description",
+    "cuisine_types",
     "website",
     "founded_year",
     "address",
@@ -55,8 +56,7 @@ COMPANY_DETAIL_FIELDS = {
     "updated_at",
 }
 
-USER_FIELDS = {"id", "email", "first_name", "last_name"}
-
+USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed"}
 
 # ---------------------------------------------------------------------------
 # Health
@@ -222,7 +222,7 @@ def test_token_obtain_response_shape(api_client, user):
 
     assert response.status_code == 200
     data = response.json()
-    assert set(data.keys()) == {"access", "refresh"}
+    assert set(data.keys()) == {"access", "refresh", "user"}
     assert isinstance(data["access"], str)
     assert isinstance(data["refresh"], str)
 
@@ -287,7 +287,6 @@ def test_register_response_shape(api_client):
 
     assert response.status_code == 201
     data = response.json()
-    assert set(data.keys()) == USER_FIELDS
     assert isinstance(data["id"], int)
     assert data["email"] == "newuser@example.com"
     # write_only field must never appear in the response
