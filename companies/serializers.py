@@ -1,5 +1,9 @@
+from django.db.models import Count
 from django.db.utils import OperationalError, ProgrammingError
 from rest_framework import serializers
+
+from community.models import CuratedList
+from users.models import BusinessClaim
 
 from .models import (
     BusinessCategory,
@@ -72,7 +76,24 @@ class CompanyListSerializer(serializers.ModelSerializer):
         )
 
 
+class ClaimedCompanyPublicListSerializer(serializers.ModelSerializer):
+    item_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = CuratedList
+        fields = ("id", "id_hash", "title", "description", "updated_at", "item_count")
+
+
+class ClaimedCompanyProfileSerializer(serializers.Serializer):
+    display_name = serializers.CharField()
+    public_slug = serializers.CharField()
+    account_type = serializers.CharField()
+    public_list_count = serializers.IntegerField()
+    public_lists = ClaimedCompanyPublicListSerializer(many=True)
+
+
 class CompanyDetailSerializer(serializers.ModelSerializer):
+    claimed_profile = serializers.SerializerMethodField()
     business_category = BusinessCategorySerializer()
     business_categories = BusinessCategorySerializer(many=True)
     product_categories = ProductCategorySerializer(many=True)
@@ -85,6 +106,32 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             return CuisineTypeSerializer(obj.cuisine_types.all(), many=True).data
         except (OperationalError, ProgrammingError):
             return []
+
+    def get_claimed_profile(self, obj):
+        verified_claim = (
+            obj.business_claims.filter(status=BusinessClaim.VerificationStatus.VERIFIED)
+            .select_related("user")
+            .order_by("-submitted_at", "-pk")
+            .first()
+        )
+        if not verified_claim:
+            return None
+
+        owner = verified_claim.user
+        public_lists = owner.curated_lists.filter(is_public=True).annotate(item_count=Count("items"))
+        public_list_count = public_lists.count()
+        if public_list_count == 0:
+            return None
+
+        display_name = owner.display_name or owner.first_name or owner.email.split("@")[0]
+        summary = {
+            "display_name": display_name,
+            "public_slug": owner.public_slug or "",
+            "account_type": owner.account_type,
+            "public_list_count": public_list_count,
+            "public_lists": list(public_lists[:3]),
+        }
+        return ClaimedCompanyProfileSerializer(summary).data
 
     def get_sustainability_markers(self, obj):
         markers = SustainabilityMarkerSerializer(obj.sustainability_markers.all(), many=True).data
@@ -130,6 +177,7 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "business_categories",
             "product_categories",
             "cuisine_types",
+            "claimed_profile",
             "ownership_markers",
             "sustainability_markers",
             "instagram_handle",

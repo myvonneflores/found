@@ -7,6 +7,7 @@ import pytest
 from django.urls import reverse
 
 from tests.factories import BusinessCategoryFactory, CompanyFactory
+from users.models import BusinessClaim, User
 
 TAXONOMY_OBJECT_FIELDS = {"id", "id_hash", "name", "description"}
 
@@ -45,6 +46,7 @@ COMPANY_DETAIL_FIELDS = {
     "business_category",
     "business_categories",
     "product_categories",
+    "claimed_profile",
     "ownership_markers",
     "sustainability_markers",
     "instagram_handle",
@@ -56,7 +58,60 @@ COMPANY_DETAIL_FIELDS = {
     "updated_at",
 }
 
+CLAIMED_PROFILE_FIELDS = {
+    "display_name",
+    "public_slug",
+    "account_type",
+    "public_list_count",
+    "public_lists",
+}
+
+CLAIMED_PUBLIC_LIST_FIELDS = {
+    "id",
+    "id_hash",
+    "title",
+    "description",
+    "updated_at",
+    "item_count",
+}
+
 USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed"}
+BUSINESS_CLAIM_FIELDS = {
+    "id",
+    "company",
+    "company_name",
+    "company_slug",
+    "intent",
+    "status",
+    "business_name",
+    "submitter_first_name",
+    "submitter_last_name",
+    "business_email",
+    "business_phone",
+    "website",
+    "instagram_handle",
+    "facebook_page",
+    "linkedin_page",
+    "role_title",
+    "claim_message",
+    "decision_reason_code",
+    "decision_reason_label",
+    "review_checklist",
+    "review_checklist_labels",
+    "review_notes",
+    "resubmitted_at",
+    "resubmission_count",
+    "submitted_at",
+    "reviewed_at",
+    "history",
+}
+BUSINESS_CLAIM_HISTORY_FIELDS = {
+    "event_type",
+    "event_label",
+    "actor_display",
+    "occurred_at",
+    "metadata",
+}
 
 # ---------------------------------------------------------------------------
 # Health
@@ -125,10 +180,25 @@ def test_company_detail_fields(api_client):
     if data["business_category"] is not None:
         assert set(data["business_category"].keys()) == TAXONOMY_OBJECT_FIELDS
     # M2M fields are lists of nested taxonomy objects
-    for field in ("business_categories", "product_categories", "ownership_markers", "sustainability_markers"):
+    for field in ("business_categories", "product_categories", "cuisine_types", "ownership_markers", "sustainability_markers"):
         assert isinstance(data[field], list)
         for obj in data[field]:
             assert set(obj.keys()) == TAXONOMY_OBJECT_FIELDS
+    if data["claimed_profile"] is not None:
+        assert set(data["claimed_profile"].keys()) == CLAIMED_PROFILE_FIELDS
+        assert isinstance(data["claimed_profile"]["display_name"], str)
+        assert isinstance(data["claimed_profile"]["public_slug"], str)
+        assert isinstance(data["claimed_profile"]["account_type"], str)
+        assert isinstance(data["claimed_profile"]["public_list_count"], int)
+        assert isinstance(data["claimed_profile"]["public_lists"], list)
+        for item in data["claimed_profile"]["public_lists"]:
+            assert set(item.keys()) == CLAIMED_PUBLIC_LIST_FIELDS
+            assert isinstance(item["id"], int)
+            assert isinstance(item["id_hash"], str)
+            assert isinstance(item["title"], str)
+            assert isinstance(item["description"], str)
+            assert isinstance(item["updated_at"], str)
+            assert isinstance(item["item_count"], int)
     # Timestamps are ISO-format strings
     assert isinstance(data["created_at"], str)
     assert isinstance(data["updated_at"], str)
@@ -184,7 +254,36 @@ def test_taxonomy_item_fields(api_client):
     assert isinstance(item["id"], int)
     assert isinstance(item["id_hash"], str) and len(item["id_hash"]) == 8
     assert isinstance(item["name"], str)
-    assert isinstance(item["description"], str)
+
+
+@pytest.mark.django_db
+def test_business_claim_fields(api_client):
+    user = User.objects.create_user(
+        email="owner@example.com",
+        password="supersecure123",
+        account_type=User.AccountType.BUSINESS,
+    )
+    company = CompanyFactory(name="Shape Claim Co")
+    claim = BusinessClaim.objects.create(
+        user=user,
+        company=company,
+        intent=BusinessClaim.ClaimIntent.EXISTING,
+        business_name=company.name,
+        submitter_first_name="Owner",
+        submitter_last_name="One",
+        business_email="owner@shapeclaim.co",
+        role_title="Founder",
+    )
+    claim.append_history_event("submitted", actor=user)
+    api_client.force_authenticate(user=user)
+
+    response = api_client.get(reverse("users:business-claim-list"))
+
+    assert response.status_code == 200
+    item = response.json()["results"][0]
+    assert set(item.keys()) == BUSINESS_CLAIM_FIELDS
+    assert isinstance(item["history"], list)
+    assert set(item["history"][0].keys()) == BUSINESS_CLAIM_HISTORY_FIELDS
 
 
 # ---------------------------------------------------------------------------

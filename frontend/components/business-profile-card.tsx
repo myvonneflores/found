@@ -10,7 +10,8 @@ export function BusinessProfileCard({
   isVerified: boolean;
   latestClaim: BusinessClaim | null;
 }) {
-  const isPendingVerification = !isVerified && Boolean(latestClaim);
+  const isPendingVerification = !isVerified && latestClaim?.status === "pending";
+  const isRejected = !isVerified && latestClaim?.status === "rejected";
 
   if (isPendingVerification) {
     return (
@@ -21,6 +22,19 @@ export function BusinessProfileCard({
         >
           PENDING VERIFICATION
         </div>
+      </article>
+    );
+  }
+
+  if (isRejected && latestClaim) {
+    return (
+      <article className="dashboard-logout-strip dashboard-business-claim-strip">
+        <Link
+          className="dashboard-logout-button dashboard-business-claim-link"
+          href={`/business/claim?claim=${latestClaim.id}`}
+        >
+          REVISE MY CLAIM
+        </Link>
       </article>
     );
   }

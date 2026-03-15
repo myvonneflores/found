@@ -15,6 +15,8 @@ import { listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
 import { CuratedList, Favorite } from "@/types/community";
 
+const DASHBOARD_SCROLL_CAP = 15;
+
 function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
   if (Array.isArray(value)) {
     return value as Favorite[];
@@ -99,7 +101,7 @@ export default function BusinessDashboardPage() {
         <p className="lede">No favorites yet. Save the local businesses you want to keep close.</p>
       ) : null}
       {!isLoading && safeFavorites.length > 0 ? (
-        <div className="dashboard-stack">
+        <div className={safeFavorites.length > DASHBOARD_SCROLL_CAP ? "dashboard-stack dashboard-scroll-region is-capped" : "dashboard-stack"}>
           {safeFavorites.map((favorite) => (
             <FavoriteChipActions favorite={favorite} key={favorite.id} />
           ))}
@@ -110,11 +112,11 @@ export default function BusinessDashboardPage() {
 
   const listsContent = (
     <>
-      <p className="lede">Build public lists you can text, email, or link anywhere your community finds you.</p>
       {isLoading ? <p className="lede">Loading your lists...</p> : null}
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Use them to spotlight neighboring businesses and share your local taste."
+          enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
         />
@@ -124,6 +126,7 @@ export default function BusinessDashboardPage() {
 
   const shareContent = (
     <>
+      <p className="lede">Build public lists you can text, email, or link anywhere your community finds you.</p>
       <p className="lede">
         Every public list gets its own page, so you can text it, email it, or link it anywhere your community finds
         you.

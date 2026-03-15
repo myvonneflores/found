@@ -1,0 +1,12 @@
+Hi {{ claim.submitter_first_name|default:claim.user.first_name|default:"there" }},
+
+We reviewed your business claim for {{ company_name }}, but we still need more information before we can verify it on FOUND.
+
+{% if decision_reason_label %}Primary reason: {{ decision_reason_label }}
+{% endif %}{% if review_checklist_labels %}What we checked:
+{% for label in review_checklist_labels %}- {{ label }}
+{% endfor %}
+{% endif %}{% if claim.review_notes %}Reviewer notes:
+{{ claim.review_notes }}
+
+{% endif %}You can return to your business dashboard at any time to revise and resubmit this claim.

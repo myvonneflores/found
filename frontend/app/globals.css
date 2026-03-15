@@ -765,6 +765,77 @@ select {
   color: rgba(201, 133, 69, 0.6);
 }
 
+.detail-page-shell .detail-recommendations-card {
+  display: grid;
+  gap: 1.1rem;
+  background: #d9c5ee;
+  border-color: rgba(123, 77, 151, 0.18);
+  color: #b3749f;
+}
+
+.detail-claimed-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.detail-claimed-copy {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 42rem;
+}
+
+.detail-claimed-copy h2,
+.detail-recommendation-pill .dashboard-chip-label strong {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.detail-page-shell .detail-recommendations-card .field-label,
+.detail-page-shell .detail-recommendations-card h2,
+.detail-page-shell .detail-recommendations-card p,
+.detail-page-shell .detail-recommendations-card .lede,
+.detail-page-shell .detail-recommendations-card .muted,
+.detail-page-shell .detail-recommendations-card span,
+.detail-page-shell .detail-recommendations-card strong {
+  color: inherit;
+}
+
+.detail-recommendations-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.detail-page-shell .detail-recommendation-pill {
+  background: rgba(255, 248, 239, 0.32);
+  border-color: rgba(123, 77, 151, 0.16);
+  color: #b3749f;
+}
+
+.detail-page-shell .detail-recommendation-pill:hover,
+.detail-page-shell .detail-recommendation-pill:focus-visible {
+  background: rgba(255, 248, 239, 0.5);
+}
+
+.detail-page-shell .detail-recommendation-pill .dashboard-chip-label strong,
+.detail-page-shell .detail-recommendation-pill .dashboard-chip-label span,
+.detail-page-shell .detail-recommendations-empty .muted {
+  color: inherit;
+}
+
+.detail-recommendations-empty {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .detail-claimed-header {
+    display: grid;
+  }
+}
+
 body.contact-page-body {
   background: #efb162;
 }
@@ -1340,10 +1411,21 @@ body.contact-page-body {
 }
 
 .business-claim-status-card {
+  width: 100%;
+  align-content: start;
+  justify-items: stretch;
+  gap: 1rem;
+  padding: clamp(1.1rem, 2vw, 1.55rem);
   background:
-    radial-gradient(circle at top left, rgba(255, 247, 244, 0.16), transparent 28%),
-    #d68e81;
-  color: #fff8f2;
+    radial-gradient(circle at top left, rgba(255, 248, 255, 0.28), transparent 28%),
+    #d9c5ee;
+  color: #b3749f;
+}
+
+.business-claim-status-card h2,
+.business-claim-status-card .lede,
+.business-claim-status-card .badge {
+  margin: 0;
 }
 
 .business-claim-status-card h2,
@@ -1354,19 +1436,50 @@ body.contact-page-body {
 }
 
 .business-claim-status-card .auth-status-item {
-  background: rgba(255, 251, 247, 0.14);
-  border-color: rgba(255, 248, 242, 0.28);
+  align-items: start;
+  justify-content: start;
+  flex-direction: column;
+  background: rgba(255, 249, 255, 0.28);
+  border-color: rgba(179, 116, 159, 0.22);
 }
 
 .business-claim-status-card .badge {
-  background: rgba(255, 248, 242, 0.2);
-  color: #fff8f2;
+  background: rgba(255, 249, 255, 0.52);
+  color: #b3749f;
 }
 
 .business-claim-status-card .badge-outline {
-  background: rgba(255, 248, 242, 0.12);
-  border-color: rgba(255, 248, 242, 0.42);
-  color: #fff8f2;
+  background: rgba(255, 249, 255, 0.24);
+  border-color: rgba(179, 116, 159, 0.3);
+  color: #b3749f;
+}
+
+.business-claim-status-card .contact-submit {
+  margin-top: 0.5rem;
+}
+
+.business-claim-search-results {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.business-claim-search-result {
+  width: 100%;
+  border: 1px solid rgba(179, 101, 7, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 248, 239, 0.78);
+  color: #9c5c13;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+}
+
+.business-claim-search-result:hover,
+.business-claim-search-result:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(179, 101, 7, 0.24);
 }
 
 .auth-card {
@@ -1778,7 +1891,7 @@ body.contact-page-body {
   width: 100%;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr) minmax(18rem, 0.78fr);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .dashboard-column-headings {
@@ -1845,6 +1958,8 @@ body.contact-page-body {
 .dashboard-sidebar {
   display: grid;
   gap: 1rem;
+  height: 100%;
+  align-items: stretch;
 }
 
 .dashboard-panel {
@@ -1923,6 +2038,11 @@ body.contact-page-body {
   color: #fff7f1;
 }
 
+.dashboard-panel-share {
+  gap: 0.55rem;
+  height: 100%;
+}
+
 .dashboard-panel-business-profile {
   width: 100%;
   padding: 0.95rem 1.15rem 1.1rem;
@@ -1996,13 +2116,13 @@ body.contact-page-body {
   background: #d9c5ee;
   border: 1px solid rgba(187, 116, 160, 0.18);
   border-radius: 42px;
-  color: #7b4d97;
+  color: #b3749f;
 }
 
 .dashboard-logout-strip.dashboard-business-claim-strip {
   background: #d9c5ee;
   border-color: rgba(123, 77, 151, 0.18);
-  color: #7b4d97;
+  color: #b3749f;
 }
 
 .dashboard-business-claim-link {
@@ -2026,7 +2146,7 @@ body.contact-page-body {
 .dashboard-business-claim-strip-static:hover,
 .dashboard-business-claim-strip-static:focus-within {
   background: #d9c5ee;
-  color: #7b4d97;
+  color: #b3749f;
 }
 
 .dashboard-business-claim-link:hover,
@@ -2089,6 +2209,17 @@ body.contact-page-body {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-scroll-region {
+  min-width: 0;
+}
+
+.dashboard-scroll-region.is-capped {
+  max-height: calc((15 * 4.2rem) + (14 * 0.75rem));
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
 }
 
 .dashboard-panel-share,

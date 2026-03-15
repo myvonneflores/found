@@ -215,6 +215,16 @@ export function createBusinessClaim(token: string, payload: BusinessClaimPayload
   });
 }
 
+export function updateBusinessClaim(token: string, claimId: number, payload: Partial<BusinessClaimPayload>) {
+  return requestJson<BusinessClaim>(`users/business-claims/${claimId}/`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listFavorites(token: string) {
   return requestJson<Favorite[] | PaginatedResponse<Favorite>>("community/favorites/", {
     headers: {
@@ -332,11 +342,15 @@ export function deleteCuratedListItem(token: string, itemId: number) {
 }
 
 export function getPublicCuratedList(idHash: string) {
-  return fetchJson<PublicCuratedList>(`community/public-lists/${idHash}/`);
+  return fetchJson<PublicCuratedList>(`community/public-lists/${idHash}/`, undefined, {
+    cache: "no-store",
+  });
 }
 
 export function getPublicProfile(publicSlug: string) {
-  return fetchJson<PublicProfile>(`users/public-profiles/${publicSlug}/`);
+  return fetchJson<PublicProfile>(`users/public-profiles/${publicSlug}/`, undefined, {
+    cache: "no-store",
+  });
 }
 
 export function getPersonalProfile(token: string) {
