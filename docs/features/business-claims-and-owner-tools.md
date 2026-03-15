@@ -1,14 +1,20 @@
 # Business Claims And Owner Tools
 
-## Scope
+## Status
 
-This feature area covers:
+This feature is still under active development.
 
-- business account onboarding
-- business claim submission and review state
-- verified business dashboard routing
-- creation of a company profile for newly verified businesses
-- editing of an existing claimed company from the public detail page
+Treat this page as a stub and orientation note, not a settled implementation spec.
+
+## Current Scope
+
+This area currently covers:
+
+- business account onboarding after signup
+- business claim submission
+- pending versus verified business state
+- create-or-edit business profile routing
+- owner editing from the public company page
 
 ## Current Entry Points
 
@@ -23,35 +29,54 @@ This feature area covers:
   - `GET/PATCH /api/users/business-claims/<pk>/`
   - `GET/POST/PATCH /api/companies/manage/current/`
 
-## Backend Surface
+## Source Of Truth
 
-- Claim model and account state live in [`../../users/models.py`](../../users/models.py).
-- Claim APIs live in [`../../users/views.py`](../../users/views.py).
-- Managed business profile APIs live in [`../../companies/views.py`](../../companies/views.py).
+- claim model and business verification state:
+  - [`../../users/models.py`](../../users/models.py)
+  - [`../../users/serializers.py`](../../users/serializers.py)
+  - [`../../users/views.py`](../../users/views.py)
+- managed business profile flow:
+  - [`../../companies/views.py`](../../companies/views.py)
+  - [`../../companies/serializers.py`](../../companies/serializers.py)
+- current frontend flow:
+  - [`../../frontend/app/business/claim/page.tsx`](../../frontend/app/business/claim/page.tsx)
+  - [`../../frontend/app/business/company/page.tsx`](../../frontend/app/business/company/page.tsx)
+  - [`../../frontend/components/company-profile-creation-form.tsx`](../../frontend/components/company-profile-creation-form.tsx)
+  - [`../../frontend/components/company-owner-editor.tsx`](../../frontend/components/company-owner-editor.tsx)
 
-Important current rule:
+## Current Known Rules
 
+- business claims are reviewed manually
 - verified claims unlock business profile creation or editing
+- a verified user with no linked company can create one through `/business/company`
+- a verified user with a linked company is redirected into that company’s public page with `?edit=1`
+- owner editing currently depends on fetching the managed business profile and matching its slug to the current company detail route
 - the business user edits the actual company record that powers the public page
 
-## Frontend Surface
+## Current Flow Snapshot
 
-- Claim submission UI: [`../../frontend/app/business/claim/page.tsx`](../../frontend/app/business/claim/page.tsx)
-- New profile creation UI: [`../../frontend/components/company-profile-creation-form.tsx`](../../frontend/components/company-profile-creation-form.tsx)
-- Existing profile edit UI: [`../../frontend/components/company-owner-editor.tsx`](../../frontend/components/company-owner-editor.tsx)
+What seems true in the code today:
 
-## Current Behavior Notes
+- business users sign up, then go through `/business/claim`
+- the claim page collects business/contact details and routes the user to the pending dashboard
+- pending business users can still use parts of the dashboard and community experience while waiting
+- verified business users use `/business/company` as a create-or-redirect entry point
+- existing claimed businesses route into the public company page in edit mode
 
-- Business claims are reviewed manually.
-- A verified user with no linked company can create one through `/business/company`.
-- A verified user with a linked company is redirected into that company’s public page with `?edit=1`.
-- Owner editing currently depends on fetching the managed company profile and matching its slug to the company detail route.
+## Areas Still In Flux
 
-## Good Next Expansions
+- the exact admin review workflow
+- how rejected claims should be surfaced in the frontend UX
+- whether owner edits should publish immediately or go through review
+- whether one business user will eventually manage multiple companies
+- how much of business setup should live on `/business/company` versus the public company page
 
-- document the admin-side review flow and operational checklist
-- define how owner edits should interact with editorial review or moderation
-- clarify whether a business user may manage multiple companies in the near-term product model
+## Next Time We Flesh This Out
+
+- document the admin-side review process and operational checklist
+- map the exact state transitions for `pending`, `verified`, and `rejected`
+- document the create-vs-edit branch end to end
+- add a concise permissions matrix for pending vs verified business users
 
 ## Open Questions
 
