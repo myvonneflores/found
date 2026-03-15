@@ -348,7 +348,9 @@ export function getPublicCuratedList(idHash: string) {
 }
 
 export function getPublicProfile(publicSlug: string) {
-  return fetchJson<PublicProfile>(`users/public-profiles/${publicSlug}/`);
+  return fetchJson<PublicProfile>(`users/public-profiles/${publicSlug}/`, undefined, {
+    cache: "no-store",
+  });
 }
 
 export function getPersonalProfile(token: string) {
