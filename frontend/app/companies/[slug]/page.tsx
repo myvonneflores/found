@@ -200,6 +200,8 @@ export default async function CompanyDetailPage({
           resetKey={JSON.stringify(resolvedSearchParams)}
         />
 
+        <CompanyOwnerEditor autoEdit={autoEdit} company={company} />
+
         <section className="detail-card detail-header">
           <CompanySaveFlow companyId={company.id} />
           <h1>
@@ -221,14 +223,9 @@ export default async function CompanyDetailPage({
                 {marker.name}
               </span>
             ))}
-            {company.is_vegan_friendly ? <span className="badge">Vegan-friendly</span> : null}
-            {company.is_gf_friendly ? <span className="badge">Gluten-free-friendly</span> : null}
-            {!company.description ? <span className="badge badge-muted">Curated summary pending</span> : null}
           </div>
-          <p className="lede">{description}</p>
+          {description ? <p className="lede">{description}</p> : null}
         </section>
-
-        <CompanyOwnerEditor autoEdit={autoEdit} company={company} />
 
         <section className="detail-grid">
           <article className="detail-card detail-map-card">
@@ -243,11 +240,11 @@ export default async function CompanyDetailPage({
                 />
               </div>
             ) : (
-              <p className="muted">Location not provided.</p>
+              <p className="muted">Coming soon</p>
             )}
             <div className="detail-map-caption">
-              <p>{company.address || "Address not provided"}</p>
-              <p>{location || "Location not provided"}</p>
+              <p>{company.address || "Coming soon"}</p>
+              <p>{location || "Coming soon"}</p>
             </div>
           </article>
 
@@ -275,7 +272,7 @@ export default async function CompanyDetailPage({
                 </LinkLogo>
               ) : null}
             </div>
-            {!hasAnyLinks ? <p className="muted">A public website or social profile has not been added yet.</p> : null}
+            {!hasAnyLinks ? <p className="muted">Coming soon</p> : null}
           </article>
         </section>
 
@@ -292,9 +289,7 @@ export default async function CompanyDetailPage({
                   </span>
                 ))
               ) : (
-                <span className="muted">
-                  {isFoodCompany ? "No cuisine types yet." : "No product categories yet."}
-                </span>
+                <span className="muted">Coming soon</span>
               )}
             </div>
           </article>
@@ -308,7 +303,7 @@ export default async function CompanyDetailPage({
                   </span>
                 ))
               ) : (
-                <span className="muted">No sustainability markers yet.</span>
+                <span className="muted">Coming soon</span>
               )}
             </div>
           </article>

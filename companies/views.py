@@ -37,6 +37,7 @@ class CompanyListView(generics.ListAPIView):
         return (
             Company.objects.select_related("business_category")
             .prefetch_related(
+                "business_categories",
                 "product_categories",
                 "ownership_markers",
                 "sustainability_markers",
@@ -52,6 +53,7 @@ class CompanyDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Company.objects.select_related("business_category").prefetch_related(
+            "business_categories",
             "product_categories",
             "ownership_markers",
             "sustainability_markers",

@@ -202,8 +202,8 @@ export default function BusinessDashboardPage() {
           <article className="panel dashboard-banner dashboard-banner-business">
             <h1 className="home-hero-title">Dashboard</h1>
             <p className="lede">
-              Save your favorite local businesses, build shareable lists, and grow a FOUND presence people can actually
-              pass along.
+              Save your favorite local businesses, create shareable lists, and build community with customers and
+              business owners in your city.
             </p>
           </article>
 

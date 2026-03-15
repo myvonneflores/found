@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import { useAuth } from "@/components/auth-provider";
 
 const socialLinks = {
   instagram: "https://www.instagram.com/found.in_/",
@@ -39,6 +44,14 @@ function FacebookIcon() {
 }
 
 export function SiteFooter() {
+  const router = useRouter();
+  const { isAuthenticated, signOut } = useAuth();
+
+  function handleSignOut() {
+    signOut();
+    router.push("/");
+  }
+
   return (
     <footer className="site-footer">
       <div className="site-footer-shell">
@@ -79,6 +92,13 @@ export function SiteFooter() {
         <div className="site-footer-brand">
           <p className="site-footer-copy">A conscious discovery engine for local, independent, value-aligned businesses.</p>
         </div>
+        {isAuthenticated ? (
+          <div className="site-footer-account">
+            <button className="site-footer-logout" onClick={handleSignOut} type="button">
+              Logout
+            </button>
+          </div>
+        ) : null}
       </div>
     </footer>
   );

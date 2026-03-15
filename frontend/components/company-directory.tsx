@@ -378,11 +378,7 @@ export function CompanyDirectory({
   const ownershipNames = selectedCompany ? names(selectedCompany.ownership_markers) : [];
   const sustainabilityNames = selectedCompany ? names(selectedCompany.sustainability_markers) : [];
   const productNames = selectedCompany ? names(selectedCompany.product_categories) : [];
-  const focusNames = [
-    ...sustainabilityNames,
-    ...(selectedCompany?.is_vegan_friendly ? ["Vegan Friendly"] : []),
-    ...(selectedCompany?.is_gf_friendly ? ["GF Friendly"] : []),
-  ];
+  const focusNames = sustainabilityNames;
   const detailListItems = [...ownershipNames, ...focusNames].map(displayLabel);
   const productSummary = productNames.map(displayLabel);
   const hasDetailListItems = detailListItems.length > 0;
@@ -730,16 +726,20 @@ export function CompanyDirectory({
                 }
               >
                 {companies.length ? (
-                  companies.map((company) => (
-                    <Link
-                      className={selectedSlug === company.slug ? "directory-company-row is-active" : "directory-company-row"}
-                      href={buildDirectoryHref(searchParams, company.slug)}
-                      key={company.id}
-                    >
-                      <span className="directory-company-name">{company.name}</span>
-                      <span className="directory-company-meta">{listDescription(company)}</span>
-                    </Link>
-                  ))
+                  companies.map((company) => {
+                    const description = listDescription(company);
+
+                    return (
+                      <Link
+                        className={selectedSlug === company.slug ? "directory-company-row is-active" : "directory-company-row"}
+                        href={buildDirectoryHref(searchParams, company.slug)}
+                        key={company.id}
+                      >
+                        <span className="directory-company-name">{company.name}</span>
+                        {description ? <span className="directory-company-meta">{description}</span> : null}
+                      </Link>
+                    );
+                  })
                 ) : hasActiveFilters ? (
                   <div className="empty-state">
                     <h2 className="section-title">No matches</h2>

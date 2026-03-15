@@ -25,6 +25,25 @@ class TestCompanyListApi:
         assert response.status_code == 200
         assert response.data["slug"] == company.slug
 
+    def test_company_detail_includes_boolean_markers_in_sustainability_markers(self, api_client, two_companies):
+        first_company = two_companies[0]
+        second_company = two_companies[1]
+
+        first_response = api_client.get(
+            reverse("companies:company-detail", kwargs={"slug": first_company.slug})
+        )
+        second_response = api_client.get(
+            reverse("companies:company-detail", kwargs={"slug": second_company.slug})
+        )
+
+        assert first_response.status_code == 200
+        assert second_response.status_code == 200
+        first_marker_names = [item["name"] for item in first_response.data["sustainability_markers"]]
+        second_marker_names = [item["name"] for item in second_response.data["sustainability_markers"]]
+        assert "Vegan-friendly" in first_marker_names
+        assert "Gluten-free-friendly" not in first_marker_names
+        assert "Gluten-free-friendly" in second_marker_names
+
     def test_filters_by_city(self, api_client, two_companies):
         response = api_client.get(reverse("companies:company-list"), {"city": "Seattle"})
 
@@ -222,6 +241,44 @@ class TestManagedBusinessProfileApi:
         assert claim.company is not None
         assert claim.company.name == "Fresh Company"
         assert response.data["slug"] == claim.company.slug
+
+    def test_managed_company_create_sets_primary_category_from_business_categories(
+        self, api_client, taxonomy_set
+    ):
+        user = User.objects.create_user(
+            email="categorized-business@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        claim = BusinessClaim.objects.create(
+            user=user,
+            business_name="Categorized Company",
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        retail = taxonomy_set["retail"]
+        food = taxonomy_set["food"]
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-manage-current"),
+            {
+                "name": "Categorized Company",
+                "business_categories": [retail.id, food.id],
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        claim.refresh_from_db()
+        assert claim.company is not None
+        assert claim.company.business_category == retail
+        assert list(claim.company.business_categories.order_by("id").values_list("id", flat=True)) == [
+            retail.id,
+            food.id,
+        ]
 
     def test_verified_business_user_post_returns_existing_company_if_already_linked(self, api_client, two_companies):
         company = two_companies[0]

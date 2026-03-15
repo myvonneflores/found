@@ -193,8 +193,6 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
     ? [
         ...selectedCompany.ownership_markers.map((item) => displayLabel(item.name)),
         ...selectedCompany.sustainability_markers.map((item) => displayLabel(item.name)),
-        ...(selectedCompany.is_vegan_friendly ? ["Vegan-friendly"] : []),
-        ...(selectedCompany.is_gf_friendly ? ["Gluten-free-friendly"] : []),
       ]
     : [];
   const productSummary = selectedCompany

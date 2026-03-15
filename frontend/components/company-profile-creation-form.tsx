@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
   createManagedBusinessProfile,
   listBusinessCategories,
@@ -41,7 +42,7 @@ export function CompanyProfileCreationForm({
   latestClaim: BusinessClaim | null;
 }) {
   const router = useRouter();
-  const { accessToken, user } = useAuth();
+  const { accessToken, getValidAccessToken, user } = useAuth();
   const [isLoadingTaxonomies, setIsLoadingTaxonomies] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +56,7 @@ export function CompanyProfileCreationForm({
     state: "",
     zip_code: "",
     business_category: null,
+    business_categories: [],
     product_categories: [],
     cuisine_types: [],
     ownership_markers: [],
@@ -126,6 +128,39 @@ export function CompanyProfileCreationForm({
     [taxonomies]
   );
 
+  const productCategoryOptions = useMemo(
+    () => taxonomies.productCategories.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.productCategories]
+  );
+  const businessCategoryOptions = useMemo(
+    () => taxonomies.businessCategories.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.businessCategories]
+  );
+  const cuisineOptions = useMemo(
+    () => taxonomies.cuisineTypes.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.cuisineTypes]
+  );
+  const ownershipOptions = useMemo(
+    () => taxonomies.ownershipMarkers.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.ownershipMarkers]
+  );
+  const moreToLoveOptions = useMemo(
+    () => [
+      ...taxonomies.sustainabilityMarkers.map((item) => ({ label: item.name, value: String(item.id) })),
+      { label: "Vegan-friendly", value: "__vegan__" },
+      { label: "Gluten-free-friendly", value: "__gf__" },
+    ],
+    [taxonomies.sustainabilityMarkers]
+  );
+  const selectedMoreToLove = useMemo(
+    () => [
+      ...profile.sustainability_markers.map(String),
+      ...(profile.is_vegan_friendly ? ["__vegan__"] : []),
+      ...(profile.is_gf_friendly ? ["__gf__"] : []),
+    ],
+    [profile.is_gf_friendly, profile.is_vegan_friendly, profile.sustainability_markers]
+  );
+
   function updateField<Key extends keyof Omit<ManagedBusinessProfile, "id" | "slug">>(
     key: Key,
     value: Omit<ManagedBusinessProfile, "id" | "slug">[Key]
@@ -146,7 +181,13 @@ export function CompanyProfileCreationForm({
     setError("");
 
     try {
-      const nextProfile = await createManagedBusinessProfile(accessToken, profile);
+      const token = await getValidAccessToken();
+      if (!token) {
+        setError("Please log in again before creating your business profile.");
+        return;
+      }
+
+      const nextProfile = await createManagedBusinessProfile(token, profile);
       router.push(`/companies/${nextProfile.slug}?edit=1`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to create your business profile.");
@@ -157,16 +198,6 @@ export function CompanyProfileCreationForm({
 
   return (
     <section className="detail-card company-owner-editor-card company-owner-creation-card">
-      <div className="company-owner-editor-header">
-        <div>
-          <span className="field-label">Create your company profile</span>
-          <p className="lede">
-            Start the real business page people will see on FOUND. Once it&apos;s created, you&apos;ll edit the live
-            profile directly.
-          </p>
-        </div>
-      </div>
-
       <form className="company-owner-editor-form" onSubmit={handleSubmit}>
         <div className="auth-form-grid">
           <label className="contact-field">
@@ -221,128 +252,71 @@ export function CompanyProfileCreationForm({
           </div>
         </div>
 
-        <div className="auth-form-grid">
-          <label className="contact-field">
-            <span className="contact-field-label">Business category</span>
-            <select
-              onChange={(event) =>
-                updateField("business_category", event.target.value ? Number(event.target.value) : null)
-              }
-              value={profile.business_category ?? ""}
-            >
-              <option value="">Choose a category</option>
-              {taxonomies.businessCategories.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="company-owner-flags">
-            <label className="auth-checkbox">
-              <input
-                checked={profile.is_vegan_friendly}
-                onChange={(event) => updateField("is_vegan_friendly", event.target.checked)}
-                type="checkbox"
-              />
-              <span>Vegan-friendly</span>
-            </label>
-
-            <label className="auth-checkbox">
-              <input
-                checked={profile.is_gf_friendly}
-                onChange={(event) => updateField("is_gf_friendly", event.target.checked)}
-                type="checkbox"
-              />
-              <span>Gluten-free-friendly</span>
-            </label>
-          </div>
+        <div className="company-owner-taxonomy-section">
+          <span className="contact-field-label">Business categories</span>
+          <TaxonomyMultiSelect
+            onToggle={(value) => {
+              const nextCategories = toggleId(profile.business_categories, Number(value));
+              updateField("business_categories", nextCategories);
+              updateField("business_category", nextCategories[0] ?? null);
+            }}
+            options={businessCategoryOptions}
+            placeholder="Choose as many as you like"
+            selected={profile.business_categories.map(String)}
+          />
         </div>
 
         <div className="company-owner-taxonomy-grid">
           <div className="company-owner-taxonomy-section">
             <span className="contact-field-label">Product categories</span>
-            <div className="directory-category-cloud">
-              {taxonomies.productCategories.map((item) => (
-                <button
-                  className={
-                    profile.product_categories.includes(item.id)
-                      ? "badge badge-outline company-owner-tag is-selected"
-                      : "badge badge-outline company-owner-tag"
-                  }
-                  key={item.id}
-                  onClick={() => updateField("product_categories", toggleId(profile.product_categories, item.id))}
-                  type="button"
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
+            <TaxonomyMultiSelect
+              onToggle={(value) => updateField("product_categories", toggleId(profile.product_categories, Number(value)))}
+              options={productCategoryOptions}
+              placeholder="Choose product categories"
+              selected={profile.product_categories.map(String)}
+            />
           </div>
 
           <div className="company-owner-taxonomy-section">
             <span className="contact-field-label">Cuisine</span>
-            <div className="directory-category-cloud">
-              {taxonomies.cuisineTypes.map((item) => (
-                <button
-                  className={
-                    profile.cuisine_types.includes(item.id)
-                      ? "badge badge-outline company-owner-tag is-selected"
-                      : "badge badge-outline company-owner-tag"
-                  }
-                  key={item.id}
-                  onClick={() => updateField("cuisine_types", toggleId(profile.cuisine_types, item.id))}
-                  type="button"
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
+            <TaxonomyMultiSelect
+              onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
+              options={cuisineOptions}
+              placeholder="Choose cuisine types"
+              selected={profile.cuisine_types.map(String)}
+            />
           </div>
         </div>
 
         <div className="company-owner-taxonomy-grid">
           <div className="company-owner-taxonomy-section">
             <span className="contact-field-label">Owned by</span>
-            <div className="directory-category-cloud">
-              {taxonomies.ownershipMarkers.map((item) => (
-                <button
-                  className={
-                    profile.ownership_markers.includes(item.id)
-                      ? "badge badge-outline company-owner-tag is-selected"
-                      : "badge badge-outline company-owner-tag"
-                  }
-                  key={item.id}
-                  onClick={() => updateField("ownership_markers", toggleId(profile.ownership_markers, item.id))}
-                  type="button"
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
+            <TaxonomyMultiSelect
+              onToggle={(value) => updateField("ownership_markers", toggleId(profile.ownership_markers, Number(value)))}
+              options={ownershipOptions}
+              placeholder="Add any ownership details you'd like to share"
+              selected={profile.ownership_markers.map(String)}
+            />
           </div>
 
           <div className="company-owner-taxonomy-section">
-            <span className="contact-field-label">Sustainability markers</span>
-            <div className="directory-category-cloud">
-              {taxonomies.sustainabilityMarkers.map((item) => (
-                <button
-                  className={
-                    profile.sustainability_markers.includes(item.id)
-                      ? "badge badge-outline company-owner-tag is-selected"
-                      : "badge badge-outline company-owner-tag"
-                  }
-                  key={item.id}
-                  onClick={() =>
-                    updateField("sustainability_markers", toggleId(profile.sustainability_markers, item.id))
-                  }
-                  type="button"
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
+            <span className="contact-field-label">More to love</span>
+            <TaxonomyMultiSelect
+              onToggle={(value) => {
+                if (value === "__vegan__") {
+                  updateField("is_vegan_friendly", !profile.is_vegan_friendly);
+                  return;
+                }
+                if (value === "__gf__") {
+                  updateField("is_gf_friendly", !profile.is_gf_friendly);
+                  return;
+                }
+                updateField("sustainability_markers", toggleId(profile.sustainability_markers, Number(value)));
+              }}
+              options={moreToLoveOptions}
+              placeholder="Choose as many as you like"
+              selected={selectedMoreToLove}
+            />
           </div>
         </div>
 

@@ -60,6 +60,11 @@ class Company(BaseModel):
         on_delete=models.SET_NULL,
         related_name="companies",
     )
+    business_categories = models.ManyToManyField(
+        BusinessCategory,
+        blank=True,
+        related_name="categorized_companies",
+    )
     product_categories = models.ManyToManyField(
         ProductCategory,
         blank=True,

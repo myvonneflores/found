@@ -310,6 +310,11 @@ class Command(BaseCommand):
                 defaults=payload,
             )
 
+            if business_category:
+                company.business_categories.set([business_category])
+            else:
+                company.business_categories.clear()
+
             company.product_categories.set(
                 [
                     ProductCategory.objects.get_or_create(name=category_name)[0]

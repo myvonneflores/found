@@ -43,6 +43,7 @@ class SustainabilityMarkerSerializer(TaxonomySerializer):
 
 class CompanyListSerializer(serializers.ModelSerializer):
     business_category = serializers.SerializerMethodField()
+    business_categories = serializers.StringRelatedField(many=True)
     product_categories = serializers.StringRelatedField(many=True)
     ownership_markers = serializers.StringRelatedField(many=True)
     sustainability_markers = serializers.StringRelatedField(many=True)
@@ -62,6 +63,7 @@ class CompanyListSerializer(serializers.ModelSerializer):
             "state",
             "country",
             "business_category",
+            "business_categories",
             "product_categories",
             "ownership_markers",
             "sustainability_markers",
@@ -72,16 +74,42 @@ class CompanyListSerializer(serializers.ModelSerializer):
 
 class CompanyDetailSerializer(serializers.ModelSerializer):
     business_category = BusinessCategorySerializer()
+    business_categories = BusinessCategorySerializer(many=True)
     product_categories = ProductCategorySerializer(many=True)
     cuisine_types = serializers.SerializerMethodField()
     ownership_markers = OwnershipMarkerSerializer(many=True)
-    sustainability_markers = SustainabilityMarkerSerializer(many=True)
+    sustainability_markers = serializers.SerializerMethodField()
 
     def get_cuisine_types(self, obj):
         try:
             return CuisineTypeSerializer(obj.cuisine_types.all(), many=True).data
         except (OperationalError, ProgrammingError):
             return []
+
+    def get_sustainability_markers(self, obj):
+        markers = SustainabilityMarkerSerializer(obj.sustainability_markers.all(), many=True).data
+
+        if obj.is_vegan_friendly:
+            markers.append(
+                {
+                    "id": -1,
+                    "id_hash": "vegan-friendly",
+                    "name": "Vegan-friendly",
+                    "description": "",
+                }
+            )
+
+        if obj.is_gf_friendly:
+            markers.append(
+                {
+                    "id": -2,
+                    "id_hash": "gluten-free-friendly",
+                    "name": "Gluten-free-friendly",
+                    "description": "",
+                }
+            )
+
+        return markers
 
     class Meta:
         model = Company
@@ -99,6 +127,7 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "zip_code",
             "country",
             "business_category",
+            "business_categories",
             "product_categories",
             "cuisine_types",
             "ownership_markers",
@@ -117,6 +146,11 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
     business_category = serializers.PrimaryKeyRelatedField(
         queryset=BusinessCategory.objects.all(),
         allow_null=True,
+        required=False,
+    )
+    business_categories = serializers.PrimaryKeyRelatedField(
+        queryset=BusinessCategory.objects.all(),
+        many=True,
         required=False,
     )
     product_categories = serializers.PrimaryKeyRelatedField(
@@ -153,6 +187,7 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
             "state",
             "zip_code",
             "business_category",
+            "business_categories",
             "product_categories",
             "cuisine_types",
             "ownership_markers",
@@ -164,3 +199,13 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
             "is_gf_friendly",
         )
         read_only_fields = ("id", "slug")
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if "business_categories" in attrs:
+            attrs["business_category"] = attrs["business_categories"][0] if attrs["business_categories"] else None
+        elif "business_category" in attrs and attrs["business_category"] is not None:
+            attrs["business_categories"] = [attrs["business_category"]]
+
+        return attrs

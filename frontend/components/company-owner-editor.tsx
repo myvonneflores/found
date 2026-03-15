@@ -1,15 +1,19 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { clearAuthSession, readAuthSession, writeAuthSession } from "@/lib/auth-storage";
+import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
   getManagedBusinessProfile,
   listBusinessCategories,
   listCuisineTypes,
   listOwnershipMarkers,
   listProductCategories,
+  refreshAccessToken,
   listSustainabilityMarkers,
   updateManagedBusinessProfile,
 } from "@/lib/api";
@@ -35,6 +39,14 @@ function toggleId(current: number[], nextId: number) {
   return current.includes(nextId) ? current.filter((value) => value !== nextId) : [...current, nextId];
 }
 
+function isTokenError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("token") &&
+    (normalized.includes("not valid") || normalized.includes("invalid") || normalized.includes("expired"))
+  );
+}
+
 export function CompanyOwnerEditor({
   company,
   autoEdit = false,
@@ -43,7 +55,9 @@ export function CompanyOwnerEditor({
   autoEdit?: boolean;
 }) {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, getValidAccessToken, isAuthenticated, isReady, user } = useAuth();
+  const accountType = user?.account_type;
+  const isBusinessVerified = user?.is_business_verified;
   const [profile, setProfile] = useState<ManagedBusinessProfile | null>(null);
   const [canEdit, setCanEdit] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
@@ -66,20 +80,53 @@ export function CompanyOwnerEditor({
       ),
     [taxonomies]
   );
+  const productCategoryOptions = useMemo(
+    () => taxonomies.productCategories.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.productCategories]
+  );
+  const businessCategoryOptions = useMemo(
+    () => taxonomies.businessCategories.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.businessCategories]
+  );
+  const cuisineOptions = useMemo(
+    () => taxonomies.cuisineTypes.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.cuisineTypes]
+  );
+  const ownershipOptions = useMemo(
+    () => taxonomies.ownershipMarkers.map((item) => ({ label: item.name, value: String(item.id) })),
+    [taxonomies.ownershipMarkers]
+  );
+  const moreToLoveOptions = useMemo(
+    () => [
+      ...taxonomies.sustainabilityMarkers.map((item) => ({ label: item.name, value: String(item.id) })),
+      { label: "Vegan-friendly", value: "__vegan__" },
+      { label: "Gluten-free-friendly", value: "__gf__" },
+    ],
+    [taxonomies.sustainabilityMarkers]
+  );
+  const selectedMoreToLove = useMemo(
+    () =>
+      profile
+        ? [
+            ...profile.sustainability_markers.map(String),
+            ...(profile.is_vegan_friendly ? ["__vegan__"] : []),
+            ...(profile.is_gf_friendly ? ["__gf__"] : []),
+          ]
+        : [],
+    [profile]
+  );
 
   useEffect(() => {
     if (!isReady) {
       return;
     }
 
-    const token = accessToken;
-
     if (
       !isAuthenticated ||
-      !token ||
-      !user ||
-      user.account_type !== "business" ||
-      !user.is_business_verified
+      !accessToken ||
+      !accountType ||
+      accountType !== "business" ||
+      !isBusinessVerified
     ) {
       setCanEdit(false);
       setProfile(null);
@@ -88,14 +135,39 @@ export function CompanyOwnerEditor({
     }
 
     let isMounted = true;
+    const token = accessToken;
 
     async function loadManagedProfile() {
       setIsChecking(true);
       try {
-        const nextProfile = await getManagedBusinessProfile(token!);
+        let nextProfile;
+        try {
+          nextProfile = await getManagedBusinessProfile(token);
+        } catch (loadError) {
+          if (!(loadError instanceof Error) || !isTokenError(loadError.message)) {
+            throw loadError;
+          }
+
+          const session = readAuthSession();
+          if (!session) {
+            clearAuthSession();
+            throw loadError;
+          }
+
+          const refreshed = await refreshAccessToken(session.refresh);
+          const nextSession = {
+            ...session,
+            access: refreshed.access,
+            refresh: refreshed.refresh ?? session.refresh,
+          };
+          writeAuthSession(nextSession);
+          nextProfile = await getManagedBusinessProfile(nextSession.access);
+        }
+
         if (!isMounted) {
           return;
         }
+
         if (nextProfile.slug === company.slug) {
           setProfile(nextProfile);
           setCanEdit(true);
@@ -120,7 +192,7 @@ export function CompanyOwnerEditor({
     return () => {
       isMounted = false;
     };
-  }, [accessToken, company.slug, isAuthenticated, isReady, user]);
+  }, [accessToken, accountType, company.slug, isAuthenticated, isBusinessVerified, isReady]);
 
   async function ensureTaxonomiesLoaded() {
     if (hasTaxonomies) {
@@ -189,10 +261,19 @@ export function CompanyOwnerEditor({
     void openEditMode();
   }, [autoEdit, canEdit, hasTaxonomies, isEditMode]);
 
+  useEffect(() => {
+    if (!success) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setSuccess(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [success]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!accessToken || !profile) {
+    if (!profile) {
       return;
     }
 
@@ -201,9 +282,16 @@ export function CompanyOwnerEditor({
     setSuccess("");
 
     try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        setError("Please log in again before saving your business profile.");
+        return;
+      }
+
       const { id: _id, ...payload } = profile;
-      const nextProfile = await updateManagedBusinessProfile(accessToken, payload);
+      const nextProfile = await updateManagedBusinessProfile(token, payload);
       setProfile(nextProfile);
+      setIsEditMode(false);
       setSuccess("Business profile updated.");
       router.refresh();
     } catch (saveError) {
@@ -217,33 +305,56 @@ export function CompanyOwnerEditor({
     return null;
   }
 
+  const successToast = success
+    ? createPortal(
+        <div className="detail-save-toast detail-save-toast-success" role="status">
+          <div className="detail-save-toast-copy">
+            <p>{success}</p>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
+  const errorToast = error
+    ? createPortal(
+        <div className="detail-save-toast detail-save-toast-error" role="alert">
+          <div className="detail-save-toast-copy">
+            <p>{error}</p>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
-    <section className="detail-card company-owner-editor-card">
-      <div className="company-owner-editor-header">
-        <div>
+    <>
+      <section className="detail-card company-owner-editor-card">
+        <div className="company-owner-editor-header">
           <span className="field-label">Owner tools</span>
-          <p className="lede">Turn on edit mode to update the real business page customers see on FOUND.</p>
+          <div className="company-owner-editor-intro">
+            <p className="lede">Turn on edit mode to update your company profile. As the owner of this business, only you can see this form.</p>
+
+            <div className="detail-save-toggle-row company-owner-toggle-row">
+              <button
+                aria-pressed={isEditMode}
+                className={isEditMode ? "detail-save-toggle is-active" : "detail-save-toggle"}
+                onClick={() => {
+                  void handleToggleEditMode();
+                }}
+                type="button"
+              >
+                <span className="detail-save-toggle-knob" />
+              </button>
+              <span className="detail-save-toggle-copy">
+                {isEditMode ? "Edit mode on" : "Edit mode off"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="detail-save-toggle-row company-owner-toggle-row">
-          <button
-            aria-pressed={isEditMode}
-            className={isEditMode ? "detail-save-toggle is-active" : "detail-save-toggle"}
-            onClick={() => {
-              void handleToggleEditMode();
-            }}
-            type="button"
-          >
-            <span className="detail-save-toggle-knob" />
-          </button>
-          <span className="detail-save-toggle-copy">
-            {isEditMode ? "Edit mode on" : "Edit mode off"}
-          </span>
-        </div>
-      </div>
-
-      {isEditMode ? (
-        <form className="company-owner-editor-form" onSubmit={handleSubmit}>
+        {isEditMode ? (
+          <form className="company-owner-editor-form" onSubmit={handleSubmit}>
           <div className="auth-form-grid">
             <label className="contact-field">
               <span className="contact-field-label">Business name</span>
@@ -308,128 +419,71 @@ export function CompanyOwnerEditor({
             </div>
           </div>
 
-          <div className="auth-form-grid">
-            <label className="contact-field">
-              <span className="contact-field-label">Business category</span>
-              <select
-                onChange={(event) =>
-                  updateField("business_category", event.target.value ? Number(event.target.value) : null)
-                }
-                value={profile.business_category ?? ""}
-              >
-                <option value="">Choose a category</option>
-                {taxonomies.businessCategories.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="company-owner-flags">
-              <label className="auth-checkbox">
-                <input
-                  checked={profile.is_vegan_friendly}
-                  onChange={(event) => updateField("is_vegan_friendly", event.target.checked)}
-                  type="checkbox"
-                />
-                <span>Vegan-friendly</span>
-              </label>
-
-              <label className="auth-checkbox">
-                <input
-                  checked={profile.is_gf_friendly}
-                  onChange={(event) => updateField("is_gf_friendly", event.target.checked)}
-                  type="checkbox"
-                />
-                <span>Gluten-free-friendly</span>
-              </label>
-            </div>
+          <div className="company-owner-taxonomy-section">
+            <span className="contact-field-label">Business categories</span>
+            <TaxonomyMultiSelect
+              onToggle={(value) => {
+                const nextCategories = toggleId(profile.business_categories, Number(value));
+                updateField("business_categories", nextCategories);
+                updateField("business_category", nextCategories[0] ?? null);
+              }}
+              options={businessCategoryOptions}
+              placeholder="Choose as many as you like"
+              selected={profile.business_categories.map(String)}
+            />
           </div>
 
           <div className="company-owner-taxonomy-grid">
             <div className="company-owner-taxonomy-section">
               <span className="contact-field-label">Product categories</span>
-              <div className="directory-category-cloud">
-                {taxonomies.productCategories.map((item) => (
-                  <button
-                    className={
-                      profile.product_categories.includes(item.id)
-                        ? "badge badge-outline company-owner-tag is-selected"
-                        : "badge badge-outline company-owner-tag"
-                    }
-                    key={item.id}
-                    onClick={() => updateField("product_categories", toggleId(profile.product_categories, item.id))}
-                    type="button"
-                  >
-                    {item.name}
-                  </button>
-                ))}
-              </div>
+              <TaxonomyMultiSelect
+                onToggle={(value) => updateField("product_categories", toggleId(profile.product_categories, Number(value)))}
+                options={productCategoryOptions}
+                placeholder="Choose product categories"
+                selected={profile.product_categories.map(String)}
+              />
             </div>
 
             <div className="company-owner-taxonomy-section">
               <span className="contact-field-label">Cuisine</span>
-              <div className="directory-category-cloud">
-                {taxonomies.cuisineTypes.map((item) => (
-                  <button
-                    className={
-                      profile.cuisine_types.includes(item.id)
-                        ? "badge badge-outline company-owner-tag is-selected"
-                        : "badge badge-outline company-owner-tag"
-                    }
-                    key={item.id}
-                    onClick={() => updateField("cuisine_types", toggleId(profile.cuisine_types, item.id))}
-                    type="button"
-                  >
-                    {item.name}
-                  </button>
-                ))}
-              </div>
+              <TaxonomyMultiSelect
+                onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
+                options={cuisineOptions}
+                placeholder="Choose cuisine types"
+                selected={profile.cuisine_types.map(String)}
+              />
             </div>
           </div>
 
           <div className="company-owner-taxonomy-grid">
             <div className="company-owner-taxonomy-section">
               <span className="contact-field-label">Owned by</span>
-              <div className="directory-category-cloud">
-                {taxonomies.ownershipMarkers.map((item) => (
-                  <button
-                    className={
-                      profile.ownership_markers.includes(item.id)
-                        ? "badge badge-outline company-owner-tag is-selected"
-                        : "badge badge-outline company-owner-tag"
-                    }
-                    key={item.id}
-                    onClick={() => updateField("ownership_markers", toggleId(profile.ownership_markers, item.id))}
-                    type="button"
-                  >
-                    {item.name}
-                  </button>
-                ))}
-              </div>
+              <TaxonomyMultiSelect
+                onToggle={(value) => updateField("ownership_markers", toggleId(profile.ownership_markers, Number(value)))}
+                options={ownershipOptions}
+                placeholder="Add any ownership details you'd like to share"
+                selected={profile.ownership_markers.map(String)}
+              />
             </div>
 
             <div className="company-owner-taxonomy-section">
-              <span className="contact-field-label">Sustainability markers</span>
-              <div className="directory-category-cloud">
-                {taxonomies.sustainabilityMarkers.map((item) => (
-                  <button
-                    className={
-                      profile.sustainability_markers.includes(item.id)
-                        ? "badge badge-outline company-owner-tag is-selected"
-                        : "badge badge-outline company-owner-tag"
-                    }
-                    key={item.id}
-                    onClick={() =>
-                      updateField("sustainability_markers", toggleId(profile.sustainability_markers, item.id))
-                    }
-                    type="button"
-                  >
-                    {item.name}
-                  </button>
-                ))}
-              </div>
+              <span className="contact-field-label">More to love</span>
+              <TaxonomyMultiSelect
+                onToggle={(value) => {
+                  if (value === "__vegan__") {
+                    updateField("is_vegan_friendly", !profile.is_vegan_friendly);
+                    return;
+                  }
+                  if (value === "__gf__") {
+                    updateField("is_gf_friendly", !profile.is_gf_friendly);
+                    return;
+                  }
+                  updateField("sustainability_markers", toggleId(profile.sustainability_markers, Number(value)));
+                }}
+                options={moreToLoveOptions}
+                placeholder="Choose as many as you like"
+                selected={selectedMoreToLove}
+              />
             </div>
           </div>
 
@@ -462,19 +516,18 @@ export function CompanyOwnerEditor({
             </label>
           </div>
 
-          {isLoadingTaxonomies ? <p className="contact-form-note">Loading editing options...</p> : null}
-          {error ? <p className="contact-form-note is-error">{error}</p> : null}
-          {success ? <p className="contact-form-note is-success">{success}</p> : null}
+            {isLoadingTaxonomies ? <p className="contact-form-note">Loading editing options...</p> : null}
 
-          <div className="directory-form-actions">
-            <button className="contact-submit" disabled={isSaving} type="submit">
-              {isSaving ? "Saving..." : "Save business page"}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <p className="lede">Turn edit mode on to update your description, categories, markers, and social links right here.</p>
-      )}
-    </section>
+            <div className="directory-form-actions">
+              <button className="contact-submit" disabled={isSaving} type="submit">
+                {isSaving ? "Saving..." : "Save business page"}
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </section>
+      {successToast}
+      {errorToast}
+    </>
   );
 }

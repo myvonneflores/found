@@ -13,7 +13,10 @@ export default function AboutPage() {
           <div className="about-intro-card">
             <div className="about-hero">
               <h1 className="about-title">About Us</h1>
-              <p className="about-tagline">Helping people discover locally owned businesses</p>
+              <p className="about-tagline">
+                Helping people discover locally owned businesses, save the ones they love, and share them with their
+                communities.
+              </p>
             </div>
           </div>
 
@@ -43,12 +46,33 @@ export default function AboutPage() {
                 products.
               </p>
               <p className="lede">
-                Save the spots you love, build a list for your next trip, and share your recommendations with your
-                community.
+                From there, you can save favorites, create lists, and keep track of the spots you want to revisit,
+                recommend, or share with someone else.
               </p>
               <p className="lede">
                 The goal is simple: help people discover great local businesses and make it easier for those businesses
                 to connect with the people looking for them.
+              </p>
+            </article>
+          </div>
+
+          <div className="about-section">
+            <div className="about-pill">sharing on found</div>
+            <article className="about-card">
+              <p className="lede">
+                FOUND supports both personal and business accounts.
+              </p>
+              <p className="lede">
+                Personal Accounts save favorite businesses, build lists, and share their curation or keep it just for
+                themselves.
+              </p>
+              <p className="lede">
+                Business Accounts build lists of favorites to share with their community and keep their profile up to
+                date, sharing what matters.
+              </p>
+              <p className="lede">
+                Public lists and profiles make it easier to share local knowledge with friends, customers, neighbors,
+                and anyone else trying to discover better businesses in their city.
               </p>
             </article>
           </div>
