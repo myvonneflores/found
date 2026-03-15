@@ -299,6 +299,28 @@ class PublicProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["public_recommendations"][0]["title"], "Neighborhood staple")
 
+    def test_bio_shown_when_profile_not_public_but_has_public_lists(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+        profile = user.personal_profile
+        profile.bio = "Bookstores and coffee."
+        profile.is_public = False
+        profile.save(update_fields=["bio", "is_public"])
+        company = Company.objects.create(name="North Star Market")
+        curated_list = CuratedList.objects.create(user=user, title="Weekend favorites", is_public=True)
+        curated_list.items.create(company=company, position=1)
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["bio"], "Bookstores and coffee.")
+
     def test_private_profile_without_public_lists_is_hidden(self):
         user = User.objects.create_user(
             email="reader@example.com",
