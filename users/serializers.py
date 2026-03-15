@@ -163,29 +163,22 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     def get_display_name(self, obj):
         return obj.display_name or obj.first_name or obj.email.split("@")[0]
 
-    def get_bio(self, obj):
+    def _get_personal_profile(self, obj):
         if obj.account_type != User.AccountType.PERSONAL:
-            return ""
-        profile = getattr(obj, "personal_profile", None)
-        if profile:
-            return profile.bio
-        return ""
+            return None
+        return getattr(obj, "personal_profile", None)
+
+    def get_bio(self, obj):
+        profile = self._get_personal_profile(obj)
+        return profile.bio if profile else ""
 
     def get_location(self, obj):
-        if obj.account_type != User.AccountType.PERSONAL:
-            return ""
-        profile = getattr(obj, "personal_profile", None)
-        if profile:
-            return profile.location
-        return ""
+        profile = self._get_personal_profile(obj)
+        return profile.location if profile else ""
 
     def get_avatar_url(self, obj):
-        if obj.account_type != User.AccountType.PERSONAL:
-            return ""
-        profile = getattr(obj, "personal_profile", None)
-        if profile:
-            return profile.avatar_url
-        return ""
+        profile = self._get_personal_profile(obj)
+        return profile.avatar_url if profile else ""
 
     def get_public_lists(self, obj):
         from community.serializers import PublicCuratedListSerializer
