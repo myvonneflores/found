@@ -35,7 +35,7 @@ def backfill_business_claim_workflow(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0006_backfill_personal_profiles'),
+        ('users', '0010_drop_all_remaining_orphaned_columns'),
     ]
 
     operations = [
