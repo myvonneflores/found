@@ -4330,7 +4330,7 @@ body.contact-page-body {
   color: #df857f;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   height: 100%;
 }
 
