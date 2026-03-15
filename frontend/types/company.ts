@@ -5,6 +5,23 @@ export type TaxonomyItem = {
   description: string;
 };
 
+export type ClaimedCompanyPublicList = {
+  id: number;
+  id_hash: string;
+  title: string;
+  description: string;
+  updated_at: string;
+  item_count: number;
+};
+
+export type ClaimedCompanyProfile = {
+  display_name: string;
+  public_slug: string;
+  account_type: "personal" | "business";
+  public_list_count: number;
+  public_lists: ClaimedCompanyPublicList[];
+};
+
 export type CompanyListItem = {
   id: number;
   id_hash: string;
@@ -41,6 +58,7 @@ export type CompanyDetail = {
   business_categories: TaxonomyItem[];
   product_categories: TaxonomyItem[];
   cuisine_types: TaxonomyItem[];
+  claimed_profile: ClaimedCompanyProfile | null;
   ownership_markers: TaxonomyItem[];
   sustainability_markers: TaxonomyItem[];
   instagram_handle: string;

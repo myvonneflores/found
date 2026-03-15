@@ -1,8 +1,9 @@
 import pytest
-from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
-from companies.models import Company
+from companies.models import Company, CuisineType
+from community.models import CuratedList, CuratedListItem
 from users.models import BusinessClaim
 
 User = get_user_model()
@@ -24,6 +25,7 @@ class TestCompanyListApi:
 
         assert response.status_code == 200
         assert response.data["slug"] == company.slug
+        assert response.data["claimed_profile"] is None
 
     def test_company_detail_includes_boolean_markers_in_sustainability_markers(self, api_client, two_companies):
         first_company = two_companies[0]
@@ -43,6 +45,42 @@ class TestCompanyListApi:
         assert "Vegan-friendly" in first_marker_names
         assert "Gluten-free-friendly" not in first_marker_names
         assert "Gluten-free-friendly" in second_marker_names
+
+    def test_company_detail_includes_claimed_profile_public_lists(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="claimed-owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+            display_name="North Star Team",
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        public_list = CuratedList.objects.create(
+            user=user,
+            title="Neighborhood Staples",
+            description="Our favorite nearby spots",
+            is_public=True,
+        )
+        CuratedListItem.objects.create(curated_list=public_list, company=company, position=1)
+
+        response = api_client.get(
+            reverse("companies:company-detail", kwargs={"slug": company.slug})
+        )
+
+        assert response.status_code == 200
+        claimed_profile = response.data["claimed_profile"]
+        assert claimed_profile["display_name"] == "North Star Team"
+        assert claimed_profile["account_type"] == User.AccountType.BUSINESS
+        assert claimed_profile["public_list_count"] == 1
+        assert len(claimed_profile["public_lists"]) == 1
+        assert claimed_profile["public_lists"][0]["title"] == "Neighborhood Staples"
+        assert claimed_profile["public_lists"][0]["item_count"] == 1
 
     def test_filters_by_city(self, api_client, two_companies):
         response = api_client.get(reverse("companies:company-list"), {"city": "Seattle"})
@@ -118,6 +156,39 @@ class TestCompanyListApi:
 
         assert response.data["count"] == 1
         assert response.data["results"][0]["name"] == "Cedar Cloth"
+
+    def test_search_matches_partial_ownership_marker_terms(self, api_client, two_companies):
+        response = api_client.get(reverse("companies:company-list"), {"search": "bipoc"})
+
+        assert response.status_code == 200
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "Cedar Cloth"
+
+    def test_search_matches_related_taxonomy_metadata(self, api_client, two_companies):
+        ethiopian = CuisineType.objects.create(
+            name="Ethiopian",
+            description="East African cuisine",
+        )
+        company = two_companies[0]
+        company.cuisine_types.add(ethiopian)
+        company.sustainability_markers.update(description="Low-waste packaging and refill options")
+
+        cuisine_response = api_client.get(reverse("companies:company-list"), {"search": "east afric"})
+        sustainability_response = api_client.get(reverse("companies:company-list"), {"search": "low-waste"})
+
+        assert cuisine_response.status_code == 200
+        assert cuisine_response.data["count"] == 1
+        assert cuisine_response.data["results"][0]["name"] == "North Star Market"
+        assert sustainability_response.status_code == 200
+        assert sustainability_response.data["count"] == 1
+        assert sustainability_response.data["results"][0]["name"] == "North Star Market"
+
+    def test_search_matches_boolean_marker_aliases(self, api_client, two_companies):
+        response = api_client.get(reverse("companies:company-list"), {"search": "vegan"})
+
+        assert response.status_code == 200
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "North Star Market"
 
     def test_invalid_detail_slug_returns_404(self, api_client):
         response = api_client.get(

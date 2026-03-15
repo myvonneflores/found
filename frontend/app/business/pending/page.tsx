@@ -14,6 +14,8 @@ import { listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
 import type { CuratedList, Favorite } from "@/types/community";
 
+const DASHBOARD_SCROLL_CAP = 15;
+
 function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
   if (Array.isArray(value)) {
     return value as Favorite[];
@@ -75,6 +77,17 @@ function isTokenError(message: string) {
   );
 }
 
+function formatTimestamp(value: string | null) {
+  if (!value) {
+    return "";
+  }
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function BusinessPendingPage() {
   const router = useRouter();
   const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
@@ -90,7 +103,94 @@ export default function BusinessPendingPage() {
 
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
-  const latestClaim = claims.find((claim) => claim.status === "verified") ?? claims[0] ?? null;
+  const latestClaim = claims[0] ?? null;
+  const latestHistory = latestClaim?.history ?? [];
+
+  const claimStatusContent = latestClaim ? (
+    <article className="auth-card business-claim-status-card">
+      <div className="auth-status-item">
+        <strong>Submitted business</strong>
+        <p>
+          {latestClaim.intent === "existing"
+            ? latestClaim.company_name ?? latestClaim.business_name
+            : latestClaim.business_name}
+        </p>
+      </div>
+      <div className="auth-status-item">
+        <strong>Submitted on</strong>
+        <p>{formatTimestamp(latestClaim.submitted_at)}</p>
+      </div>
+      {latestClaim.resubmitted_at ? (
+        <div className="auth-status-item">
+          <strong>Last resubmitted</strong>
+          <p>{formatTimestamp(latestClaim.resubmitted_at)}</p>
+        </div>
+      ) : null}
+      {latestClaim.decision_reason_label ? (
+        <div className="auth-status-item">
+          <strong>Primary reason</strong>
+          <p>{latestClaim.decision_reason_label}</p>
+        </div>
+      ) : null}
+      {latestClaim.review_notes ? (
+        <div className="auth-status-item">
+          <strong>Reviewer notes</strong>
+          <p>{latestClaim.review_notes}</p>
+        </div>
+      ) : null}
+      {latestClaim.review_checklist_labels.length ? (
+        <div className="auth-status-item">
+          <strong>Review checklist</strong>
+          <p>{latestClaim.review_checklist_labels.join(" • ")}</p>
+        </div>
+      ) : null}
+      {latestClaim.status === "rejected" && latestHistory.length ? (
+        <div className="auth-status-item">
+          <strong>Timeline</strong>
+          <p>
+            {latestHistory
+              .map(
+                (event) =>
+                  `${event.event_label} ${formatTimestamp(event.occurred_at)}`
+              )
+              .join(" • ")}
+          </p>
+        </div>
+      ) : null}
+      <div className="auth-status-item">
+        <strong>What happens next</strong>
+        <p>
+          {latestClaim.status === "rejected"
+            ? "Update the claim details below and resubmit when you're ready. We'll keep your previous review history attached to this claim."
+            : "We'll review your business contact details and connection to the company. Favorites and private lists stay available while you wait."}
+        </p>
+      </div>
+      {latestClaim.status === "rejected" ? (
+        <button
+          className="contact-submit"
+          onClick={() => router.push(`/business/claim?claim=${latestClaim.id}`)}
+          type="button"
+        >
+          Revise and resubmit
+        </button>
+      ) : null}
+    </article>
+  ) : (
+    <article className="auth-card business-claim-status-card">
+      <span className="badge">Start here</span>
+      <h2>Submit your business verification</h2>
+      <p className="lede">
+        You haven't submitted a verification claim yet. Once you do, we'll review it here.
+      </p>
+      <button
+        className="contact-submit"
+        onClick={() => router.push("/business/claim")}
+        type="button"
+      >
+        Start verification
+      </button>
+    </article>
+  );
 
   const favoritesContent = (
     <>
@@ -99,7 +199,7 @@ export default function BusinessPendingPage() {
         <p className="lede">No favorites yet. Start saving businesses you want to stay close to while we review your claim.</p>
       ) : null}
       {!isLoading && safeFavorites.length > 0 ? (
-        <div className="dashboard-stack">
+        <div className={safeFavorites.length > DASHBOARD_SCROLL_CAP ? "dashboard-stack dashboard-scroll-region is-capped" : "dashboard-stack"}>
           {safeFavorites.map((favorite) => (
             <FavoriteChipActions favorite={favorite} key={favorite.id} />
           ))}
@@ -115,6 +215,7 @@ export default function BusinessPendingPage() {
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Start one now so your curation is ready to share once verification is complete."
+          enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
         />
@@ -206,6 +307,7 @@ export default function BusinessPendingPage() {
           </article>
 
           <BusinessProfileCard isVerified={false} latestClaim={latestClaim} />
+          {claimStatusContent}
 
           <div className="dashboard-column-headings">
             <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>

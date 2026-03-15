@@ -1,4 +1,5 @@
-from rest_framework import generics, permissions, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -28,8 +29,8 @@ from .serializers import (
 class CompanyListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = CompanyListSerializer
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = CompanyFilterSet
-    search_fields = ("name", "description", "city", "state", "country")
     ordering_fields = ("name", "founded_year", "number_of_employees", "created_at")
     ordering = ("name",)
 

@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models.functions import Coalesce
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import BusinessClaim, PersonalProfile
@@ -49,7 +51,13 @@ class BusinessClaimListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if self.request.user.account_type != User.AccountType.BUSINESS:
             raise PermissionDenied("Only business users can access business claims.")
-        return BusinessClaim.objects.filter(user=self.request.user).select_related("company")
+        return (
+            BusinessClaim.objects.filter(user=self.request.user)
+            .select_related("company", "reviewed_by")
+            .prefetch_related("history__actor")
+            .annotate(current_activity_at=Coalesce("resubmitted_at", "submitted_at"))
+            .order_by("-current_activity_at", "-pk")
+        )
 
     serializer_class = BusinessClaimSerializer
 
@@ -60,12 +68,24 @@ class BusinessClaimDetailView(generics.RetrieveUpdateAPIView):
     def get_queryset(self):
         if self.request.user.account_type != User.AccountType.BUSINESS:
             raise PermissionDenied("Only business users can access business claims.")
-        return BusinessClaim.objects.filter(user=self.request.user).select_related("company")
+        return (
+            BusinessClaim.objects.filter(user=self.request.user)
+            .select_related("company", "reviewed_by")
+            .prefetch_related("history__actor")
+        )
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
             return BusinessClaimSerializer
         return BusinessClaimUpdateSerializer
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        serializer = BusinessClaimSerializer(
+            self.get_object(),
+            context=self.get_serializer_context(),
+        )
+        return Response(serializer.data, status=response.status_code)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

@@ -1,0 +1,9 @@
+Hi {{ claim.submitter_first_name|default:claim.user.first_name|default:"there" }},
+
+Your business claim for {{ company_name }} has been approved on FOUND.
+
+You can now open your business dashboard, edit your company profile, and share public lists with your community.
+
+If you claimed an existing company profile, the Edit My Business button will now take you into that page. If you're adding a new business, you can now create your company profile.
+
+See you on FOUND.

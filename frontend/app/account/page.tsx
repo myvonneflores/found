@@ -19,6 +19,8 @@ import {
 import { CuratedList, Favorite } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
 
+const DASHBOARD_SCROLL_CAP = 15;
+
 function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
   if (Array.isArray(value)) {
     return value as Favorite[];
@@ -96,7 +98,7 @@ export default function AccountPage() {
         <p className="lede">You haven’t favorited any businesses yet. Save favs from the business&apos; detail page.</p>
       ) : null}
       {!isLoading && safeFavorites.length > 0 ? (
-        <div className="dashboard-stack">
+        <div className={safeFavorites.length > DASHBOARD_SCROLL_CAP ? "dashboard-stack dashboard-scroll-region is-capped" : "dashboard-stack"}>
           {safeFavorites.map((favorite) => (
             <FavoriteChipActions favorite={favorite} key={favorite.id} />
           ))}
@@ -111,6 +113,7 @@ export default function AccountPage() {
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Create your first one to start curating neighborhoods and favorites."
+          enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
         />

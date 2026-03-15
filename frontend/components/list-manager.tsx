@@ -8,15 +8,21 @@ export function ListManager({
   emptyMessage,
   lists,
   onCreateList,
+  enableScroll = false,
 }: {
   emptyMessage: string;
   lists: CuratedList[];
   onCreateList: () => void;
+  enableScroll?: boolean;
 }) {
   return (
     <div className="list-manager">
       {lists.length > 0 ? (
-        <div aria-label="Your lists" className="list-manager-picker" role="list">
+        <div
+          aria-label="Your lists"
+          className={enableScroll ? "list-manager-picker dashboard-scroll-region is-capped" : "list-manager-picker"}
+          role="list"
+        >
           {lists.map((list) => (
             <Link
               className="dashboard-row dashboard-row-link dashboard-chip-link list-picker-chip"

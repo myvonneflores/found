@@ -2,9 +2,9 @@
 
 ## Status
 
-This feature is still under active development.
+This feature now includes a real manual-review verification workflow for business accounts.
 
-Treat this page as a stub and orientation note, not a settled implementation spec.
+It is still evolving, but the claim lifecycle, dashboard states, and admin review path below reflect code that exists now.
 
 ## Current Scope
 
@@ -46,7 +46,11 @@ This area currently covers:
 
 ## Current Known Rules
 
-- business claims are reviewed manually
+- business claims are reviewed manually in Django admin
+- claims carry an explicit intent: `existing` or `new`
+- claim submissions store structured submitter identity fields plus business contact details
+- rejected claims can be revised and resubmitted from the same claim record
+- claim history is preserved as an event timeline
 - verified claims unlock business profile creation or editing
 - a verified user with no linked company can create one through `/business/company`
 - a verified user with a linked company is redirected into that company’s public page with `?edit=1`
@@ -57,26 +61,34 @@ This area currently covers:
 
 What seems true in the code today:
 
-- business users sign up, then go through `/business/claim`
-- the claim page collects business/contact details and routes the user to the pending dashboard
+- business users sign up, choose whether they are claiming an existing listing or adding a new business, then go through `/business/claim`
+- existing-business claims now target a real FOUND company during submission
+- the claim page supports both first-time submission and rejected-claim resubmission
+- the pending dashboard shows current claim details, reviewer feedback, and next-step messaging
 - pending business users can still use parts of the dashboard and community experience while waiting
 - verified business users use `/business/company` as a create-or-redirect entry point
 - existing claimed businesses route into the public company page in edit mode
 
 ## Areas Still In Flux
 
-- the exact admin review workflow
-- how rejected claims should be surfaced in the frontend UX
-- whether owner edits should publish immediately or go through review
+- whether business verification should eventually support uploads or stronger proof collection
 - whether one business user will eventually manage multiple companies
 - how much of business setup should live on `/business/company` versus the public company page
+- whether owner edits should ever move from immediate publish to a review queue
+
+## Admin Review Snapshot
+
+- reviewers open claims in Django admin
+- they choose `verified` or `rejected`
+- review decisions require at least one checklist item
+- rejected decisions also require a primary reason code
+- saving a decision stamps reviewer metadata, appends a history event, and sends an email notification to the business contact
 
 ## Next Time We Flesh This Out
 
-- document the admin-side review process and operational checklist
-- map the exact state transitions for `pending`, `verified`, and `rejected`
-- document the create-vs-edit branch end to end
+- document the full reviewer operating checklist with screenshots
 - add a concise permissions matrix for pending vs verified business users
+- document the notification templates and operational email setup for production
 
 ## Open Questions
 

@@ -6,7 +6,7 @@ import { BodyClass } from "@/components/body-class";
 import { CompanyOwnerEditor } from "@/components/company-owner-editor";
 import { CompanySaveFlow } from "@/components/company-save-flow";
 import { detailDescription } from "@/lib/company-copy";
-import { getCompany } from "@/lib/api";
+import { getCompany, getPublicCuratedList } from "@/lib/api";
 import { instagramProfileUrl } from "@/lib/social-links";
 import { SiteHeader } from "@/components/site-header";
 
@@ -172,6 +172,23 @@ export default async function CompanyDetailPage({
     const hasAnyLinks = Boolean(
       company.website || company.facebook_page || company.linkedin_page || company.instagram_handle
     );
+    const claimedProfile = company.claimed_profile;
+    const singleRecommendationList =
+      claimedProfile && claimedProfile.public_lists.length === 1
+        ? await getPublicCuratedList(claimedProfile.public_lists[0].id_hash).catch(() => null)
+        : null;
+    const recommendationPills =
+      claimedProfile && claimedProfile.public_lists.length === 1 && singleRecommendationList?.items.length
+        ? singleRecommendationList.items.map((item) => ({
+            href: `/companies/${item.company.slug}`,
+            label: item.company.name,
+            meta: undefined,
+          }))
+        : claimedProfile?.public_lists.map((list) => ({
+            href: `/lists/${list.id_hash}`,
+            label: list.title,
+            meta: `${list.item_count} ${list.item_count === 1 ? "place" : "places"}`,
+          })) ?? [];
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Organization",
@@ -308,6 +325,38 @@ export default async function CompanyDetailPage({
             </div>
           </article>
         </section>
+
+        {claimedProfile ? (
+          <section className="detail-card detail-recommendations-card">
+            <div className="detail-claimed-header">
+              <div className="detail-claimed-copy">
+                <h2>Recommendations</h2>
+              </div>
+            </div>
+
+            <div className="detail-recommendations-pill-grid">
+              {recommendationPills.map((pill) => (
+                <Link className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill" href={pill.href} key={`${pill.href}-${pill.label}`}>
+                  <span className="dashboard-chip-label">
+                    <strong>{pill.label}</strong>
+                    {pill.meta ? <span>{pill.meta}</span> : null}
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            {recommendationPills.length === 0 ? (
+              <div className="detail-recommendations-empty">
+                <span className="muted">
+                  {claimedProfile.public_lists.length === 1
+                    ? "This public list does not have any businesses yet."
+                    : "No public recommendations yet."}
+                </span>
+              </div>
+            ) : null}
+
+          </section>
+        ) : null}
       </main>
     );
   } catch {
