@@ -55,9 +55,16 @@ From `frontend/`:
 
 ```bash
 fly secrets set \
-  API_BASE_URL="https://api.found-places.com/api" \
   SITE_URL="https://www.found-places.com"
 ```
+
+> **Note:** `NEXT_PUBLIC_API_BASE_URL` is a build-time variable (Next.js
+> inlines `NEXT_PUBLIC_*` values during `next build`). The production default
+> is already set in the Dockerfile. To override it, pass a build arg:
+>
+> ```bash
+> fly deploy --build-arg NEXT_PUBLIC_API_BASE_URL="https://api.found-places.com/api"
+> ```
 
 ## 5. Deploy
 
