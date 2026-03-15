@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { clearAuthSession, readAuthSession, writeAuthSession, type AuthSession } from "@/lib/auth-storage";
 import { getCurrentUser, refreshAccessToken } from "@/lib/api";
@@ -11,7 +11,6 @@ interface AuthContextValue {
   isReady: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
-  getValidAccessToken: () => Promise<string | null>;
   signIn: (session: AuthSession) => void;
   signOut: () => void;
   refreshUser: () => Promise<void>;
@@ -66,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const hydrateSession = useCallback(async (session: AuthSession): Promise<AuthSession | null> => {
+  async function hydrateSession(session: AuthSession): Promise<AuthSession | null> {
     try {
       const nextUser = await getCurrentUser(session.access);
       return { ...session, user: nextUser };
@@ -87,14 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     }
-  }, []);
+  }
 
-  const getValidAccessToken = useCallback(async () => {
+  async function refreshUser() {
     const session = readAuthSession();
     if (!session) {
       setUser(null);
       setAccessToken(null);
-      return null;
+      return;
     }
 
     const nextSession = await hydrateSession(session);
@@ -103,47 +102,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuthSession();
       setUser(null);
       setAccessToken(null);
-      return null;
+      return;
     }
 
     writeAuthSession(nextSession);
     setUser(nextSession.user);
     setAccessToken(nextSession.access);
-    return nextSession.access;
-  }, [hydrateSession]);
+  }
 
-  const refreshUser = useCallback(async () => {
-    await getValidAccessToken();
-  }, [getValidAccessToken]);
-
-  const signIn = useCallback((session: AuthSession) => {
+  function signIn(session: AuthSession) {
     writeAuthSession(session);
     setAccessToken(session.access);
     setUser(session.user);
-  }, []);
+  }
 
-  const signOut = useCallback(() => {
+  function signOut() {
     clearAuthSession();
     setAccessToken(null);
     setUser(null);
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      accessToken,
-      getValidAccessToken,
-      isReady,
-      isAuthenticated: Boolean(accessToken && user),
-      user,
-      signIn,
-      signOut,
-      refreshUser,
-    }),
-    [accessToken, getValidAccessToken, isReady, refreshUser, signIn, signOut, user]
-  );
+  }
 
   return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    <AuthContext.Provider
+      value={{
+        accessToken,
+        isReady,
+        isAuthenticated: Boolean(accessToken && user),
+        user,
+        signIn,
+        signOut,
+        refreshUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
   );
 }
 

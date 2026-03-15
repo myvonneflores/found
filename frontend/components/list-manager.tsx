@@ -28,6 +28,9 @@ export function ListManager({
             >
               <span className="dashboard-chip-label">
                 <strong>{list.title}</strong>
+                <span>
+                  {list.items.length} saved {list.items.length === 1 ? "place" : "places"}
+                </span>
               </span>
             </Link>
           ))}

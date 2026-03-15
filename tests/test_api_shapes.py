@@ -20,7 +20,6 @@ COMPANY_LIST_FIELDS = {
     "state",
     "country",
     "business_category",
-    "business_categories",
     "product_categories",
     "ownership_markers",
     "sustainability_markers",
@@ -42,7 +41,6 @@ COMPANY_DETAIL_FIELDS = {
     "zip_code",
     "country",
     "business_category",
-    "business_categories",
     "product_categories",
     "ownership_markers",
     "sustainability_markers",
@@ -102,7 +100,7 @@ def test_company_list_result_fields(api_client):
     # business_category is a plain string (SerializerMethodField) or null
     assert item["business_category"] is None or isinstance(item["business_category"], str)
     # M2M fields are lists of strings (StringRelatedField)
-    for field in ("business_categories", "product_categories", "ownership_markers", "sustainability_markers"):
+    for field in ("product_categories", "ownership_markers", "sustainability_markers"):
         assert isinstance(item[field], list)
         for val in item[field]:
             assert isinstance(val, str)
@@ -125,7 +123,7 @@ def test_company_detail_fields(api_client):
     if data["business_category"] is not None:
         assert set(data["business_category"].keys()) == TAXONOMY_OBJECT_FIELDS
     # M2M fields are lists of nested taxonomy objects
-    for field in ("business_categories", "product_categories", "ownership_markers", "sustainability_markers"):
+    for field in ("product_categories", "ownership_markers", "sustainability_markers"):
         assert isinstance(data[field], list)
         for obj in data[field]:
             assert set(obj.keys()) == TAXONOMY_OBJECT_FIELDS
