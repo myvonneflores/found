@@ -41,7 +41,7 @@ Relevant local URLs:
 
 The frontend is configured to talk to the backend differently depending on where it runs:
 
-- inside Docker: `API_BASE_URL=http://web:8000/api`
+- inside Docker: `NEXT_PUBLIC_API_BASE_URL=http://web:8000/api`
 - outside Docker fallback in code: `http://127.0.0.1:8000/api`
 
 This split matters any time you are debugging network requests or adding a new environment variable.

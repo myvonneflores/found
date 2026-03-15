@@ -55,7 +55,7 @@ From `frontend/`:
 
 ```bash
 fly secrets set \
-  API_BASE_URL="https://api.found-places.com/api" \
+  NEXT_PUBLIC_API_BASE_URL="https://api.found-places.com/api" \
   SITE_URL="https://www.found-places.com"
 ```
 
