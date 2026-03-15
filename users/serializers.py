@@ -140,6 +140,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class PublicProfileSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
     bio = serializers.SerializerMethodField()
     location = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
@@ -159,11 +160,14 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             "public_recommendations",
         )
 
+    def get_display_name(self, obj):
+        return obj.display_name or obj.first_name or obj.email.split("@")[0]
+
     def get_bio(self, obj):
         if obj.account_type != User.AccountType.PERSONAL:
             return ""
         profile = getattr(obj, "personal_profile", None)
-        if profile and profile.is_public:
+        if profile:
             return profile.bio
         return ""
 
@@ -171,7 +175,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
         if obj.account_type != User.AccountType.PERSONAL:
             return ""
         profile = getattr(obj, "personal_profile", None)
-        if profile and profile.is_public:
+        if profile:
             return profile.location
         return ""
 
@@ -179,7 +183,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
         if obj.account_type != User.AccountType.PERSONAL:
             return ""
         profile = getattr(obj, "personal_profile", None)
-        if profile and profile.is_public:
+        if profile:
             return profile.avatar_url
         return ""
 

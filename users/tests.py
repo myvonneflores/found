@@ -317,6 +317,67 @@ class PublicProfileTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_bio_shown_for_user_with_public_lists_and_private_profile(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+        profile = user.personal_profile
+        profile.bio = "Neighborhood coffee spots."
+        profile.is_public = False
+        profile.save(update_fields=["bio", "is_public"])
+        company = Company.objects.create(name="Cozy Corner")
+        CuratedList.objects.create(user=user, title="My picks", is_public=True).items.create(
+            company=company, position=1
+        )
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["bio"], "Neighborhood coffee spots.")
+
+    def test_display_name_falls_back_to_first_name_when_blank(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            first_name="Alice",
+        )
+        self.assertEqual(user.display_name, "")
+        profile = user.personal_profile
+        profile.is_public = True
+        profile.save(update_fields=["is_public"])
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["display_name"], "Alice")
+
+    def test_display_name_falls_back_to_email_prefix_when_name_fields_are_blank(self):
+        user = User.objects.create_user(
+            email="uniquereader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        self.assertEqual(user.display_name, "")
+        self.assertEqual(user.first_name, "")
+        profile = user.personal_profile
+        profile.is_public = True
+        profile.save(update_fields=["is_public"])
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["display_name"], "uniquereader")
+
 
 class BusinessClaimTests(APITestCase):
     def setUp(self):
