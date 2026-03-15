@@ -12,4 +12,8 @@ class Migration(migrations.Migration):
             sql='ALTER TABLE users_businessclaim DROP COLUMN IF EXISTS decision_reason_code;',
             reverse_sql=migrations.RunSQL.noop,
         ),
+        migrations.RunSQL(
+            sql='ALTER TABLE users_businessclaim DROP COLUMN IF EXISTS intent;',
+            reverse_sql=migrations.RunSQL.noop,
+        ),
     ]
