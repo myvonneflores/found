@@ -43,6 +43,7 @@ class CompanyListView(generics.ListAPIView):
                 "ownership_markers",
                 "sustainability_markers",
             )
+            .filter(is_published=True)
             .distinct()
         )
 

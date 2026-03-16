@@ -2,16 +2,24 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import { detailDescription, listDescription } from "@/lib/company-copy";
 import { instagramProfileUrl } from "@/lib/social-links";
+import { useAuth } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
+import { BrandedSelect } from "@/components/branded-select";
+import { AddCompanyToList } from "@/components/add-company-to-list";
+import { createFavorite, deleteFavorite, listFavorites } from "@/lib/api";
 import { CompanyDetail, CompanyListItem, CompanySearchParams, TaxonomyItem } from "@/types/company";
 
 const MOBILE_STACK_BREAKPOINT = 760;
 const DETAIL_HEIGHT_SYNC_BREAKPOINT = 1280;
+const MENU_MAX_ROWS = 8;
+const MENU_ROW_HEIGHT_PX = 48;
+const MENU_VIEWPORT_PADDING_PX = 16;
 
 function selectedValues(value?: string) {
   return new Set((value ?? "").split(",").filter(Boolean));
@@ -60,13 +68,50 @@ function displayLabel(value: string) {
   return labels[value] ?? value;
 }
 
+const FILTER_STORAGE_KEY = "found-directory-filters";
+
+function serializeParams(params: CompanySearchParams) {
+  const serialized = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (!value || key === "selected") {
+      return;
+    }
+    serialized.set(key, value);
+  });
+  return serialized.toString();
+}
+
+function loadSavedFilters() {
+  try {
+    const stored = localStorage.getItem(FILTER_STORAGE_KEY);
+    if (!stored) {
+      return null;
+    }
+    return Object.fromEntries(new URLSearchParams(stored)) as CompanySearchParams;
+  } catch {
+    return null;
+  }
+}
+
+function saveFilters(params: CompanySearchParams) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const serialized = serializeParams(params);
+  if (serialized) {
+    localStorage.setItem(FILTER_STORAGE_KEY, serialized);
+  } else {
+    localStorage.removeItem(FILTER_STORAGE_KEY);
+  }
+}
+
 function FilterSection({
   title,
   children,
   className,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -107,81 +152,20 @@ function MobilePanelToggle({
   );
 }
 
-function BrandedSelect({
-  name,
-  value,
-  placeholder,
-  options,
-  onSelect,
-}: {
-  name: string;
-  value: string;
-  placeholder: string;
-  options: Array<{ label: string; value: string }>;
-  onSelect: (value: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const activeLabel = options.find((option) => option.value === value)?.label ?? placeholder;
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  return (
-    <div className={`directory-custom-select${isOpen ? " is-open" : ""}`} ref={containerRef}>
-      <input name={name} type="hidden" value={value} />
-      <button
-        aria-expanded={isOpen}
-        className="directory-custom-select-trigger"
-        onClick={() => setIsOpen((open) => !open)}
-        type="button"
-      >
-        <span>{activeLabel}</span>
-        <span className="directory-custom-select-chevron" aria-hidden="true">
-          v
-        </span>
-      </button>
-      {isOpen ? (
-        <div className="directory-custom-select-menu">
-          {options.map((option) => (
-            <button
-              className={option.value === value ? "directory-custom-select-option is-active" : "directory-custom-select-option"}
-              key={option.value || "__empty__"}
-              onClick={() => {
-                onSelect(option.value);
-                setIsOpen(false);
-              }}
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 function joinSelectedValues(values: Set<string>) {
   return Array.from(values).join(",");
+}
+
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path
+        d="M12 21s-6-4.35-9-9.05C2.03 8.23 2 5.68 3.68 4.15 5.36 2.65 8.04 2.8 9.6 4.32L12 6.69l2.4-2.37c1.56-1.52 4.24-1.67 5.92-0.17 1.68 1.53 1.65 4.08-0.32 7.74C18 16.65 12 21 12 21z"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </svg>
+  );
 }
 
 function BrandedMultiSelect({
@@ -197,6 +181,9 @@ function BrandedMultiSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<
+    { top: number; left: number; width: number; maxHeight: number } | null
+  >(null);
   const selectedLabels = options.filter((option) => selected.has(option.value)).map((option) => option.label);
   const triggerLabel =
     selectedLabels.length === 0
@@ -204,6 +191,32 @@ function BrandedMultiSelect({
       : selectedLabels.length <= 2
         ? selectedLabels.join(", ")
         : `${selectedLabels.length} selected`;
+
+  const updateMenuPosition = useCallback(() => {
+    const trigger = containerRef.current?.querySelector<HTMLButtonElement>(".directory-custom-select-trigger");
+    const rect = trigger?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+
+    const viewportHeight = window.innerHeight;
+    const availableBelow = Math.max(viewportHeight - rect.bottom - MENU_VIEWPORT_PADDING_PX, 0);
+    const availableAbove = Math.max(rect.top - MENU_VIEWPORT_PADDING_PX, 0);
+    const shouldOpenAbove = availableBelow < MENU_ROW_HEIGHT_PX && availableAbove > availableBelow;
+    const fallbackMaxHeight = MENU_MAX_ROWS * MENU_ROW_HEIGHT_PX;
+    const computedMaxHeight = Math.max(
+      Math.min(fallbackMaxHeight, shouldOpenAbove ? availableAbove : availableBelow || fallbackMaxHeight),
+      Math.min(MENU_ROW_HEIGHT_PX, fallbackMaxHeight)
+    );
+    const top = shouldOpenAbove ? rect.top - computedMaxHeight : rect.bottom;
+
+    setMenuPosition({
+      top,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: computedMaxHeight,
+    });
+  }, []);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -226,6 +239,24 @@ function BrandedMultiSelect({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setMenuPosition(null);
+      return;
+    }
+
+    updateMenuPosition();
+
+    const handleResize = () => updateMenuPosition();
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize, true);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize, true);
+    };
+  }, [isOpen, updateMenuPosition]);
+
   return (
     <div className={`directory-custom-select directory-custom-multiselect${isOpen ? " is-open" : ""}`} ref={containerRef}>
       <button
@@ -240,7 +271,20 @@ function BrandedMultiSelect({
         </span>
       </button>
       {isOpen ? (
-        <div className="directory-custom-select-menu">
+        <div
+          className="directory-custom-select-menu"
+          style={
+            menuPosition
+              ? {
+                  position: "fixed",
+                  top: menuPosition.top,
+                  left: menuPosition.left,
+                  width: menuPosition.width,
+                  maxHeight: menuPosition.maxHeight,
+                }
+              : undefined
+          }
+        >
           {options.map((option) => {
             const isActive = selected.has(option.value);
             return (
@@ -353,6 +397,7 @@ export function CompanyDirectory({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { getValidAccessToken, isAuthenticated, isReady } = useAuth();
   const gridRef = useRef<HTMLDivElement | null>(null);
   const filtersPanelRef = useRef<HTMLElement | null>(null);
   const filtersSurfaceRef = useRef<HTMLDivElement | null>(null);
@@ -375,6 +420,10 @@ export function CompanyDirectory({
   const selectedCity = searchParams.city ?? "";
   const selectedBusinessCategory = searchParams.business_category ?? "";
   const selectedSlug = selectedCompany?.slug ?? searchParams.selected;
+  const [favoriteMap, setFavoriteMap] = useState<Record<number, number>>({});
+  const [togglingFavorites, setTogglingFavorites] = useState<Set<number>>(new Set());
+  const [listPromptCompanyId, setListPromptCompanyId] = useState<number | null>(null);
+  const closeListPrompt = () => setListPromptCompanyId(null);
   const ownershipNames = selectedCompany ? names(selectedCompany.ownership_markers) : [];
   const sustainabilityNames = selectedCompany ? names(selectedCompany.sustainability_markers) : [];
   const productNames = selectedCompany ? names(selectedCompany.product_categories) : [];
@@ -385,6 +434,105 @@ export function CompanyDirectory({
   const hasCompactDetailList = detailListItems.length > 0 && detailListItems.length <= 2;
   const isMobileStack = viewportWidth !== undefined && viewportWidth <= MOBILE_STACK_BREAKPOINT;
   const headerResetKey = JSON.stringify(searchParams);
+  useEffect(() => {
+    setSearchValue(searchParams.search ?? "");
+  }, [searchParams.search]);
+  const listPromptModal =
+    listPromptCompanyId && typeof document !== "undefined"
+      ? createPortal(
+          <div className="detail-save-modal-backdrop" onClick={closeListPrompt} role="presentation">
+            <div
+              aria-modal="true"
+              className="detail-save-modal"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+            >
+              <div className="detail-save-modal-header">
+                <div>
+                  <strong>Add to a list</strong>
+                  <p>Pick an existing list or create a new one.</p>
+                </div>
+                <button
+                  aria-label="Close add to list dialog"
+                  className="detail-save-close"
+                  onClick={closeListPrompt}
+                  type="button"
+                >
+                  x
+                </button>
+              </div>
+              <AddCompanyToList companyId={listPromptCompanyId} onAdded={closeListPrompt} />
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (hasActiveFilters) {
+      saveFilters(searchParams);
+      return;
+    }
+
+    const saved = loadSavedFilters();
+    if (!saved) {
+      return;
+    }
+
+    const current = serializeParams(searchParams);
+    const stored = serializeParams(saved);
+    if (!stored || current === stored) {
+      return;
+    }
+
+    router.replace(stored ? `/companies?${stored}` : pathname);
+  }, [hasActiveFilters, pathname, router, searchParams]);
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadFavorites() {
+      if (!isAuthenticated) {
+        setFavoriteMap({});
+        return;
+      }
+
+      const token = await getValidAccessToken();
+      if (!token) {
+        setFavoriteMap({});
+        return;
+      }
+
+      try {
+        const favorites = await listFavorites(token);
+        if (!isMounted) {
+          return;
+        }
+
+        const map: Record<number, number> = {};
+        favorites.forEach((favorite) => {
+          map[favorite.company.id] = favorite.id;
+        });
+        setFavoriteMap(map);
+      } catch {
+        if (isMounted) {
+          setFavoriteMap({});
+        }
+      }
+    }
+
+    void loadFavorites();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getValidAccessToken, isAuthenticated, isReady]);
 
   const focusOptions = [
     ...sustainabilityMarkers.map((marker) => ({
@@ -403,9 +551,13 @@ export function CompanyDirectory({
   }
 
   function updateFilters(updates: Partial<CompanySearchParams>) {
+    const nextSearchParams = {
+      ...searchParams,
+      ...updates,
+    };
     const nextParams = new URLSearchParams();
 
-    Object.entries({ ...searchParams, ...updates }).forEach(([key, value]) => {
+    Object.entries(nextSearchParams).forEach(([key, value]) => {
       if (!value || key === "selected") {
         return;
       }
@@ -413,12 +565,14 @@ export function CompanyDirectory({
     });
 
     const query = nextParams.toString();
+    saveFilters(nextSearchParams);
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
   function submitFilters(form: HTMLFormElement) {
     const formData = new FormData(form);
     const params = new URLSearchParams();
+    const nextSearchParams: CompanySearchParams = {};
 
     for (const [key, value] of formData.entries()) {
       const normalized = String(value).trim();
@@ -426,15 +580,13 @@ export function CompanyDirectory({
         continue;
       }
       params.append(key, normalized);
+      nextSearchParams[key as keyof CompanySearchParams] = normalized;
     }
+
+    saveFilters(nextSearchParams);
 
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
-  }
-
-  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    updateFilters({ search: searchValue.trim() || undefined });
   }
 
   function toggleOwnershipMarker(value: string) {
@@ -469,6 +621,58 @@ export function CompanyDirectory({
       is_vegan_friendly: nextVegan ? "true" : undefined,
       is_gf_friendly: nextGf ? "true" : undefined,
     });
+  }
+
+  async function handleFavoriteClick(event: MouseEvent<HTMLButtonElement>, company: CompanyListItem) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isAuthenticated) {
+      const nextHref = buildDirectoryHref(searchParams, company.slug);
+      router.push(`/login?next=${encodeURIComponent(nextHref)}`);
+      return;
+    }
+
+    if (togglingFavorites.has(company.id)) {
+      return;
+    }
+
+    const token = await getValidAccessToken();
+    if (!token) {
+      const nextHref = buildDirectoryHref(searchParams, company.slug);
+      router.push(`/login?next=${encodeURIComponent(nextHref)}`);
+      return;
+    }
+
+    setTogglingFavorites((current) => {
+      const next = new Set(current);
+      next.add(company.id);
+      return next;
+    });
+
+    try {
+      const favoriteId = favoriteMap[company.id];
+      if (favoriteId) {
+        await deleteFavorite(token, favoriteId);
+        setFavoriteMap((current) => {
+          const next = { ...current };
+          delete next[company.id];
+          return next;
+        });
+      } else {
+        const favorite = await createFavorite(token, company.id);
+        setFavoriteMap((current) => ({ ...current, [company.id]: favorite.id }));
+        setListPromptCompanyId(company.id);
+      }
+    } catch {
+      // swallow errors
+    } finally {
+      setTogglingFavorites((current) => {
+        const next = new Set(current);
+        next.delete(company.id);
+        return next;
+      });
+    }
   }
 
   useEffect(() => {
@@ -615,7 +819,7 @@ export function CompanyDirectory({
   return (
     <section className="directory-experience">
       <div className="directory-shell">
-        <SiteHeader brandHref={brandHref} initialSearch={searchValue} resetKey={headerResetKey} />
+        <SiteHeader brandHref={brandHref} resetKey={headerResetKey} />
 
         <div
           className={isResizing ? "directory-grid is-resizing" : "directory-grid"}
@@ -641,9 +845,6 @@ export function CompanyDirectory({
                 ref={filtersFormRef}
                 onChange={(event) => {
                   const target = event.target as HTMLInputElement | HTMLSelectElement;
-                  if (target.name === "search") {
-                    return;
-                  }
                   submitFilters(event.currentTarget);
                 }}
                 onSubmit={(event) => {
@@ -701,6 +902,20 @@ export function CompanyDirectory({
                   />
                 </FilterSection>
 
+                <FilterSection title="Search">
+                  <div className="directory-panel-search">
+                    <input
+                      id="directory-search-input"
+                      autoComplete="off"
+                      name="search"
+                      aria-label="Search businesses"
+                      placeholder=""
+                      value={searchValue}
+                      onChange={(event) => setSearchValue(event.target.value)}
+                    />
+                  </div>
+                </FilterSection>
+
                 <div className="directory-form-actions">
                   <Link className="button button-secondary" href="/companies">
                     Reset
@@ -728,16 +943,31 @@ export function CompanyDirectory({
                 {companies.length ? (
                   companies.map((company) => {
                     const description = listDescription(company);
+                    const isActiveRow = selectedSlug === company.slug;
 
                     return (
-                      <Link
-                        className={selectedSlug === company.slug ? "directory-company-row is-active" : "directory-company-row"}
-                        href={buildDirectoryHref(searchParams, company.slug)}
+                      <div
+                        className={isActiveRow ? "directory-company-row is-active" : "directory-company-row"}
                         key={company.id}
                       >
-                        <span className="directory-company-name">{company.name}</span>
-                        {description ? <span className="directory-company-meta">{description}</span> : null}
-                      </Link>
+                        <Link
+                          className="directory-company-link"
+                          href={buildDirectoryHref(searchParams, company.slug)}
+                        >
+                          <span className="directory-company-name">{company.name}</span>
+                          {description ? <span className="directory-company-meta">{description}</span> : null}
+                        </Link>
+                        <button
+                          className={`directory-company-favorite${favoriteMap[company.id] ? " is-active" : ""}`}
+                          type="button"
+                          aria-pressed={Boolean(favoriteMap[company.id])}
+                          aria-label={favoriteMap[company.id] ? "Remove from favorites" : "Save to favorites"}
+                          disabled={togglingFavorites.has(company.id)}
+                          onClick={(event) => handleFavoriteClick(event, company)}
+                        >
+                          <HeartIcon filled={Boolean(favoriteMap[company.id])} />
+                        </button>
+                      </div>
                     );
                   })
                 ) : hasActiveFilters ? (
@@ -771,9 +1001,21 @@ export function CompanyDirectory({
                 <div className="directory-detail-body">
                 <div className="directory-detail-header-grid">
                   <div className="directory-detail-head">
-                    <h2>
-                      <Link href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}>{selectedCompany.name}</Link>
-                    </h2>
+                    <div className="directory-detail-title">
+                      <h2>
+                        <Link href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}>{selectedCompany.name}</Link>
+                      </h2>
+                      <button
+                        className={`directory-company-favorite directory-detail-favorite${favoriteMap[selectedCompany.id] ? " is-active" : ""}`}
+                        type="button"
+                        aria-pressed={Boolean(favoriteMap[selectedCompany.id])}
+                        aria-label={favoriteMap[selectedCompany.id] ? "Remove from favorites" : "Save to favorites"}
+                        disabled={togglingFavorites.has(selectedCompany.id)}
+                        onClick={(event) => handleFavoriteClick(event, selectedCompany)}
+                      >
+                        <HeartIcon filled={Boolean(favoriteMap[selectedCompany.id])} />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="directory-socials">
@@ -877,6 +1119,7 @@ export function CompanyDirectory({
           </section>
         </div>
       </div>
+      {listPromptModal}
     </section>
   );
 }

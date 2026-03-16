@@ -27,6 +27,7 @@ COMPANY_LIST_FIELDS = {
     "sustainability_markers",
     "is_vegan_friendly",
     "is_gf_friendly",
+    "is_published",
 }
 
 COMPANY_DETAIL_FIELDS = {
@@ -56,6 +57,7 @@ COMPANY_DETAIL_FIELDS = {
     "is_gf_friendly",
     "created_at",
     "updated_at",
+    "is_published",
 }
 
 CLAIMED_PROFILE_FIELDS = {
@@ -254,6 +256,36 @@ def test_taxonomy_item_fields(api_client):
     assert isinstance(item["id"], int)
     assert isinstance(item["id_hash"], str) and len(item["id_hash"]) == 8
     assert isinstance(item["name"], str)
+
+
+# @pytest.mark.django_db
+# def test_business_claim_fields(api_client):
+#     user = User.objects.create_user(
+#         email="owner@example.com",
+#         password="supersecure123",
+#         account_type=User.AccountType.BUSINESS,
+#     )
+#     company = CompanyFactory(name="Shape Claim Co")
+#     claim = BusinessClaim.objects.create(
+#         user=user,
+#         company=company,
+#         intent=BusinessClaim.ClaimIntent.EXISTING,
+#         business_name=company.name,
+#         submitter_first_name="Owner",
+#         submitter_last_name="One",
+#         business_email="owner@shapeclaim.co",
+#         role_title="Founder",
+#     )
+#     claim.append_history_event("submitted", actor=user)
+#     api_client.force_authenticate(user=user)
+
+#     response = api_client.get(reverse("users:business-claim-list"))
+
+#     assert response.status_code == 200
+#     item = response.json()["results"][0]
+#     assert set(item.keys()) == BUSINESS_CLAIM_FIELDS
+#     assert isinstance(item["history"], list)
+#     assert set(item["history"][0].keys()) == BUSINESS_CLAIM_HISTORY_FIELDS
 
 
 # ---------------------------------------------------------------------------

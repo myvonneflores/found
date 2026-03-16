@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { BrandedSelect } from "@/components/branded-select";
 import { addCuratedListItem, createCuratedList, listCuratedLists } from "@/lib/api";
 import { CuratedList } from "@/types/community";
 
@@ -45,6 +46,7 @@ export function AddCompanyToList({
   const canUseLists = Boolean(user?.account_type === "personal" || user?.account_type === "business");
   const canMakePublic = Boolean(user?.account_type === "personal" || user?.is_business_verified);
   const safeLists = normalizeLists(lists);
+  const [isNewListPublic, setIsNewListPublic] = useState(false);
 
   useEffect(() => {
     async function loadLists() {
@@ -74,6 +76,12 @@ export function AddCompanyToList({
     void loadLists();
   }, [accessToken, canUseLists, isAuthenticated, isReady]);
 
+  useEffect(() => {
+    if (!canMakePublic) {
+      setIsNewListPublic(false);
+    }
+  }, [canMakePublic]);
+
   const matchingLists = safeLists.filter((list) => list.items.some((item) => item.company.id === companyId));
   const alreadyInSelectedList = safeLists.some(
     (list) => String(list.id) === selectedListId && list.items.some((item) => item.company.id === companyId)
@@ -97,7 +105,7 @@ export function AddCompanyToList({
         const nextList = await createCuratedList(accessToken, {
           title: newListTitle,
           description: newListDescription,
-          is_public: canMakePublic,
+          is_public: canMakePublic ? isNewListPublic : false,
         });
         setLists((current) => [nextList, ...normalizeLists(current)]);
         targetListId = String(nextList.id);
@@ -105,6 +113,7 @@ export function AddCompanyToList({
         setNewListTitle("");
         setNewListDescription("");
         setIsCreatingNewList(false);
+        setIsNewListPublic(canMakePublic);
       }
 
       if (!targetListId) {
@@ -180,19 +189,17 @@ export function AddCompanyToList({
         {!isCreatingNewList ? (
           <>
             <label className="detail-list-field">
-              <select
-                aria-label="Choose a list"
-                disabled={isLoading || safeLists.length === 0}
-                onChange={(event) => setSelectedListId(event.target.value)}
+              <BrandedSelect
+                name="selected_list"
+                placeholder={safeLists.length === 0 ? "No lists yet" : "Choose a list"}
                 value={selectedListId}
-              >
-                {safeLists.length === 0 ? <option value="">No lists yet</option> : null}
-                {safeLists.map((list) => (
-                  <option key={list.id} value={String(list.id)}>
-                    {list.title}
-                  </option>
-                ))}
-              </select>
+                options={safeLists.map((list) => ({
+                  label: list.title,
+                  value: String(list.id),
+                }))}
+                onSelect={(value) => setSelectedListId(value)}
+                disabled={isLoading || safeLists.length === 0}
+              />
             </label>
           </>
         ) : (
@@ -219,12 +226,29 @@ export function AddCompanyToList({
                 setIsCreatingNewList(false);
                 setError("");
                 setSuccessMessage("");
+                setIsNewListPublic(false);
               }}
               type="button"
             >
               Use an existing list
             </button>
-            {!canMakePublic ? <p className="detail-list-field-meta">Public lists unlock after verification.</p> : null}
+            {canMakePublic ? (
+              <label className="detail-save-toggle-row">
+                <button
+                  aria-pressed={isNewListPublic}
+                  className={isNewListPublic ? "detail-save-toggle is-active" : "detail-save-toggle"}
+                  onClick={() => setIsNewListPublic((current) => !current)}
+                  type="button"
+                >
+                  <span className="detail-save-toggle-knob" />
+                </button>
+                <span className="detail-save-toggle-copy">
+                  {isNewListPublic ? "you went public!" : "Make this list public"}
+                </span>
+              </label>
+            ) : (
+              <p className="detail-list-field-meta">Public lists unlock after verification.</p>
+            )}
           </>
         )}
 

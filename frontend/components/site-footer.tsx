@@ -64,6 +64,7 @@ export function SiteFooter() {
             <Link href="/companies">Search</Link>
             <Link href="/privacy-policy">Privacy Policy</Link>
             <Link href="/terms-and-conditions">Terms &amp; Conditions</Link>
+            <Link href="/faqs">FAQs</Link>
           </nav>
           <div className="site-footer-socials">
             <a

@@ -4,6 +4,12 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+def create_businessclaimevent_if_missing(apps, schema_editor):
+    try:
+        BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
+    except LookupError:
+        return
+
 
 def create_businessclaimevent_if_missing(apps, schema_editor):
     """Create the table only when it doesn't already exist (idempotent)."""

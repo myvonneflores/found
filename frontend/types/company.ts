@@ -91,6 +91,7 @@ export type ManagedBusinessProfile = {
   linkedin_page: string;
   is_vegan_friendly: boolean;
   is_gf_friendly: boolean;
+  is_published: boolean;
 };
 
 export type PaginatedResponse<T> = {
