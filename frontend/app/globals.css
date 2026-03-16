@@ -1422,6 +1422,10 @@ body.contact-page-body {
 
 .contact-form-note.is-error {
   color: #9c4b33;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(156, 75, 51, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 241, 236, 0.92);
 }
 
 .auth-page-shell .directory-menu-search input {
@@ -4274,6 +4278,10 @@ body.contact-page-body {
     display: grid;
   }
 
+  .home-hero-actions .about-cta-link {
+    text-align: center;
+  }
+
   .home-hero-card,
   .home-section-card,
   .home-final-cta-card {
@@ -4416,6 +4424,7 @@ body.contact-page-body {
   justify-items: center;
   min-height: var(--header-strip-min-height);
   padding-inline: clamp(1rem, 2.2vw, var(--header-strip-padding-x));
+  z-index: 40;
 }
 
 .directory-header-balance {
@@ -4465,6 +4474,7 @@ body.contact-page-body {
   display: flex;
   align-items: center;
   align-self: center;
+  z-index: 50;
 }
 
 .directory-menu-trigger {
@@ -4493,7 +4503,7 @@ body.contact-page-body {
   position: absolute;
   top: calc(100% + 0.7rem);
   right: 0;
-  z-index: 30;
+  z-index: 60;
   min-width: 15rem;
   display: grid;
   gap: 0.4rem;

@@ -18,6 +18,8 @@ import type {
   BusinessClaimPayload,
 } from "@/types/auth";
 
+const CLAIM_SIGNUP_STORAGE_KEY = "found-signup-claim-company";
+
 type SelectedCompany = {
   id: number;
   name: string;
@@ -122,6 +124,33 @@ function BusinessClaimPageContent() {
     }));
     setCompanySearch((current) => current || user.display_name || "");
   }, [user]);
+
+  useEffect(() => {
+    if (intent !== "existing" || selectedCompany || editingClaim) {
+      return;
+    }
+
+    const storedValue = window.sessionStorage.getItem(CLAIM_SIGNUP_STORAGE_KEY);
+    if (!storedValue) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedValue) as SelectedCompany;
+      if (!parsed?.id || !parsed?.name || !parsed?.slug) {
+        return;
+      }
+
+      setSelectedCompany(parsed);
+      setCompanySearch(parsed.name);
+      setForm((current) => ({
+        ...current,
+        businessName: current.businessName || parsed.name,
+      }));
+    } catch {
+      window.sessionStorage.removeItem(CLAIM_SIGNUP_STORAGE_KEY);
+    }
+  }, [editingClaim, intent, selectedCompany]);
 
   useEffect(() => {
     async function loadEditableClaim() {
@@ -257,6 +286,7 @@ function BusinessClaimPageContent() {
         await createBusinessClaim(accessToken, payload);
       }
 
+      window.sessionStorage.removeItem(CLAIM_SIGNUP_STORAGE_KEY);
       router.push("/business/pending");
     } catch (submitError) {
       setError(
@@ -335,6 +365,7 @@ function BusinessClaimPageContent() {
                     onClick={() => {
                       setIntent("new");
                       setSelectedCompany(null);
+                      window.sessionStorage.removeItem(CLAIM_SIGNUP_STORAGE_KEY);
                       setError("");
                     }}
                     role="radio"
@@ -351,6 +382,7 @@ function BusinessClaimPageContent() {
                       onChange={(event) => {
                         setCompanySearch(event.target.value);
                         setSelectedCompany(null);
+                        setError("");
                       }}
                       placeholder="Search by business name"
                       required
@@ -363,6 +395,14 @@ function BusinessClaimPageContent() {
                     ) : null}
                     {isSearchingCompanies ? (
                       <p className="auth-inline-note">Searching FOUND businesses...</p>
+                    ) : null}
+                    {!selectedCompany &&
+                    companySearch.trim().length >= 2 &&
+                    companyResults.length === 0 &&
+                    !isSearchingCompanies ? (
+                      <p className="auth-inline-note">
+                        No matching FOUND businesses yet. Try a different name or choose “Add a new business.”
+                      </p>
                     ) : null}
                     {!selectedCompany && companyResults.length > 0 ? (
                       <div className="business-claim-search-results">
@@ -377,6 +417,7 @@ function BusinessClaimPageContent() {
                                 ...current,
                                 businessName: company.name,
                               }));
+                              setError("");
                             }}
                             type="button"
                           >
@@ -532,7 +573,11 @@ function BusinessClaimPageContent() {
                   </article>
                 ) : null}
 
-                {error ? <p className="contact-form-note is-error">{error}</p> : null}
+                {error ? (
+                  <p className="contact-form-note is-error" role="alert">
+                    <strong>Error:</strong> {error}
+                  </p>
+                ) : null}
 
                 <div className="auth-form-actions">
                   <button

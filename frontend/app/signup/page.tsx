@@ -2,15 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useDeferredValue, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
-import { loginUser, registerUser } from "@/lib/api";
+import { listCompanies, loginUser, registerUser } from "@/lib/api";
 import { AccountType } from "@/types/auth";
 
 type BusinessIntent = "existing" | "new";
+type SelectedCompany = {
+  id: number;
+  name: string;
+  slug: string;
+};
+const CLAIM_SIGNUP_STORAGE_KEY = "found-signup-claim-company";
 
 const accountOptions: Array<{ value: AccountType; title: string }> = [
   {
@@ -52,6 +58,46 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+  const deferredCompanySearch = useDeferredValue(companySearch);
+  const [companyResults, setCompanyResults] = useState<SelectedCompany[]>([]);
+  const [isSearchingCompanies, setIsSearchingCompanies] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<SelectedCompany | null>(null);
+
+  useEffect(() => {
+    async function searchCompanies() {
+      if (accountType !== "business" || businessIntent !== "existing") {
+        setCompanyResults([]);
+        setIsSearchingCompanies(false);
+        return;
+      }
+
+      const query = deferredCompanySearch.trim();
+      if (query.length < 2) {
+        setCompanyResults([]);
+        setIsSearchingCompanies(false);
+        return;
+      }
+
+      setIsSearchingCompanies(true);
+      try {
+        const response = await listCompanies({ search: query });
+        setCompanyResults(
+          response.results.slice(0, 8).map((company) => ({
+            id: company.id,
+            name: company.name,
+            slug: company.slug,
+          }))
+        );
+      } catch {
+        setCompanyResults([]);
+      } finally {
+        setIsSearchingCompanies(false);
+      }
+    }
+
+    void searchCompanies();
+  }, [accountType, businessIntent, deferredCompanySearch]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,6 +121,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (accountType === "business" && businessIntent === "existing" && !selectedCompany) {
+      setError("Please choose the business listing you want to claim before creating your account.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -93,6 +144,12 @@ export default function SignupPage() {
       });
 
       signIn(session);
+      if (accountType === "business" && businessIntent === "existing" && selectedCompany) {
+        window.sessionStorage.setItem(CLAIM_SIGNUP_STORAGE_KEY, JSON.stringify(selectedCompany));
+      } else {
+        window.sessionStorage.removeItem(CLAIM_SIGNUP_STORAGE_KEY);
+      }
+
       router.push(accountType === "business" ? `/business/claim?intent=${businessIntent}` : "/account");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Something went wrong while creating your account.");
@@ -136,13 +193,68 @@ export default function SignupPage() {
                     <button
                       key={option.value}
                       className={`auth-toggle auth-toggle-intent ${businessIntent === option.value ? "is-active" : ""}`}
-                      onClick={() => setBusinessIntent(option.value)}
+                      onClick={() => {
+                        setBusinessIntent(option.value);
+                        setError("");
+                      }}
                       type="button"
                     >
                       <strong>{option.title}</strong>
                     </button>
                   ))}
                 </div>
+
+                {businessIntent === "existing" ? (
+                  <label className="contact-field">
+                    <span className="contact-field-label">Find your business on FOUND</span>
+                    <input
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        setCompanySearch(nextValue);
+                        setSelectedCompany((current) =>
+                          current && current.name === nextValue ? current : null
+                        );
+                        setError("");
+                      }}
+                      placeholder="Search by business name"
+                      required
+                      value={companySearch}
+                    />
+                    {selectedCompany ? (
+                      <p className="auth-inline-note">
+                        Claiming: <strong>{selectedCompany.name}</strong>
+                      </p>
+                    ) : null}
+                    {isSearchingCompanies ? (
+                      <p className="auth-inline-note">Searching FOUND businesses...</p>
+                    ) : null}
+                    {!selectedCompany && companySearch.trim().length >= 2 && companyResults.length === 0 && !isSearchingCompanies ? (
+                      <p className="auth-inline-note">No matching FOUND businesses yet. Try a different name or choose “Add a new business.”</p>
+                    ) : null}
+                    {!selectedCompany && companyResults.length > 0 ? (
+                      <div className="business-claim-search-results">
+                        {companyResults.map((company) => (
+                          <button
+                            className="business-claim-search-result"
+                            key={company.id}
+                            onClick={() => {
+                              setSelectedCompany(company);
+                              setCompanySearch(company.name);
+                              setForm((current) => ({
+                                ...current,
+                                displayName: current.displayName || company.name,
+                              }));
+                              setError("");
+                            }}
+                            type="button"
+                          >
+                            {company.name}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </label>
+                ) : null}
               </div>
             ) : null}
           </article>
@@ -309,7 +421,11 @@ export default function SignupPage() {
                 </span>
               </label>
 
-              {error ? <p className="contact-form-note is-error">{error}</p> : null}
+              {error ? (
+                <p className="contact-form-note is-error" role="alert">
+                  <strong>Error:</strong> {error}
+                </p>
+              ) : null}
 
               <div className="auth-form-actions">
                 <button className="contact-submit" disabled={isSubmitting} type="submit">
