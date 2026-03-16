@@ -57,12 +57,20 @@ export default function SignupPage() {
     event.preventDefault();
     setError("");
 
+    const formData = new FormData(event.currentTarget);
+    const submittedFirstName = String(formData.get("firstName") ?? "");
+    const submittedLastName = String(formData.get("lastName") ?? "");
+    const submittedDisplayName = String(formData.get("displayName") ?? "");
+    const submittedEmail = String(formData.get("email") ?? "");
+    const submittedPassword = String(formData.get("password") ?? "");
+    const submittedConfirmPassword = String(formData.get("confirmPassword") ?? "");
+
     if (!agreedToTerms) {
       setError("Please agree to the Terms & Conditions to continue.");
       return;
     }
 
-    if (form.password !== form.confirmPassword) {
+    if (submittedPassword !== submittedConfirmPassword) {
       setError("Passwords do not match.");
       return;
     }
@@ -71,17 +79,17 @@ export default function SignupPage() {
 
     try {
       await registerUser({
-        email: form.email,
-        password: form.password,
-        first_name: form.firstName,
-        last_name: form.lastName,
-        display_name: form.displayName || form.firstName,
+        email: submittedEmail,
+        password: submittedPassword,
+        first_name: submittedFirstName,
+        last_name: submittedLastName,
+        display_name: submittedDisplayName || submittedFirstName,
         account_type: accountType,
       });
 
       const session = await loginUser({
-        email: form.email,
-        password: form.password,
+        email: submittedEmail,
+        password: submittedPassword,
       });
 
       signIn(session);
@@ -145,6 +153,8 @@ export default function SignupPage() {
                 <label className="contact-field">
                   <span className="contact-field-label">First name</span>
                   <input
+                    autoComplete="given-name"
+                    name="firstName"
                     onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
                     required
                     value={form.firstName}
@@ -153,6 +163,8 @@ export default function SignupPage() {
                 <label className="contact-field">
                   <span className="contact-field-label">Last name</span>
                   <input
+                    autoComplete="family-name"
+                    name="lastName"
                     onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
                     required
                     value={form.lastName}
@@ -163,6 +175,8 @@ export default function SignupPage() {
               <label className="contact-field">
                 <span className="contact-field-label">Display name</span>
                 <input
+                  autoComplete="nickname"
+                  name="displayName"
                   onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
                   placeholder={
                     accountType === "business"
@@ -178,8 +192,12 @@ export default function SignupPage() {
               <label className="contact-field">
                 <span className="contact-field-label">Email</span>
                 <input
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  name="email"
                   onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                   required
+                  spellCheck={false}
                   type="email"
                   value={form.email}
                 />
@@ -189,7 +207,9 @@ export default function SignupPage() {
                 <span className="contact-field-label">Password</span>
                 <div className="auth-password-field">
                   <input
+                    autoComplete="new-password"
                     minLength={8}
+                    name="password"
                     onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
                     required
                     type={showPassword ? "text" : "password"}
@@ -229,7 +249,9 @@ export default function SignupPage() {
                 <span className="contact-field-label">Confirm password</span>
                 <div className="auth-password-field">
                   <input
+                    autoComplete="new-password"
                     minLength={8}
+                    name="confirmPassword"
                     onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))}
                     required
                     type={showConfirmPassword ? "text" : "password"}

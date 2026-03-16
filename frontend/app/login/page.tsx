@@ -53,8 +53,12 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setError("");
 
+    const formData = new FormData(event.currentTarget);
+    const submittedEmail = String(formData.get("email") ?? "");
+    const submittedPassword = String(formData.get("password") ?? "");
+
     try {
-      const session = await loginUser({ email, password });
+      const session = await loginUser({ email: submittedEmail, password: submittedPassword });
       signIn(session);
       router.push(destinationForUser(session.user.account_type, session.user.is_business_verified));
     } catch (submitError) {
@@ -79,14 +83,25 @@ export default function LoginPage() {
             <form className="auth-form" onSubmit={handleSubmit}>
               <label className="contact-field">
                 <span className="contact-field-label">Email</span>
-                <input onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
+                <input
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  name="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  spellCheck={false}
+                  type="email"
+                  value={email}
+                />
               </label>
 
               <label className="contact-field">
                 <span className="contact-field-label">Password</span>
                 <div className="auth-password-field">
                   <input
+                    autoComplete="current-password"
                     minLength={8}
+                    name="password"
                     onChange={(event) => setPassword(event.target.value)}
                     required
                     type={showPassword ? "text" : "password"}
