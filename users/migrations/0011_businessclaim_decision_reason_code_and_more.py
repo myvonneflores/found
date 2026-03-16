@@ -13,10 +13,11 @@ def create_businessclaimevent_if_missing(apps, schema_editor):
 
 def backfill_business_claim_workflow(apps, schema_editor):
     BusinessClaim = apps.get_model("users", "BusinessClaim")
+    BusinessClaimEvent = None
     try:
         BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
-    except Exception as e:
-        return
+    except LookupError:
+        pass
 
     for claim in BusinessClaim.objects.select_related("user", "company"):
         update_fields = []
@@ -29,7 +30,7 @@ def backfill_business_claim_workflow(apps, schema_editor):
         if update_fields:
             claim.save(update_fields=update_fields)
 
-        if not BusinessClaimEvent.objects.filter(claim=claim).exists():
+        if BusinessClaimEvent and not BusinessClaimEvent.objects.filter(claim=claim).exists():
             BusinessClaimEvent.objects.create(
                 claim=claim,
                 actor=claim.user,
