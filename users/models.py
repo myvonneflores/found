@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db import utils as db_utils
 from django.db.models.functions import Coalesce
 from django.utils.text import slugify
 
@@ -177,11 +178,19 @@ class BusinessClaim(models.Model):
         return [labels[item] for item in self.review_checklist if item in labels]
 
     def append_history_event(self, event_type, *, actor=None, metadata=None):
-        return self.history.create(
-            event_type=event_type,
-            actor=actor,
-            metadata=metadata or {},
-        )
+        try:
+            return self.history.create(
+                event_type=event_type,
+                actor=actor,
+                metadata=metadata or {},
+            )
+        except db_utils.ProgrammingError:
+            return None
+        except db_utils.OperationalError:
+            return None
+        except Exception:
+            # Any other exception likely occurs because the history table is missing in an early migration run.
+            return None
 
 
 class BusinessClaimEvent(models.Model):
