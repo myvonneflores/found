@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
 import { detailDescription, listDescription } from "@/lib/company-copy";
 import { instagramProfileUrl } from "@/lib/social-links";
@@ -623,7 +623,7 @@ export function CompanyDirectory({
     });
   }
 
-  async function handleFavoriteClick(event: MouseEvent<HTMLButtonElement>, company: CompanyListItem) {
+  async function handleFavoriteClick(event: ReactMouseEvent<HTMLButtonElement>, company: Pick<CompanyListItem, "id" | "slug">) {
     event.preventDefault();
     event.stopPropagation();
 

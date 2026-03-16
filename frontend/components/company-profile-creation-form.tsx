@@ -66,6 +66,7 @@ export function CompanyProfileCreationForm({
     linkedin_page: latestClaim?.linkedin_page || "",
     is_vegan_friendly: false,
     is_gf_friendly: false,
+    is_published: false,
   });
 
   useEffect(() => {
