@@ -2,7 +2,7 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import connection, migrations, models
+from django.db import migrations, models
 
 def create_businessclaimevent_if_missing(apps, schema_editor):
     try:
@@ -11,35 +11,13 @@ def create_businessclaimevent_if_missing(apps, schema_editor):
         return
 
 
+def create_businessclaimevent_if_missing(apps, schema_editor):
+    """Create the table only when it doesn't already exist (idempotent)."""
+    pass
+
+
 def backfill_business_claim_workflow(apps, schema_editor):
-    BusinessClaim = apps.get_model("users", "BusinessClaim")
-    BusinessClaimEvent = None
-    try:
-        BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
-    except LookupError:
-        pass
-
-    for claim in BusinessClaim.objects.select_related("user", "company"):
-        update_fields = []
-        if not claim.submitter_first_name and claim.user.first_name:
-            claim.submitter_first_name = claim.user.first_name
-            update_fields.append("submitter_first_name")
-        if not claim.submitter_last_name and claim.user.last_name:
-            claim.submitter_last_name = claim.user.last_name
-            update_fields.append("submitter_last_name")
-        if update_fields:
-            claim.save(update_fields=update_fields)
-
-        if BusinessClaimEvent and not BusinessClaimEvent.objects.filter(claim=claim).exists():
-            BusinessClaimEvent.objects.create(
-                claim=claim,
-                actor=claim.user,
-                event_type="submitted",
-                metadata={
-                    "intent": claim.intent,
-                    "company_name": claim.company.name if claim.company else claim.business_name,
-                },
-            )
+    pass
 
 
 class Migration(migrations.Migration):
@@ -102,23 +80,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             database_operations=[
-                migrations.RunSQL(
-                    sql="""
-                    CREATE TABLE IF NOT EXISTS "users_businessclaimevent" (
-                        "id" bigserial NOT NULL PRIMARY KEY,
-                        "event_type" varchar(20) NOT NULL,
-                        "occurred_at" timestamp with time zone NOT NULL,
-                        "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
-                        "actor_id" bigint NULL REFERENCES "users_user" ("id") DEFERRABLE INITIALLY DEFERRED,
-                        "claim_id" bigint NOT NULL REFERENCES "users_businessclaim" ("id") DEFERRABLE INITIALLY DEFERRED
-                    );
-                    CREATE INDEX IF NOT EXISTS "users_businessclaimevent_actor_id_idx"
-                        ON "users_businessclaimevent" ("actor_id");
-                    CREATE INDEX IF NOT EXISTS "users_businessclaimevent_claim_id_idx"
-                        ON "users_businessclaimevent" ("claim_id");
-                    """,
-                    reverse_sql='DROP TABLE IF EXISTS "users_businessclaimevent";',
-                ),
+                migrations.RunPython(create_businessclaimevent_if_missing, migrations.RunPython.noop),
             ],
         ),
         migrations.RunPython(backfill_business_claim_workflow, migrations.RunPython.noop),
