@@ -27,6 +27,7 @@ COMPANY_LIST_FIELDS = {
     "sustainability_markers",
     "is_vegan_friendly",
     "is_gf_friendly",
+    "is_published",
 }
 
 COMPANY_DETAIL_FIELDS = {
@@ -56,6 +57,7 @@ COMPANY_DETAIL_FIELDS = {
     "is_gf_friendly",
     "created_at",
     "updated_at",
+    "is_published",
 }
 
 CLAIMED_PROFILE_FIELDS = {
