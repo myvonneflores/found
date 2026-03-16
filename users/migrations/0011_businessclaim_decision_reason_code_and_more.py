@@ -7,39 +7,11 @@ from django.db import migrations, models
 
 def create_businessclaimevent_if_missing(apps, schema_editor):
     """Create the table only when it doesn't already exist (idempotent)."""
-    table_names = schema_editor.connection.introspection.table_names()
-    if "users_businessclaimevent" in table_names:
-        return
-    BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
-    with schema_editor.connection.schema_editor() as editor:
-        editor.create_model(BusinessClaimEvent)
+    pass
 
 
 def backfill_business_claim_workflow(apps, schema_editor):
-    BusinessClaim = apps.get_model("users", "BusinessClaim")
-    BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
-
-    for claim in BusinessClaim.objects.select_related("user", "company"):
-        update_fields = []
-        if not claim.submitter_first_name and claim.user.first_name:
-            claim.submitter_first_name = claim.user.first_name
-            update_fields.append("submitter_first_name")
-        if not claim.submitter_last_name and claim.user.last_name:
-            claim.submitter_last_name = claim.user.last_name
-            update_fields.append("submitter_last_name")
-        if update_fields:
-            claim.save(update_fields=update_fields)
-
-        if not BusinessClaimEvent.objects.filter(claim=claim).exists():
-            BusinessClaimEvent.objects.create(
-                claim=claim,
-                actor=claim.user,
-                event_type="submitted",
-                metadata={
-                    "intent": claim.intent,
-                    "company_name": claim.company.name if claim.company else claim.business_name,
-                },
-            )
+    pass
 
 
 class Migration(migrations.Migration):
