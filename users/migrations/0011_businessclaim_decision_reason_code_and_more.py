@@ -7,10 +7,7 @@ from django.db import connection, migrations, models
 
 def backfill_business_claim_workflow(apps, schema_editor):
     BusinessClaim = apps.get_model("users", "BusinessClaim")
-    try:
-        BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
-    except LookupError:
-        return
+    BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
 
     for claim in BusinessClaim.objects.select_related("user", "company"):
         update_fields = []
