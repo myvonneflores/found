@@ -225,6 +225,9 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
 
       <section className="public-profile-browser-board">
         <article className="panel dashboard-panel dashboard-panel-favorites public-profile-browser-panel">
+          <div className="dashboard-panel-mobile-heading dashboard-column-heading dashboard-column-heading-favorites">
+            lists
+          </div>
           <div className="public-profile-browser-list-rail">
             {profile.public_lists.length ? (
               profile.public_lists.map((list) => (
@@ -251,6 +254,9 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
         </article>
 
         <article className="panel dashboard-panel dashboard-panel-lists public-profile-browser-panel">
+          <div className="dashboard-panel-mobile-heading dashboard-column-heading dashboard-column-heading-lists">
+            {selectedList?.title || "list"}
+          </div>
           <div className="public-profile-browser-company-rail">
             {selectedList?.items.length ? (
               selectedList.items.map((item: CuratedListItem) => {
@@ -279,6 +285,9 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
         </article>
 
         <article className="panel dashboard-panel dashboard-panel-share public-profile-browser-panel public-profile-browser-detail">
+          <div className="dashboard-panel-mobile-heading dashboard-column-heading dashboard-column-heading-profile">
+            {selectedCompany ? selectedCompany.name : "business"}
+          </div>
           {selectedCompany ? (
             <div className="directory-detail-body">
               <div className="directory-detail-header-grid">

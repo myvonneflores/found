@@ -3367,13 +3367,20 @@ body.contact-page-body {
 }
 
 @media (max-width: 980px) {
-  .public-profile-browser-headings,
   .public-profile-browser-board {
     grid-template-columns: 1fr;
   }
 
+  .public-profile-browser-headings {
+    display: none;
+  }
+
   .public-profile-browser-panel {
     min-height: auto;
+  }
+
+  .dashboard-panel-mobile-heading {
+    display: inline-flex;
   }
 }
 
