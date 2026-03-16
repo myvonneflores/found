@@ -4,6 +4,13 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import connection, migrations, models
 
+def create_businessclaimevent_if_missing(apps, schema_editor):
+    try:
+        BusinessClaimEvent = apps.get_model("users", "BusinessClaimEvent")
+    except LookupError:
+        return
+  BusinessClaim = apps.get_model("users", "BusinessClaim")
+
 
 def backfill_business_claim_workflow(apps, schema_editor):
     BusinessClaim = apps.get_model("users", "BusinessClaim")
