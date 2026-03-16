@@ -46,6 +46,7 @@ class Company(BaseModel):
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(blank=True)
     needs_editorial_review = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
     website = models.URLField(blank=True)
     founded_year = models.PositiveIntegerField(null=True, blank=True)
     address = models.CharField(max_length=255, blank=True)

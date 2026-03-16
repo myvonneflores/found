@@ -116,6 +116,23 @@ export function CompanyOwnerEditor({
     [profile]
   );
 
+  const foodCategoryIds = useMemo(
+    () =>
+      new Set(
+        taxonomies.businessCategories
+          .filter((category) => /food/i.test(category.name))
+          .map((category) => category.id)
+      ),
+    [taxonomies.businessCategories]
+  );
+
+  const selectedBusinessCategories = profile?.business_categories ?? [];
+
+  const showsCuisineSection = useMemo(
+    () => selectedBusinessCategories.some((categoryId) => foodCategoryIds.has(categoryId)),
+    [selectedBusinessCategories, foodCategoryIds]
+  );
+
   useEffect(() => {
     if (!isReady) {
       return;
@@ -430,61 +447,68 @@ export function CompanyOwnerEditor({
               options={businessCategoryOptions}
               placeholder="Choose as many as you like"
               selected={profile.business_categories.map(String)}
+              portal={false}
             />
           </div>
 
-          <div className="company-owner-taxonomy-grid">
-            <div className="company-owner-taxonomy-section">
-              <span className="contact-field-label">Product categories</span>
-              <TaxonomyMultiSelect
-                onToggle={(value) => updateField("product_categories", toggleId(profile.product_categories, Number(value)))}
-                options={productCategoryOptions}
-                placeholder="Choose product categories"
-                selected={profile.product_categories.map(String)}
-              />
-            </div>
+        <div className="company-owner-taxonomy-grid">
+          <div className="company-owner-taxonomy-section">
+            <span className="contact-field-label">Product categories</span>
+            <TaxonomyMultiSelect
+              onToggle={(value) => updateField("product_categories", toggleId(profile.product_categories, Number(value)))}
+              options={productCategoryOptions}
+              placeholder="Choose product categories"
+              selected={profile.product_categories.map(String)}
+              portal={false}
+            />
+          </div>
 
+          {showsCuisineSection ? (
             <div className="company-owner-taxonomy-section">
               <span className="contact-field-label">Cuisine</span>
-              <TaxonomyMultiSelect
-                onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
-                options={cuisineOptions}
-                placeholder="Choose cuisine types"
-                selected={profile.cuisine_types.map(String)}
-              />
-            </div>
+            <TaxonomyMultiSelect
+              onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
+              options={cuisineOptions}
+              placeholder="Choose cuisine types"
+              selected={profile.cuisine_types.map(String)}
+              portal={false}
+            />
           </div>
+          ) : null}
+        </div>
 
           <div className="company-owner-taxonomy-grid">
             <div className="company-owner-taxonomy-section">
               <span className="contact-field-label">Owned by</span>
-              <TaxonomyMultiSelect
-                onToggle={(value) => updateField("ownership_markers", toggleId(profile.ownership_markers, Number(value)))}
-                options={ownershipOptions}
-                placeholder="Add any ownership details you'd like to share"
-                selected={profile.ownership_markers.map(String)}
-              />
-            </div>
+            <TaxonomyMultiSelect
+              onToggle={(value) => updateField("ownership_markers", toggleId(profile.ownership_markers, Number(value)))}
+              options={ownershipOptions}
+              placeholder="Add any ownership details you'd like to share"
+              selected={profile.ownership_markers.map(String)}
+              portal={false}
+            />
+          </div>
 
             <div className="company-owner-taxonomy-section">
               <span className="contact-field-label">More to love</span>
-              <TaxonomyMultiSelect
-                onToggle={(value) => {
-                  if (value === "__vegan__") {
-                    updateField("is_vegan_friendly", !profile.is_vegan_friendly);
-                    return;
-                  }
-                  if (value === "__gf__") {
-                    updateField("is_gf_friendly", !profile.is_gf_friendly);
-                    return;
-                  }
-                  updateField("sustainability_markers", toggleId(profile.sustainability_markers, Number(value)));
-                }}
-                options={moreToLoveOptions}
-                placeholder="Choose as many as you like"
-                selected={selectedMoreToLove}
-              />
-            </div>
+            <TaxonomyMultiSelect
+              onToggle={(value) => {
+                if (value === "__vegan__") {
+                  updateField("is_vegan_friendly", !profile.is_vegan_friendly);
+                  return;
+                }
+                if (value === "__gf__") {
+                  updateField("is_gf_friendly", !profile.is_gf_friendly);
+                  return;
+                }
+                updateField("sustainability_markers", toggleId(profile.sustainability_markers, Number(value)));
+              }}
+              options={moreToLoveOptions}
+              placeholder="Choose as many as you like"
+              selected={selectedMoreToLove}
+              portal={false}
+            />
+          </div>
           </div>
 
           <div className="auth-form-grid">
@@ -516,13 +540,30 @@ export function CompanyOwnerEditor({
             </label>
           </div>
 
-            {isLoadingTaxonomies ? <p className="contact-form-note">Loading editing options...</p> : null}
-
-            <div className="directory-form-actions">
-              <button className="contact-submit" disabled={isSaving} type="submit">
-                {isSaving ? "Saving..." : "Save business page"}
-              </button>
+          <label className="contact-field contact-field-checkbox">
+            <span className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={profile.is_published}
+                onChange={(event) => updateField("is_published", event.target.checked)}
+              />
+              <span className="toggle-slider" aria-hidden="true" />
+            </span>
+            <div>
+              <strong>Display this business in the public SEARCH directory</strong>
+              <span className="contact-field-note">
+                Toggle off to keep your profile live but hidden from search results.
+              </span>
             </div>
+          </label>
+
+          {isLoadingTaxonomies ? <p className="contact-form-note">Loading editing options...</p> : null}
+
+          <div className="directory-form-actions">
+            <button className="contact-submit" disabled={isSaving} type="submit">
+              {isSaving ? "Saving..." : "Save business page"}
+            </button>
+          </div>
           </form>
         ) : null}
       </section>

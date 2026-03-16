@@ -161,6 +161,21 @@ export function CompanyProfileCreationForm({
     [profile.is_gf_friendly, profile.is_vegan_friendly, profile.sustainability_markers]
   );
 
+  const foodCategoryIds = useMemo(
+    () =>
+      new Set(
+        taxonomies.businessCategories
+          .filter((category) => /food/i.test(category.name))
+          .map((category) => category.id)
+      ),
+    [taxonomies.businessCategories]
+  );
+
+  const showsCuisineSection = useMemo(
+    () => profile.business_categories.some((categoryId) => foodCategoryIds.has(categoryId)),
+    [profile.business_categories, foodCategoryIds]
+  );
+
   function updateField<Key extends keyof Omit<ManagedBusinessProfile, "id" | "slug">>(
     key: Key,
     value: Omit<ManagedBusinessProfile, "id" | "slug">[Key]
@@ -277,15 +292,17 @@ export function CompanyProfileCreationForm({
             />
           </div>
 
-          <div className="company-owner-taxonomy-section">
-            <span className="contact-field-label">Cuisine</span>
-            <TaxonomyMultiSelect
-              onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
-              options={cuisineOptions}
-              placeholder="Choose cuisine types"
-              selected={profile.cuisine_types.map(String)}
-            />
-          </div>
+          {showsCuisineSection ? (
+            <div className="company-owner-taxonomy-section">
+              <span className="contact-field-label">Cuisine</span>
+              <TaxonomyMultiSelect
+                onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
+                options={cuisineOptions}
+                placeholder="Choose cuisine types"
+                selected={profile.cuisine_types.map(String)}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="company-owner-taxonomy-grid">

@@ -51,10 +51,16 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    if (!agreedToTerms) {
+      setError("Please agree to the Terms & Conditions to continue.");
+      return;
+    }
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
@@ -264,6 +270,22 @@ export default function SignupPage() {
                   ? "Business accounts can sign in right away, then submit their listing claim for review."
                   : "Personal accounts can start saving favorites and building lists right away."}
               </p>
+
+              <label className="contact-field contact-field-checkbox">
+                <input
+                  checked={agreedToTerms}
+                  onChange={(event) => setAgreedToTerms(event.target.checked)}
+                  required
+                  type="checkbox"
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link className="contact-link" href="/terms-and-conditions" target="_blank" rel="noreferrer">
+                    Terms & Conditions
+                  </Link>
+                  .
+                </span>
+              </label>
 
               {error ? <p className="contact-form-note is-error">{error}</p> : null}
 

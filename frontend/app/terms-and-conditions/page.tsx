@@ -4,19 +4,23 @@ import { SiteHeader } from "@/components/site-header";
 const termsSections = [
   {
     title: "Using FOUND",
-    body: "FOUND is an informational directory designed to help people discover value-aligned businesses. By using the site, you agree not to misuse the content, interfere with the service, or attempt to access parts of the platform beyond normal public use.",
+    body: "FOUND is an informational directory designed to help people discover and support value-aligned businesses. When you use the site you agree to keep interactions positive, respect ownership signals, and not attempt to disrupt or reverse-engineer the service.",
+  },
+  {
+    title: "Public Profiles & Lists",
+    body: "Business owners and list curators control whether their profile or lists are public or private. If you toggle content to public, it becomes visible to everyone; if you keep it private it stays tied to your account and cannot be found through search.",
   },
   {
     title: "Directory Accuracy",
-    body: "We work to keep listings thoughtful, useful, and current, but business details can change over time. FOUND does not guarantee that every listing is complete, error-free, or fully up to date at every moment.",
+    body: "We work to keep listings thoughtful and current, but business details, ownership, and availability may change. FOUND does not guarantee every entry is complete or error-free. You are responsible for keeping your own profile and lists accurate.",
   },
   {
     title: "External Links",
-    body: "Some listings and pages link to third-party websites or social profiles. FOUND is not responsible for the content, availability, or policies of those external services.",
+    body: "Some listings link out to third-party websites or social profiles. FOUND is not responsible for those external services, their content, availability, or policies.",
   },
   {
     title: "Updates",
-    body: "These terms may evolve as FOUND grows. Continued use of the site after updates are published means you accept the revised terms.",
+    body: "These terms evolve as FOUND grows. Continued use of the site after changes are posted means you accept the revised terms.",
   },
 ] as const;
 

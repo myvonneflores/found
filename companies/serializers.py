@@ -73,7 +73,9 @@ class CompanyListSerializer(serializers.ModelSerializer):
             "sustainability_markers",
             "is_vegan_friendly",
             "is_gf_friendly",
+            "is_published",
         )
+        read_only_fields = ("is_published",)
 
 
 class ClaimedCompanyPublicListSerializer(serializers.ModelSerializer):
@@ -185,9 +187,11 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "linkedin_page",
             "is_vegan_friendly",
             "is_gf_friendly",
+            "is_published",
             "created_at",
             "updated_at",
         )
+        read_only_fields = ("id", "slug", "is_published")
 
 
 class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
@@ -221,6 +225,7 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
         many=True,
         required=False,
     )
+    is_published = serializers.BooleanField(required=False)
 
     class Meta:
         model = Company
@@ -245,6 +250,7 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
             "linkedin_page",
             "is_vegan_friendly",
             "is_gf_friendly",
+            "is_published",
         )
         read_only_fields = ("id", "slug")
 

@@ -357,7 +357,7 @@ export default function CuratedListPage() {
             <>
               <article className="public-list-hero-card list-browser-curator-strip">
                 {ownerProfileHref ? (
-                  <Link className="list-browser-curator-link" href={ownerProfileHref}>
+                  <Link className="list-browser-curator-button" href={ownerProfileHref}>
                     {shareLabel(ownerDisplayName)}
                   </Link>
                 ) : (

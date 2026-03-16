@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useAuth } from "@/components/auth-provider";
+import { BrandedSelect } from "@/components/branded-select";
 import {
   addCuratedListItem,
   createCuratedList,
@@ -99,8 +100,15 @@ export function CompanySaveFlow({
 
   const canUseSaveTools = Boolean(user?.account_type === "personal" || user?.account_type === "business");
   const canMakePublicLists = Boolean(user?.account_type === "personal" || user?.is_business_verified);
+  const [isNewListPublic, setIsNewListPublic] = useState(false);
   const safeLists = normalizeLists(lists);
   const isFavorited = favoriteId !== null;
+
+  useEffect(() => {
+    if (!canMakePublicLists) {
+      setIsNewListPublic(false);
+    }
+  }, [canMakePublicLists]);
 
   function isMissingCompanyError(message: string) {
     const normalized = message.toLowerCase();
@@ -265,7 +273,7 @@ export function CompanySaveFlow({
         const nextList = await createCuratedList(token, {
           title: newListTitle,
           description: newListDescription,
-          is_public: canMakePublicLists,
+          is_public: canMakePublicLists ? isNewListPublic : false,
         });
         setLists((current) => [nextList, ...normalizeLists(current)]);
         targetListId = String(nextList.id);
@@ -385,18 +393,17 @@ export function CompanySaveFlow({
                 {!isCreatingList ? (
                   <label className="detail-list-field">
                     <span className="field-label">Choose a list</span>
-                    <select
-                      disabled={isLoading || safeLists.length === 0}
-                      onChange={(event) => setSelectedListId(event.target.value)}
+                    <BrandedSelect
+                      name="selected_list"
+                      placeholder={safeLists.length === 0 ? "No lists yet" : "Choose a list"}
                       value={selectedListId}
-                    >
-                      {safeLists.length === 0 ? <option value="">No lists yet</option> : null}
-                      {safeLists.map((list) => (
-                        <option key={list.id} value={String(list.id)}>
-                          {list.title}
-                        </option>
-                      ))}
-                    </select>
+                      onSelect={(value) => setSelectedListId(value)}
+                      options={safeLists.map((list) => ({
+                        label: list.title,
+                        value: String(list.id),
+                      }))}
+                      disabled={isLoading || safeLists.length === 0}
+                    />
                   </label>
                 ) : (
                   <>
@@ -416,30 +423,50 @@ export function CompanySaveFlow({
                         value={newListDescription}
                       />
                     </label>
-                    {!canMakePublicLists ? (
+                    {canMakePublicLists ? (
+                      <label className="detail-save-toggle-row">
+                        <button
+                          aria-pressed={isNewListPublic}
+                          className={isNewListPublic ? "detail-save-toggle is-active" : "detail-save-toggle"}
+                          onClick={() => setIsNewListPublic((current) => !current)}
+                          type="button"
+                        >
+                          <span className="detail-save-toggle-knob" />
+                        </button>
+                        <span className="detail-save-toggle-copy">
+                          {isNewListPublic ? "you went public!" : "Make this list public"}
+                        </span>
+                      </label>
+                    ) : (
                       <p className="detail-list-field-meta">Lists created during verification stay private until your business is approved.</p>
-                    ) : null}
+                    )}
                   </>
                 )}
 
                 <div className="detail-save-modal-actions">
-                  {isCreatingList ? (
-                    <button
-                      className="button button-secondary"
-                      onClick={() => setIsCreatingList(false)}
-                      type="button"
-                    >
-                      use existing list
-                    </button>
-                  ) : (
-                    <button
-                      className="button button-secondary"
-                      onClick={() => setIsCreatingList(true)}
-                      type="button"
-                    >
-                      create new list
-                    </button>
-                  )}
+                {isCreatingList ? (
+                  <button
+                    className="button button-secondary"
+                    onClick={() => {
+                      setIsCreatingList(false);
+                      setIsNewListPublic(false);
+                    }}
+                    type="button"
+                  >
+                    use existing list
+                  </button>
+                ) : (
+                  <button
+                    className="button button-secondary"
+                    onClick={() => {
+                      setIsCreatingList(true);
+                      setIsNewListPublic(false);
+                    }}
+                    type="button"
+                  >
+                    create new list
+                  </button>
+                )}
 
                   <button
                     className="button button-primary"

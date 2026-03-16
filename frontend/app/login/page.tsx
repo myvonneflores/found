@@ -17,6 +17,22 @@ function destinationForUser(accountType: string, isBusinessVerified: boolean) {
   return "/account";
 }
 
+function friendlyAuthError(message: string) {
+  if (message.includes("Failed to fetch")) {
+    return "Unable to reach FOUND right now. Please check your network or try again shortly.";
+  }
+
+  if (message.match(/no active account/i) || message.match(/user .* does not exist/i)) {
+    return "We couldn’t find an account with that email. Please double-check your credentials or sign up.";
+  }
+
+  if (message.match(/invalid credentials/i)) {
+    return "Those credentials look incorrect. Try again or reset your password.";
+  }
+
+  return message;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, isReady, signIn, user } = useAuth();
@@ -42,7 +58,8 @@ export default function LoginPage() {
       signIn(session);
       router.push(destinationForUser(session.user.account_type, session.user.is_business_verified));
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to log in.");
+      const raw = submitError instanceof Error ? submitError.message : "Unable to log in.";
+      setError(friendlyAuthError(raw));
     } finally {
       setIsSubmitting(false);
     }

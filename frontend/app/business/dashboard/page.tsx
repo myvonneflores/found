@@ -11,7 +11,7 @@ import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
 import { SiteHeader } from "@/components/site-header";
-import { listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
+import { listBusinessClaims, listCuratedLists, listFavorites, updateCuratedList } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
 import { CuratedList, Favorite } from "@/types/community";
 
@@ -92,7 +92,39 @@ export default function BusinessDashboardPage() {
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
+  const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const latestClaim = claims.find((claim) => claim.status === "verified") ?? claims[0] ?? null;
+
+  async function toggleListPrivacy(list: CuratedList) {
+    if (!accessToken) {
+      setError("Unable to update list privacy right now.");
+      return;
+    }
+
+    setTogglingListIds((current) => {
+      const next = new Set(current);
+      next.add(list.id);
+      return next;
+    });
+
+    try {
+      const updated = await updateCuratedList(accessToken, list.id, {
+        title: list.title,
+        description: list.description,
+        is_public: !list.is_public,
+      });
+
+      setLists((current) => current.map((item) => (item.id === list.id ? updated : item)));
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : "Unable to update list privacy right now.");
+    } finally {
+      setTogglingListIds((current) => {
+        const next = new Set(current);
+        next.delete(list.id);
+        return next;
+      });
+    }
+  }
 
   const favoritesContent = (
     <>
@@ -119,6 +151,8 @@ export default function BusinessDashboardPage() {
           enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
+          togglingListIds={togglingListIds}
+          onTogglePublic={toggleListPrivacy}
         />
       ) : null}
     </>

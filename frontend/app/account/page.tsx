@@ -14,6 +14,7 @@ import {
   getPersonalProfile,
   listCuratedLists,
   listFavorites,
+  updateCuratedList,
   updatePersonalProfile,
 } from "@/lib/api";
 import { CuratedList, Favorite } from "@/types/community";
@@ -87,9 +88,37 @@ export default function AccountPage() {
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
+  const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
   const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
-  const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
+const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
+
+  async function toggleListPrivacy(list: CuratedList) {
+    if (!accessToken) {
+      setError("Unable to update list privacy right now.");
+      return;
+    }
+
+    setTogglingListIds((current) => new Set(current).add(list.id));
+
+    try {
+      const updated = await updateCuratedList(accessToken, list.id, {
+        title: list.title,
+        description: list.description,
+        is_public: !list.is_public,
+      });
+
+      setLists((current) => current.map((item) => (item.id === list.id ? updated : item)));
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : "Unable to update list privacy right now.");
+    } finally {
+      setTogglingListIds((current) => {
+        const next = new Set(current);
+        next.delete(list.id);
+        return next;
+      });
+    }
+  }
 
   const favoritesContent = (
     <>
@@ -116,6 +145,8 @@ export default function AccountPage() {
           enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
+          togglingListIds={togglingListIds}
+          onTogglePublic={toggleListPrivacy}
         />
       ) : null}
     </>
