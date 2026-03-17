@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getCompany } from "@/lib/api";
 import { instagramProfileUrl } from "@/lib/social-links";
+import { UserBadge } from "@/components/user-badge";
 import type { CompanyDetail } from "@/types/company";
 import type { CuratedListItem } from "@/types/community";
 import type { PublicProfile } from "@/types/profile";
@@ -203,18 +204,30 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
       ]
     : [];
   const hasCompactDetailList = detailListItems.length > 4;
+  const heroBadges = profile.badges.filter((badge) => badge.slug === "community-contributor");
+  const stackedBadges = profile.badges.filter((badge) => badge.slug !== "community-contributor");
+  const profileTitle = profile.account_type === "business" && profile.business_company_slug ? (
+    <Link className="public-profile-hero-title-link" href={`/companies/${profile.business_company_slug}`}>
+      {profile.display_name}
+    </Link>
+  ) : (
+    profile.display_name
+  );
 
   return (
     <section className="dashboard-stage public-profile-browser">
       <article className="panel dashboard-banner public-profile-browser-hero">
         <div className="public-profile-browser-hero-copy">
-          <h1 className="home-hero-title">{profile.display_name}</h1>
-          {profile.badges.length ? (
+          <div className="public-profile-hero-heading">
+            <h1 className="home-hero-title">{profileTitle}</h1>
+            {heroBadges.map((badge) => (
+              <UserBadge badge={badge} className="public-profile-hero-badge" key={badge.slug} size={84} />
+            ))}
+          </div>
+          {stackedBadges.length ? (
             <div className="profile-badge-row">
-              {profile.badges.map((badge) => (
-                <span className={`badge badge-profile badge-${badge.slug}`} key={badge.slug}>
-                  {badge.label}
-                </span>
+              {stackedBadges.map((badge) => (
+                <UserBadge badge={badge} key={badge.slug} size={72} />
               ))}
             </div>
           ) : null}

@@ -369,6 +369,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     bio = serializers.SerializerMethodField()
     location = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    business_company_slug = serializers.SerializerMethodField()
     public_lists = serializers.SerializerMethodField()
     public_recommendations = serializers.SerializerMethodField()
     badges = serializers.SerializerMethodField()
@@ -382,6 +383,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             "bio",
             "location",
             "avatar_url",
+            "business_company_slug",
             "badges",
             "public_lists",
             "public_recommendations",
@@ -391,8 +393,6 @@ class PublicProfileSerializer(serializers.ModelSerializer):
         return obj.display_name or obj.first_name or obj.email.split("@")[0]
 
     def _get_personal_profile(self, obj):
-        if obj.account_type != User.AccountType.PERSONAL:
-            return None
         return getattr(obj, "personal_profile", None)
 
     def get_bio(self, obj):
@@ -406,6 +406,17 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     def get_avatar_url(self, obj):
         profile = self._get_personal_profile(obj)
         return profile.avatar_url if profile else ""
+
+    def get_business_company_slug(self, obj):
+        verified_claim = (
+            obj.business_claims.filter(status=BusinessClaim.VerificationStatus.VERIFIED, company__isnull=False)
+            .select_related("company")
+            .order_by("-reviewed_at", "-pk")
+            .first()
+        )
+        if not verified_claim or not verified_claim.company:
+            return None
+        return verified_claim.company.slug
 
     def get_badges(self, obj):
         return get_user_badges(obj)

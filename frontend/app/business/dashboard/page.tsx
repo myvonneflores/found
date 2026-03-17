@@ -11,9 +11,17 @@ import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
 import { SiteHeader } from "@/components/site-header";
-import { listBusinessClaims, listCuratedLists, listFavorites, updateCuratedList } from "@/lib/api";
+import {
+  getPersonalProfile,
+  listBusinessClaims,
+  listCuratedLists,
+  listFavorites,
+  updateCuratedList,
+  updatePersonalProfile,
+} from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
 import { CuratedList, Favorite } from "@/types/community";
+import { PersonalProfile } from "@/types/profile";
 
 const DASHBOARD_SCROLL_CAP = 15;
 
@@ -84,9 +92,18 @@ export default function BusinessDashboardPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
+  const [profile, setProfile] = useState<PersonalProfile>({
+    bio: "",
+    location: "",
+    avatar_url: "",
+    is_public: false,
+  });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSavedMessage, setProfileSavedMessage] = useState("");
+  const [savedProfileIsPublic, setSavedProfileIsPublic] = useState(false);
   const [mobileFavoritesOpen, setMobileFavoritesOpen] = useState(true);
   const [mobileListsOpen, setMobileListsOpen] = useState(false);
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
@@ -94,6 +111,9 @@ export default function BusinessDashboardPage() {
   const safeLists = normalizeLists(lists);
   const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const latestClaim = claims.find((claim) => claim.status === "verified") ?? claims[0] ?? null;
+  const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
+  const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
+  const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
 
   async function toggleListPrivacy(list: CuratedList) {
     if (!accessToken) {
@@ -160,14 +180,85 @@ export default function BusinessDashboardPage() {
 
   const shareContent = (
     <>
-      <p className="lede">Build public lists you can text, email, or link anywhere your community finds you.</p>
-      <p className="lede">
-        Every public list gets its own page, so you can text it, email it, or link it anywhere your community finds
-        you.
-      </p>
-      <p className="muted">Open any public list from the lists column to grab the shareable page.</p>
+      <form className="auth-form dashboard-profile-form" onSubmit={handleProfileSave}>
+        <p className="dashboard-profile-helper">
+          create a profile for easy sharing. don&apos;t see your favs listed? contribute to the community by adding a
+          business listing.
+        </p>
+        <label className="contact-field">
+          <span className="contact-field-label">Name</span>
+          <input disabled value={profileName} />
+        </label>
+        <label className="contact-field">
+          <span className="contact-field-label">Bio</span>
+          <textarea
+            onChange={(event) => {
+              setProfile((current) => ({ ...current, bio: event.target.value }));
+              setProfileSavedMessage("");
+            }}
+            placeholder="Tell people what you care about discovering on FOUND."
+            rows={3}
+            value={profile.bio}
+          />
+        </label>
+        <div className="dashboard-profile-actions">
+          <label className="detail-save-toggle-row dashboard-profile-toggle-row">
+            <button
+              aria-pressed={profile.is_public}
+              className={profile.is_public ? "detail-save-toggle is-active" : "detail-save-toggle"}
+              onClick={() => {
+                setProfile((current) => ({ ...current, is_public: !current.is_public }));
+                setProfileSavedMessage("");
+              }}
+              type="button"
+            >
+              <span className="detail-save-toggle-knob" />
+            </button>
+            <span className="detail-save-toggle-copy">
+              {profile.is_public ? "you went public!" : "Make your profile public"}
+            </span>
+          </label>
+          <button className="contact-submit dashboard-profile-save" disabled={isSavingProfile} type="submit">
+            {isSavingProfile ? "Saving..." : "Save"}
+          </button>
+        </div>
+
+        {hasPublicPresence && profileHref ? (
+          <Link className="button button-secondary dashboard-profile-link" href={profileHref}>
+            VIEW PROFILE
+          </Link>
+        ) : null}
+        {profileSavedMessage ? <p className="contact-form-note is-success">{profileSavedMessage}</p> : null}
+      </form>
     </>
   );
+
+  async function handleProfileSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!accessToken) {
+      setError("Please log in again before saving your profile.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setError("");
+
+    try {
+      const nextProfile = await updatePersonalProfile(accessToken, profile);
+      setProfile(nextProfile);
+      setSavedProfileIsPublic(nextProfile.is_public);
+      setProfileSavedMessage(nextProfile.is_public ? "Your public profile is live." : "Your profile changes were saved.");
+    } catch (saveError) {
+      if (saveError instanceof Error && isTokenError(saveError.message)) {
+        signOut();
+        router.replace("/login");
+        return;
+      }
+      setError(saveError instanceof Error ? saveError.message : "Unable to save your profile right now.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
 
   useEffect(() => {
     if (!isReady) {
@@ -197,14 +288,17 @@ export default function BusinessDashboardPage() {
       }
 
       try {
-        const [nextFavorites, nextLists, nextClaims] = await Promise.all([
+        const [nextFavorites, nextLists, nextClaims, nextProfile] = await Promise.all([
           listFavorites(accessToken),
           listCuratedLists(accessToken),
           listBusinessClaims(accessToken),
+          getPersonalProfile(accessToken),
         ]);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
         setClaims(normalizeClaims(nextClaims));
+        setProfile(nextProfile);
+        setSavedProfileIsPublic(nextProfile.is_public);
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
           signOut();
@@ -249,7 +343,7 @@ export default function BusinessDashboardPage() {
           <div className="dashboard-column-headings">
             <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>
             <div className="dashboard-column-heading dashboard-column-heading-lists">lists</div>
-            <div className="dashboard-column-heading dashboard-column-heading-profile">share</div>
+            <div className="dashboard-column-heading dashboard-column-heading-profile">community</div>
           </div>
 
           <section className="dashboard-board">
@@ -262,7 +356,7 @@ export default function BusinessDashboardPage() {
             </article>
 
             <aside className="dashboard-sidebar">
-              <article className="panel dashboard-panel dashboard-panel-share">{shareContent}</article>
+              <article className="panel dashboard-panel dashboard-panel-share dashboard-panel-profile-combined">{shareContent}</article>
             </aside>
           </section>
 
@@ -308,13 +402,13 @@ export default function BusinessDashboardPage() {
                 onClick={() => setMobileShareOpen((open) => !open)}
                 type="button"
               >
-                <span>share</span>
+                <span>community</span>
                 <span aria-hidden="true" className={mobileShareOpen ? "directory-panel-mobile-chevron is-open" : "directory-panel-mobile-chevron"}>
                   +
                 </span>
               </button>
               <div className={mobileShareOpen ? "" : "directory-mobile-collapsed"}>
-                <article className="panel dashboard-panel dashboard-panel-share">{shareContent}</article>
+                <article className="panel dashboard-panel dashboard-panel-share dashboard-panel-profile-combined">{shareContent}</article>
               </div>
             </article>
           </section>

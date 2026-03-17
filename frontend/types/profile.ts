@@ -16,6 +16,7 @@ export interface PublicProfile {
   bio: string;
   location: string;
   avatar_url: string;
+  business_company_slug: string | null;
   badges: UserBadge[];
   public_lists: PublicCuratedList[];
   public_recommendations: Recommendation[];

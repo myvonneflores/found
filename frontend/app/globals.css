@@ -512,15 +512,40 @@ select {
 }
 
 .badge-community-contributor {
-  background: linear-gradient(135deg, rgba(108, 171, 76, 0.95), rgba(118, 167, 215, 0.92));
-  border: 1px solid rgba(255, 248, 239, 0.38);
-  box-shadow: 0 10px 24px rgba(71, 118, 46, 0.18);
-  color: #fff8ef;
+  background: rgba(108, 171, 76, 0.18);
+  border: 1px solid rgba(108, 171, 76, 0.35);
+  color: #3f7c24;
+}
+
+.profile-badge-seal {
+  --badge-seal-size: 4.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--badge-seal-size) * 1.148);
+  height: var(--badge-seal-size);
+  flex: 0 0 auto;
+  filter: drop-shadow(0 12px 22px rgba(71, 118, 46, 0.18));
+}
+
+.profile-badge-seal svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.profile-badge-seal-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
 }
 
 .profile-badge-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.55rem;
   margin-bottom: 0.8rem;
 }
@@ -2464,6 +2489,15 @@ body.contact-page-body {
   width: 100%;
 }
 
+.dashboard-profile-helper {
+  margin: 0;
+  color: #ad5e05;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
 .dashboard-profile-form .contact-field {
   display: grid;
   gap: 0.4rem;
@@ -3229,9 +3263,31 @@ body.contact-page-body {
   width: min(100%, 46rem);
 }
 
+.public-profile-hero-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.public-profile-hero-badge {
+  margin-top: 0.1rem;
+}
+
 .public-profile-browser-hero .home-hero-title,
 .public-profile-browser-hero .lede {
   color: #fff8ef;
+}
+
+.public-profile-hero-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.public-profile-hero-title-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
 }
 
 .public-profile-browser-headings {
@@ -4401,6 +4457,16 @@ body.contact-page-body {
     width: 100%;
   }
 
+  .public-profile-hero-heading {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .public-profile-hero-badge {
+    --badge-seal-size: clamp(4.3rem, 20vw, 5rem);
+    margin-top: 0;
+  }
+
   .public-profile-browse-link {
     width: 100%;
   }
@@ -5438,13 +5504,19 @@ body.contact-page-body {
 .directory-panel-search input {
   flex: 1;
   border-radius: 999px;
-  border: 0;
+  border: 2px solid transparent;
   background: rgba(250, 238, 232, 0.84);
   color: #ad5e05;
   padding: 0.65rem 1rem;
   font: inherit;
   font-weight: 700;
   letter-spacing: 0.04em;
+  box-shadow: none;
+}
+
+.directory-panel-search input:focus-visible {
+  border-color: var(--found-green);
+  box-shadow: none;
 }
 
 .directory-panel-search button {

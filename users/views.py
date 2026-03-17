@@ -39,8 +39,6 @@ class PersonalProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self):
-        if self.request.user.account_type != User.AccountType.PERSONAL:
-            raise PermissionDenied("Only personal users have personal profiles.")
         profile, _ = PersonalProfile.objects.get_or_create(user=self.request.user)
         return profile
 
