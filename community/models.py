@@ -67,6 +67,28 @@ class CuratedListItem(BaseModel):
         return f"{self.curated_list.title}: {self.company.name}"
 
 
+class SavedCuratedList(BaseModel):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="saved_curated_lists",
+    )
+    curated_list = models.ForeignKey(
+        CuratedList,
+        on_delete=models.CASCADE,
+        related_name="saved_by",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "curated_list"], name="unique_saved_curated_list_per_user"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} saved {self.curated_list.title}"
+
+
 class Recommendation(BaseModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

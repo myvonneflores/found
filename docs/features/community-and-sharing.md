@@ -8,7 +8,7 @@ It explains:
 
 - how favorites, lists, list items, and recommendations are modeled
 - which parts of the community system are private versus public
-- how list sharing and public-profile browsing currently work
+- how list sharing, public-list discovery, and public-profile browsing currently work
 - which community capabilities are implemented in the API versus actively used in the current UI
 
 ## Feature Scope
@@ -18,7 +18,9 @@ This area includes:
 - favorites
 - curated lists
 - ordered list items
+- public list discovery
 - public list pages
+- saved public lists
 - public profile list browsing
 - recommendations
 - recommendation visibility rules
@@ -52,7 +54,9 @@ Primary frontend files:
 - [`../../frontend/components/edit-list-modal.tsx`](../../frontend/components/edit-list-modal.tsx)
 - [`../../frontend/components/company-save-flow.tsx`](../../frontend/components/company-save-flow.tsx)
 - [`../../frontend/components/public-profile-browser.tsx`](../../frontend/components/public-profile-browser.tsx)
+- [`../../frontend/components/saved-list-shelf.tsx`](../../frontend/components/saved-list-shelf.tsx)
 - [`../../frontend/components/recommendation-manager.tsx`](../../frontend/components/recommendation-manager.tsx)
+- [`../../frontend/app/lists/page.tsx`](../../frontend/app/lists/page.tsx)
 - [`../../frontend/app/lists/[idHash]/page.tsx`](../../frontend/app/lists/%5BidHash%5D/page.tsx)
 - [`../../frontend/app/profiles/[publicSlug]/page.tsx`](../../frontend/app/profiles/%5BpublicSlug%5D/page.tsx)
 
@@ -64,6 +68,8 @@ In the current product:
 
 - favorites are the quick-save primitive
 - curated lists are the main sharing primitive
+- public-list discovery lets users search by title, curator, and company name
+- saved public lists let users bookmark other people’s lists without copying them
 - public profile visibility depends largely on whether a user has public-facing community content
 - recommendations exist as a supported content type, but they are not as central in the current UX as favorites and lists
 
@@ -107,6 +113,19 @@ Public lists are the main user-facing sharing artifact in the current app.
 
 The item order is part of the product experience and is maintained in the backend.
 
+### `SavedCuratedList`
+
+`SavedCuratedList` represents a user bookmarking someone else’s public list for later reference.
+
+Important properties:
+
+- belongs to one user
+- belongs to one curated list
+- unique per user/list pair
+- ordered newest-first
+
+Saved lists are a bookmark relationship, not a copied list. If the source list becomes private, it drops out of saved-list responses.
+
 ### `Recommendation`
 
 `Recommendation` is a user-authored piece of company-specific written content.
@@ -128,7 +147,9 @@ The backend is the source of truth for community permissions.
 Current rules include:
 
 - authenticated access is required for private favorites, private lists, owned list items, and owned recommendations
+- authenticated access is required for saved-list bookmarks
 - public list detail is available without auth only when `is_public=True`
+- public list search is available without auth
 - public recommendations are available without auth through the API
 - owner-only private list access by `id_hash` requires authentication as the owner
 - `can_use_community_features` gates community access at the API level
@@ -159,7 +180,10 @@ Current routes include:
 - `GET /api/community/lists/by-id-hash/<id_hash>/`
 - `POST /api/community/lists/<pk>/items/`
 - `GET/PATCH/DELETE /api/community/lists/items/<pk>/`
+- `GET /api/community/public-lists/`
 - `GET /api/community/public-lists/<id_hash>/`
+- `GET/POST /api/community/saved-lists/`
+- `DELETE /api/community/saved-lists/<pk>/`
 - `GET/POST /api/community/recommendations/`
 - `GET/PATCH/DELETE /api/community/recommendations/<pk>/`
 - `GET /api/community/public-recommendations/`
@@ -185,6 +209,13 @@ Public lists additionally expose an `owner` object containing:
 - `display_name`
 - `public_slug`
 - `account_type`
+
+Public list search uses a lighter preview serializer that adds:
+
+- `item_count`
+- `preview_companies`
+
+Saved-list serializers wrap that preview under a `list` field.
 
 ### Recommendations
 
@@ -258,6 +289,13 @@ Item ordering is maintained in the backend:
 These rules live in the serializer layer and are covered by tests.
 
 ## Dashboard List Management
+
+The dashboards now have two different list concepts:
+
+- owned lists that the user can edit and publish
+- saved public lists that the user can bookmark from other curators
+
+Saved lists render as a separate shelf-style card on the account and verified-business dashboards.
 
 Dashboard list display is intentionally lightweight.
 

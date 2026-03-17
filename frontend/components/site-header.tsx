@@ -151,6 +151,17 @@ export function SiteHeader({
               >
                 Search
               </Link>
+              <Link
+                className="directory-menu-link"
+                href="/lists"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setSearchValue("");
+                }}
+                role="menuitem"
+              >
+                Lists
+              </Link>
               <form className="directory-menu-search" onSubmit={submitSearch} role="search">
                 <input
                   autoComplete="off"

@@ -6,7 +6,14 @@ import {
   RegisterPayload,
   AuthUser,
 } from "@/types/auth";
-import { CuratedList, CuratedListItem, Favorite, PublicCuratedList } from "@/types/community";
+import {
+  CuratedList,
+  CuratedListItem,
+  Favorite,
+  PublicCuratedList,
+  PublicCuratedListPreview,
+  SavedCuratedList,
+} from "@/types/community";
 import { PersonalProfile, PublicProfile } from "@/types/profile";
 import { Recommendation } from "@/types/recommendation";
 import {
@@ -20,6 +27,7 @@ import {
 } from "@/types/company";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 function buildUrl(path: string, searchParams?: Record<string, string | undefined>) {
   const url = new URL(path, API_BASE_URL.endsWith("/") ? API_BASE_URL : `${API_BASE_URL}/`);
@@ -52,6 +60,95 @@ async function fetchJson<T>(
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildUrl(path), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    let detail = `Request failed: ${response.status}`;
+
+    try {
+      const data = (await response.json()) as Record<string, unknown>;
+      const firstEntry = Object.entries(data)[0];
+      if (typeof data.detail === "string") {
+        detail = data.detail;
+      } else if (firstEntry) {
+        const value = firstEntry[1];
+        if (Array.isArray(value) && typeof value[0] === "string") {
+          detail = value[0];
+        } else if (typeof value === "string") {
+          detail = value;
+        }
+      }
+    } catch {
+      // Fall back to the generic message when the response is not JSON.
+    }
+
+    throw new Error(detail);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function fetchAppJson<T>(
+  path: string,
+  searchParams?: Record<string, string | undefined>,
+  init?: RequestInit
+): Promise<T> {
+  const baseUrl = typeof window === "undefined" ? APP_BASE_URL : window.location.origin;
+  const url = new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value) {
+        url.searchParams.set(key, value);
+      }
+    });
+  }
+
+  const response = await fetch(url.toString(), {
+    ...(init ?? {}),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    let detail = `Request failed: ${response.status}`;
+
+    try {
+      const data = (await response.json()) as Record<string, unknown>;
+      const firstEntry = Object.entries(data)[0];
+      if (typeof data.detail === "string") {
+        detail = data.detail;
+      } else if (firstEntry) {
+        const value = firstEntry[1];
+        if (Array.isArray(value) && typeof value[0] === "string") {
+          detail = value[0];
+        } else if (typeof value === "string") {
+          detail = value;
+        }
+      }
+    } catch {
+      // Fall back to the generic message when the response is not JSON.
+    }
+
+    throw new Error(detail);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function requestAppJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const baseUrl = typeof window === "undefined" ? APP_BASE_URL : window.location.origin;
+  const url = new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+
+  const response = await fetch(url.toString(), {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -355,6 +452,40 @@ export function deleteCuratedListItem(token: string, itemId: number) {
 export function getPublicCuratedList(idHash: string) {
   return fetchJson<PublicCuratedList>(`community/public-lists/${idHash}/`, undefined, {
     cache: "no-store",
+  });
+}
+
+export function listPublicCuratedLists(search?: string) {
+  return fetchAppJson<PublicCuratedListPreview[] | PaginatedResponse<PublicCuratedListPreview>>(
+    "/api/community/public-lists",
+    search ? { search } : undefined,
+  ).then(unwrapListResponse);
+}
+
+export function listSavedCuratedLists(token: string) {
+  return requestAppJson<SavedCuratedList[] | PaginatedResponse<SavedCuratedList>>("/api/community/saved-lists", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }).then(unwrapListResponse);
+}
+
+export function createSavedCuratedList(token: string, curatedListId: number) {
+  return requestAppJson<SavedCuratedList>("/api/community/saved-lists", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ curated_list_id: curatedListId }),
+  });
+}
+
+export function deleteSavedCuratedList(token: string, savedListId: number) {
+  return requestAppJson<void>(`/api/community/saved-lists/${savedListId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 }
 

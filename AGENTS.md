@@ -16,14 +16,14 @@ The app currently centers on four product areas:
 
 - company discovery and public company profiles
 - accounts, auth, and dashboards
-- community tools like favorites, curated lists, and personal-user listing contributions
+- community tools like favorites, curated lists, searchable public lists, saved public lists, and personal-user listing contributions
 - business claims plus verified owner editing flows
 
 ## Repo Map
 
 - [`config/`](./config): Django settings, root URLs, API URL composition
 - [`companies/`](./companies): company model, taxonomies, filters, company APIs, import/audit commands
-- [`community/`](./community): favorites, curated lists, recommendations, public list APIs
+- [`community/`](./community): favorites, curated lists, saved public lists, recommendations, public list APIs
 - [`users/`](./users): custom user model, personal profiles, business claims, auth/profile APIs
 - [`frontend/app/`](./frontend/app): App Router pages
 - [`frontend/components/`](./frontend/components): client UI, dashboards, save flows, owner tools
@@ -68,7 +68,7 @@ docker compose run --rm frontend sh -lc 'npm install && npm run build'
 
 - Keep domain behavior inside the existing Django apps unless the boundary is genuinely new.
 - `companies` owns public directory data, taxonomy-backed listing creation, provenance metadata for imported/owner/community listings, and the verified business management endpoint.
-- `community` owns favorites, curated lists, list items, recommendations, and public list exposure.
+- `community` owns favorites, curated lists, saved-list bookmarks, list items, recommendations, and public list exposure/discovery.
 - `users` owns auth, account type behavior, public profiles, profile badges, and business claim workflows.
 - API responses are part of the contract. If a serializer shape changes, update or add tests in [`tests/test_api_shapes.py`](./tests/test_api_shapes.py) and any app-specific tests.
 
@@ -77,7 +77,7 @@ docker compose run --rm frontend sh -lc 'npm install && npm run build'
 - Public discovery pages are primarily server-rendered in `frontend/app/*` and fetch through [`frontend/lib/api.ts`](./frontend/lib/api.ts).
 - Authenticated dashboards and owner tools are client components that rely on [`AuthProvider`](./frontend/components/auth-provider.tsx), local storage session persistence, and JWT bearer tokens.
 - When adding an endpoint, add a typed wrapper in [`frontend/lib/api.ts`](./frontend/lib/api.ts) and update the matching types in [`frontend/types/`](./frontend/types).
-- Reuse the current route structure before inventing a new one. The app already has stable surfaces for `/companies`, `/account`, `/business/*`, `/profiles/[publicSlug]`, and `/lists/[idHash]`.
+- Reuse the current route structure before inventing a new one. The app already has stable surfaces for `/companies`, `/account`, `/business/*`, `/profiles/[publicSlug]`, `/lists`, and `/lists/[idHash]`.
 
 ### Product and UX
 

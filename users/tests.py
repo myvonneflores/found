@@ -46,12 +46,33 @@ class UserRegistrationTests(APITestCase):
                 "last_name": "One",
                 "display_name": "Owner",
                 "account_type": User.AccountType.BUSINESS,
+                "certify_local_ownership": True,
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["account_type"], User.AccountType.BUSINESS)
+
+    def test_register_requires_local_ownership_certification_for_business_accounts(self):
+        response = self.client.post(
+            reverse("users:register"),
+            {
+                "email": "owner@example.com",
+                "password": "supersecure123",
+                "first_name": "Owner",
+                "last_name": "One",
+                "display_name": "Owner",
+                "account_type": User.AccountType.BUSINESS,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["certify_local_ownership"],
+            ["Business accounts must certify that the business they represent is locally owned."],
+        )
 
     def test_register_generates_public_slug(self):
         response = self.client.post(

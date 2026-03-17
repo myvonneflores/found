@@ -15,6 +15,10 @@ const termsSections = [
     body: "We work to keep listings thoughtful and current, but business details, ownership, and availability may change. FOUND does not guarantee every entry is complete or error-free. You are responsible for keeping your own profile and lists accurate.",
   },
   {
+    title: "Business Account Certification",
+    body: "If you create or use a business account on FOUND, you certify that the business you represent is locally owned. You are responsible for making sure that certification is truthful and current before claiming a listing, adding a new business, or using owner tools.",
+  },
+  {
     title: "External Links",
     body: "Some listings link out to third-party websites or social profiles. FOUND is not responsible for those external services, their content, availability, or policies.",
   },
@@ -37,7 +41,8 @@ export default function TermsAndConditionsPage() {
               <p className="about-tagline">Basic terms for using the FOUND directory and website.</p>
               <p className="legal-intro">
                 This page covers the basics for using FOUND today. It can grow into a more formal legal document as
-                the platform expands.
+                the platform expands, including the commitments business account users make when certifying local
+                ownership.
               </p>
             </div>
           </article>

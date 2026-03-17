@@ -317,11 +317,12 @@ Current route behavior:
 
 ## Personal Dashboard
 
-The personal dashboard currently combines three areas:
+The personal dashboard currently combines three main columns plus a saved-lists shelf:
 
 - favorites
 - lists
 - share/profile
+- saved public lists
 
 ### Current data loading
 
@@ -329,6 +330,7 @@ On load, the page fetches:
 
 - favorites
 - curated lists
+- saved public lists
 - personal profile
 
 If token-related requests fail, the user is signed out and redirected back to login.
@@ -372,7 +374,7 @@ The verified dashboard also uses the favorites/lists/share structure, but with b
 
 Current behavior:
 
-- the user can load favorites, lists, and business claims
+- the user can load favorites, lists, saved public lists, and business claims
 - the CTA strip uses `EDIT MY BUSINESS` if a claimed company exists
 - if no company is linked yet, the CTA routes to `/business/company`
 

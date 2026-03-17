@@ -3,8 +3,18 @@ from django.db.models import Max
 from rest_framework import serializers
 
 from companies.serializers import CompanyListSerializer
+from companies.models import Company
 
-from .models import CuratedList, CuratedListItem, Favorite, Recommendation
+from .models import CuratedList, CuratedListItem, Favorite, Recommendation, SavedCuratedList
+
+
+def serialize_curated_list_owner(user):
+    display_name = user.display_name or user.first_name or user.email.split("@")[0]
+    return {
+        "display_name": display_name,
+        "public_slug": user.public_slug,
+        "account_type": user.account_type,
+    }
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -81,13 +91,39 @@ class PublicCuratedListSerializer(serializers.ModelSerializer):
         )
 
     def get_owner(self, obj):
-        user = obj.user
-        display_name = user.display_name or user.first_name or user.email.split("@")[0]
-        return {
-            "display_name": display_name,
-            "public_slug": user.public_slug,
-            "account_type": user.account_type,
-        }
+        return serialize_curated_list_owner(obj.user)
+
+
+class PublicCuratedListPreviewCompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = ("id", "slug", "name", "city", "state", "country")
+
+
+class PublicCuratedListPreviewSerializer(serializers.ModelSerializer):
+    item_count = serializers.IntegerField(read_only=True)
+    owner = serializers.SerializerMethodField()
+    preview_companies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CuratedList
+        fields = (
+            "id",
+            "id_hash",
+            "title",
+            "description",
+            "updated_at",
+            "item_count",
+            "owner",
+            "preview_companies",
+        )
+
+    def get_owner(self, obj):
+        return serialize_curated_list_owner(obj.user)
+
+    def get_preview_companies(self, obj):
+        companies = [item.company for item in obj.items.all()[:3]]
+        return PublicCuratedListPreviewCompanySerializer(companies, many=True).data
 
 
 class RecommendationSerializer(serializers.ModelSerializer):
@@ -176,3 +212,50 @@ class CuratedListItemUpdateSerializer(serializers.ModelSerializer):
             instance.save(update_fields=("position", "note", "updated_at"))
 
         return instance
+
+
+class SavedCuratedListSerializer(serializers.ModelSerializer):
+    list = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SavedCuratedList
+        fields = ("id", "created_at", "list")
+
+    def get_list(self, obj):
+        curated_list = obj.curated_list
+        if hasattr(obj, "item_count"):
+            curated_list.item_count = obj.item_count
+        elif not hasattr(curated_list, "item_count"):
+            curated_list.item_count = curated_list.items.count()
+        return PublicCuratedListPreviewSerializer(curated_list, context=self.context).data
+
+
+class SavedCuratedListCreateSerializer(serializers.ModelSerializer):
+    curated_list_id = serializers.PrimaryKeyRelatedField(
+        source="curated_list",
+        queryset=CuratedList.objects.all(),
+        write_only=True,
+    )
+
+    class Meta:
+        model = SavedCuratedList
+        fields = ("id", "created_at", "curated_list_id")
+        read_only_fields = ("id", "created_at")
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        user = self.context["request"].user
+        value = attrs["curated_list"]
+
+        if value.user_id == user.id:
+            raise serializers.ValidationError({"curated_list_id": "You can only save lists from other users."})
+        if not value.is_public:
+            raise serializers.ValidationError({"curated_list_id": "Only public lists can be saved."})
+        return attrs
+
+    def create(self, validated_data):
+        saved_list, _created = SavedCuratedList.objects.get_or_create(
+            user=self.context["request"].user,
+            curated_list=validated_data["curated_list"],
+        )
+        return saved_list

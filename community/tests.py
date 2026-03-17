@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from companies.models import Company
 from users.models import BusinessClaim
 
-from .models import CuratedList, CuratedListItem, Favorite, Recommendation
+from .models import CuratedList, CuratedListItem, Favorite, Recommendation, SavedCuratedList
 
 User = get_user_model()
 
@@ -310,3 +310,172 @@ class CommunityApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("consistently", recommendation.body)
+
+    def test_public_list_search_matches_title(self):
+        curated_list = CuratedList.objects.create(
+            user=self.personal_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        curated_list.items.create(company=self.company, position=1)
+
+        response = self.client.get(reverse("community:public-list-list"), {"search": "weekend"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["title"], "Weekend favorites")
+
+    def test_public_list_search_matches_curator_name(self):
+        self.personal_user.display_name = "Reader One"
+        self.personal_user.save(update_fields=["display_name"])
+        curated_list = CuratedList.objects.create(
+            user=self.personal_user,
+            title="Neighborhood staples",
+            is_public=True,
+        )
+        curated_list.items.create(company=self.company, position=1)
+
+        response = self.client.get(reverse("community:public-list-list"), {"search": "reader"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["owner"]["display_name"], "Reader One")
+
+    def test_public_list_search_matches_company_name(self):
+        curated_list = CuratedList.objects.create(
+            user=self.personal_user,
+            title="Neighborhood staples",
+            is_public=True,
+        )
+        curated_list.items.create(company=self.company, position=1)
+
+        response = self.client.get(reverse("community:public-list-list"), {"search": "north star"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["preview_companies"][0]["name"], "North Star Market")
+
+    def test_public_list_search_hides_private_lists(self):
+        CuratedList.objects.create(
+            user=self.personal_user,
+            title="Private notes",
+            is_public=False,
+        ).items.create(company=self.company, position=1)
+
+        response = self.client.get(reverse("community:public-list-list"), {"search": "private"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+        self.assertEqual(response.data["results"], [])
+
+    def test_user_can_save_another_users_public_list(self):
+        curated_list = CuratedList.objects.create(
+            user=self.verified_business_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        curated_list.items.create(company=self.company, position=1)
+        self.client.force_authenticate(user=self.personal_user)
+
+        response = self.client.post(
+            reverse("community:saved-list-list"),
+            {"curated_list_id": curated_list.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(SavedCuratedList.objects.get().user, self.personal_user)
+        self.assertEqual(response.data["list"]["title"], "Weekend favorites")
+
+    def test_user_cannot_save_own_public_list(self):
+        curated_list = CuratedList.objects.create(
+            user=self.personal_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        self.client.force_authenticate(user=self.personal_user)
+
+        response = self.client.post(
+            reverse("community:saved-list-list"),
+            {"curated_list_id": curated_list.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("other users", response.data["curated_list_id"][0])
+
+    def test_user_cannot_save_private_list(self):
+        curated_list = CuratedList.objects.create(
+            user=self.verified_business_user,
+            title="Private notes",
+            is_public=False,
+        )
+        self.client.force_authenticate(user=self.personal_user)
+
+        response = self.client.post(
+            reverse("community:saved-list-list"),
+            {"curated_list_id": curated_list.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Only public lists", response.data["curated_list_id"][0])
+
+    def test_duplicate_saved_list_returns_existing_record(self):
+        curated_list = CuratedList.objects.create(
+            user=self.verified_business_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        SavedCuratedList.objects.create(user=self.personal_user, curated_list=curated_list)
+        self.client.force_authenticate(user=self.personal_user)
+
+        response = self.client.post(
+            reverse("community:saved-list-list"),
+            {"curated_list_id": curated_list.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(SavedCuratedList.objects.filter(user=self.personal_user, curated_list=curated_list).count(), 1)
+
+    def test_saved_lists_hide_entries_for_lists_that_become_private(self):
+        curated_list = CuratedList.objects.create(
+            user=self.verified_business_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        SavedCuratedList.objects.create(user=self.personal_user, curated_list=curated_list)
+        curated_list.is_public = False
+        curated_list.save(update_fields=["is_public"])
+        self.client.force_authenticate(user=self.personal_user)
+
+        response = self.client.get(reverse("community:saved-list-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+        self.assertEqual(response.data["results"], [])
+
+    def test_user_can_delete_saved_list(self):
+        curated_list = CuratedList.objects.create(
+            user=self.verified_business_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        saved_list = SavedCuratedList.objects.create(user=self.personal_user, curated_list=curated_list)
+        self.client.force_authenticate(user=self.personal_user)
+
+        response = self.client.delete(reverse("community:saved-list-detail", kwargs={"pk": saved_list.pk}))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SavedCuratedList.objects.filter(pk=saved_list.pk).exists())
+
+    def test_user_cannot_delete_another_users_saved_list(self):
+        curated_list = CuratedList.objects.create(
+            user=self.verified_business_user,
+            title="Weekend favorites",
+            is_public=True,
+        )
+        saved_list = SavedCuratedList.objects.create(user=self.personal_user, curated_list=curated_list)
+        self.client.force_authenticate(user=self.pending_business_user)
+
+        response = self.client.delete(reverse("community:saved-list-detail", kwargs={"pk": saved_list.pk}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

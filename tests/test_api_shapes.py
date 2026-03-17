@@ -6,8 +6,10 @@ These act as a contract: if a serializer field is renamed or removed, the test b
 import pytest
 from django.urls import reverse
 
+from community.models import CuratedList, SavedCuratedList
 from tests.factories import BusinessCategoryFactory, CompanyFactory
 from users.models import BusinessClaim, User
+from tests.factories import UserFactory
 
 TAXONOMY_OBJECT_FIELDS = {"id", "id_hash", "name", "description"}
 
@@ -80,6 +82,19 @@ CLAIMED_PUBLIC_LIST_FIELDS = {
     "updated_at",
     "item_count",
 }
+PUBLIC_LIST_OWNER_FIELDS = {"display_name", "public_slug", "account_type"}
+PUBLIC_LIST_PREVIEW_COMPANY_FIELDS = {"id", "slug", "name", "city", "state", "country"}
+PUBLIC_LIST_PREVIEW_FIELDS = {
+    "id",
+    "id_hash",
+    "title",
+    "description",
+    "updated_at",
+    "item_count",
+    "owner",
+    "preview_companies",
+}
+SAVED_LIST_FIELDS = {"id", "created_at", "list"}
 
 USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed", "badges"}
 BUSINESS_CLAIM_FIELDS = {
@@ -448,3 +463,55 @@ def test_me_401_response_shape(api_client):
     data = response.json()
     assert "detail" in data
     assert isinstance(data["detail"], str)
+
+
+# ---------------------------------------------------------------------------
+# Community
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_public_list_search_response_shape(api_client):
+    owner = UserFactory(display_name="Reader One")
+    curated_list = CuratedList.objects.create(
+        user=owner,
+        title="Weekend favorites",
+        description="Neighborhood staples",
+        is_public=True,
+    )
+    curated_list.items.create(company=CompanyFactory(name="North Star Market"), position=1)
+
+    response = api_client.get(reverse("community:public-list-list"))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == {"count", "next", "previous", "results"}
+    assert isinstance(data["results"], list)
+    item = data["results"][0]
+    assert set(item.keys()) == PUBLIC_LIST_PREVIEW_FIELDS
+    assert set(item["owner"].keys()) == PUBLIC_LIST_OWNER_FIELDS
+    assert isinstance(item["preview_companies"], list)
+    assert set(item["preview_companies"][0].keys()) == PUBLIC_LIST_PREVIEW_COMPANY_FIELDS
+
+
+@pytest.mark.django_db
+def test_saved_list_response_shape(authenticated_client, user):
+    owner = UserFactory(display_name="Reader One")
+    curated_list = CuratedList.objects.create(
+        user=owner,
+        title="Weekend favorites",
+        description="Neighborhood staples",
+        is_public=True,
+    )
+    curated_list.items.create(company=CompanyFactory(name="North Star Market"), position=1)
+    SavedCuratedList.objects.create(user=user, curated_list=curated_list)
+
+    response = authenticated_client.get(reverse("community:saved-list-list"))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == {"count", "next", "previous", "results"}
+    assert isinstance(data["results"], list)
+    item = data["results"][0]
+    assert set(item.keys()) == SAVED_LIST_FIELDS
+    assert set(item["list"].keys()) == PUBLIC_LIST_PREVIEW_FIELDS

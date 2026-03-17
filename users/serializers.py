@@ -134,6 +134,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    certify_local_ownership = serializers.BooleanField(write_only=True, required=False, default=False)
 
     class Meta:
         model = User
@@ -146,11 +147,23 @@ class RegisterSerializer(serializers.ModelSerializer):
             "display_name",
             "public_slug",
             "account_type",
+            "certify_local_ownership",
             "onboarding_completed",
         )
         read_only_fields = ("id", "public_slug")
 
+    def validate(self, attrs):
+        account_type = attrs.get("account_type", User.AccountType.PERSONAL)
+        if account_type == User.AccountType.BUSINESS and not attrs.get("certify_local_ownership", False):
+            raise serializers.ValidationError(
+                {
+                    "certify_local_ownership": "Business accounts must certify that the business they represent is locally owned."
+                }
+            )
+        return attrs
+
     def create(self, validated_data):
+        validated_data.pop("certify_local_ownership", None)
         return User.objects.create_user(**validated_data)
 
 
