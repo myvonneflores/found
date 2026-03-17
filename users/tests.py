@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -232,7 +233,7 @@ class PersonalProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(PersonalProfile.objects.filter(user=user).exists())
 
-    def test_business_user_cannot_get_personal_profile(self):
+    def test_business_user_can_get_personal_profile(self):
         user = User.objects.create_user(
             email="owner@example.com",
             password="supersecure123",
@@ -242,7 +243,33 @@ class PersonalProfileTests(APITestCase):
 
         response = self.client.get(reverse("users:me-profile"))
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(PersonalProfile.objects.filter(user=user).exists())
+
+    def test_business_profile_patch_updates_visibility(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.patch(
+            reverse("users:me-profile"),
+            {
+                "bio": "Neighborhood staples and collaborations.",
+                "location": "Portland, OR",
+                "avatar_url": "https://example.com/avatar.jpg",
+                "is_public": True,
+            },
+            format="json",
+        )
+
+        user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(user.personal_profile.is_public)
+        self.assertEqual(user.personal_profile.location, "Portland, OR")
 
     def test_personal_profile_patch_updates_visibility(self):
         user = User.objects.create_user(
@@ -349,6 +376,34 @@ class PublicProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["public_recommendations"][0]["title"], "Neighborhood staple")
 
+    def test_business_public_profile_includes_verified_company_slug(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+            display_name="Owner One",
+        )
+        profile = PersonalProfile.objects.create(user=user, is_public=True)
+        company = Company.objects.create(name="North Star Market")
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            intent=BusinessClaim.ClaimIntent.EXISTING,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+            business_name=company.name,
+            submitter_first_name="Owner",
+            submitter_last_name="One",
+            business_email="owner@northstar.example.com",
+            reviewed_at=timezone.now(),
+        )
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["business_company_slug"], company.slug)
+
     def test_bio_shown_when_profile_not_public_but_has_public_lists(self):
         user = User.objects.create_user(
             email="reader@example.com",
@@ -411,6 +466,26 @@ class PublicProfileTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["bio"], "Neighborhood coffee spots.")
+
+    def test_business_public_profile_includes_bio(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+            display_name="Owner One",
+        )
+        PersonalProfile.objects.create(
+            user=user,
+            bio="Neighborhood staples and collaborations.",
+            is_public=True,
+        )
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["bio"], "Neighborhood staples and collaborations.")
 
     def test_display_name_falls_back_to_first_name_when_blank(self):
         user = User.objects.create_user(

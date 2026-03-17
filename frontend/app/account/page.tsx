@@ -90,7 +90,6 @@ export default function AccountPage() {
   const safeLists = normalizeLists(lists);
   const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
-  const userBadges = user?.badges ?? [];
   const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
   const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
 
@@ -156,15 +155,10 @@ export default function AccountPage() {
   const shareContent = (
     <>
       <form className="auth-form dashboard-profile-form" onSubmit={handleProfileSave}>
-        {userBadges.length ? (
-          <div className="profile-badge-row">
-            {userBadges.map((badge) => (
-              <span className={`badge badge-profile badge-${badge.slug}`} key={badge.slug}>
-                {badge.label}
-              </span>
-            ))}
-          </div>
-        ) : null}
+        <p className="dashboard-profile-helper">
+          create a profile for easy sharing. don&apos;t see your favs listed? contribute to the community by adding a
+          business listing.
+        </p>
         <label className="contact-field">
           <span className="contact-field-label">Name</span>
           <input disabled value={profileName} />
@@ -205,11 +199,11 @@ export default function AccountPage() {
 
         {hasPublicPresence && profileHref ? (
           <Link className="button button-secondary dashboard-profile-link" href={profileHref}>
-            PROFILE
+            VIEW PROFILE
           </Link>
         ) : null}
         <Link className="button button-secondary dashboard-profile-link" href="/account/add-business">
-          ADD A BUSINESS LISTING
+          + YOUR FAV BIZ
         </Link>
         {profileSavedMessage ? <p className="contact-form-note is-success">{profileSavedMessage}</p> : null}
       </form>
@@ -314,7 +308,7 @@ export default function AccountPage() {
           <div className="dashboard-column-headings">
             <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>
             <div className="dashboard-column-heading dashboard-column-heading-lists">lists</div>
-            <div className="dashboard-column-heading dashboard-column-heading-profile">share</div>
+            <div className="dashboard-column-heading dashboard-column-heading-profile">community</div>
           </div>
 
           <section className="dashboard-board">
@@ -375,7 +369,7 @@ export default function AccountPage() {
                 onClick={() => setMobileShareOpen((open) => !open)}
                 type="button"
               >
-                <span>share</span>
+                <span>community</span>
                 <span aria-hidden="true" className={mobileShareOpen ? "directory-panel-mobile-chevron is-open" : "directory-panel-mobile-chevron"}>
                   +
                 </span>
