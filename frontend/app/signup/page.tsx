@@ -58,6 +58,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [certifiedLocalOwnership, setCertifiedLocalOwnership] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
   const deferredCompanySearch = useDeferredValue(companySearch);
   const [companyResults, setCompanyResults] = useState<SelectedCompany[]>([]);
@@ -116,6 +117,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (accountType === "business" && !certifiedLocalOwnership) {
+      setError("Please certify that your business is locally owned to create a business account.");
+      return;
+    }
+
     if (submittedPassword !== submittedConfirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -136,6 +142,7 @@ export default function SignupPage() {
         last_name: submittedLastName,
         display_name: submittedDisplayName || submittedFirstName,
         account_type: accountType,
+        certify_local_ownership: accountType === "business" ? certifiedLocalOwnership : undefined,
       });
 
       const session = await loginUser({
@@ -404,6 +411,18 @@ export default function SignupPage() {
                   ? "Business accounts can sign in right away, then submit their listing claim for review."
                   : "Personal accounts can start saving favorites and building lists right away."}
               </p>
+
+              {accountType === "business" ? (
+                <label className="contact-field contact-field-checkbox">
+                  <input
+                    checked={certifiedLocalOwnership}
+                    onChange={(event) => setCertifiedLocalOwnership(event.target.checked)}
+                    required
+                    type="checkbox"
+                  />
+                  <span>I certify that the business I am representing on FOUND is locally owned.</span>
+                </label>
+              ) : null}
 
               <label className="contact-field contact-field-checkbox">
                 <input

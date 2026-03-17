@@ -49,6 +49,7 @@ export interface RegisterPayload {
   last_name: string;
   display_name: string;
   account_type: AccountType;
+  certify_local_ownership?: boolean;
 }
 
 export interface LoginPayload {
