@@ -35,7 +35,7 @@ const faqItems = [
 ];
 
 export default function FAQsPage() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <main className="page-shell directory-page-shell about-page-shell">

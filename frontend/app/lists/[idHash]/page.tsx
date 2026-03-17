@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { BodyClass } from "@/components/body-class";
 import { useAuth } from "@/components/auth-provider";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditListModal } from "@/components/edit-list-modal";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -145,6 +146,7 @@ export default function CuratedListPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [savedListId, setSavedListId] = useState<number | null>(null);
   const [isSavePending, setIsSavePending] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -371,16 +373,12 @@ export default function CuratedListPage() {
       return;
     }
 
-    const confirmed = window.confirm(`Delete "${list.title}"?`);
-    if (!confirmed) {
-      return;
-    }
-
     setIsDeleting(true);
     setError("");
 
     try {
       await deleteCuratedList(accessToken, list.id);
+      setIsDeleteConfirmOpen(false);
       router.push(user?.account_type === "business" ? "/business/dashboard" : "/account");
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Unable to delete this list.");
@@ -614,7 +612,7 @@ export default function CuratedListPage() {
                           <button
                             className="list-browser-action-button is-danger"
                             disabled={isDeleting}
-                            onClick={handleDelete}
+                            onClick={() => setIsDeleteConfirmOpen(true)}
                             type="button"
                           >
                             {isDeleting ? "Deleting…" : "Delete"}
@@ -679,6 +677,15 @@ export default function CuratedListPage() {
                       : null
                   );
                 }}
+              />
+              <ConfirmDialog
+                confirmLabel="delete"
+                isOpen={isDeleteConfirmOpen}
+                isPending={isDeleting}
+                message="This cannot be undone."
+                onCancel={() => setIsDeleteConfirmOpen(false)}
+                onConfirm={() => void handleDelete()}
+                title="Delete this list?"
               />
             </>
           )}

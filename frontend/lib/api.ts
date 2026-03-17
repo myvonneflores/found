@@ -26,11 +26,13 @@ import {
   TaxonomyItem,
 } from "@/types/company";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+const INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL ?? PUBLIC_API_BASE_URL;
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 function buildUrl(path: string, searchParams?: Record<string, string | undefined>) {
-  const url = new URL(path, API_BASE_URL.endsWith("/") ? API_BASE_URL : `${API_BASE_URL}/`);
+  const baseUrl = typeof window === "undefined" ? INTERNAL_API_BASE_URL : PUBLIC_API_BASE_URL;
+  const url = new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
   if (searchParams) {
     Object.entries(searchParams).forEach(([key, value]) => {
       if (value) {
