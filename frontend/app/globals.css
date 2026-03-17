@@ -5147,6 +5147,11 @@ body.contact-page-body {
   transition: height 180ms ease, min-height 180ms ease, gap 180ms ease;
 }
 
+.directory-panel-filters,
+.directory-panel-list {
+  --directory-side-panel-max-height: calc(8 * 58px + 4rem);
+}
+
 .directory-panel-surface {
   border-radius: 42px;
   width: 100%;
@@ -5161,8 +5166,10 @@ body.contact-page-body {
   color: #df857f;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
   height: 100%;
+  min-height: 0;
+  max-height: var(--directory-side-panel-max-height);
 }
 
 .directory-panel-list .directory-panel-surface {
@@ -5172,6 +5179,8 @@ body.contact-page-body {
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  min-height: 0;
+  max-height: var(--directory-side-panel-max-height);
 }
 
 .directory-panel-detail .directory-panel-surface {
@@ -5205,6 +5214,14 @@ body.contact-page-body {
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: #bb74a0 rgba(250, 238, 232, 0.88);
+}
+
+.directory-panel-filters .directory-form,
+.directory-panel-list .directory-company-list {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overscroll-behavior: contain;
 }
 
 .directory-filter-list,
@@ -5494,7 +5511,7 @@ body.contact-page-body {
 }
 
 .directory-detail-favorite {
-  margin-left: 0.5rem;
+  flex: 0 0 auto;
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
@@ -5539,6 +5556,13 @@ body.contact-page-body {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.directory-detail-title h2 {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .directory-company-meta {
@@ -5550,6 +5574,7 @@ body.contact-page-body {
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .directory-panel-detail {
@@ -5912,9 +5937,17 @@ body.contact-page-body {
 
   .directory-form,
   .directory-company-list {
-    overflow: visible;
-    max-height: none;
+    overflow-x: hidden;
     padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+
+  .directory-panel-list .directory-company-list {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    padding-right: 0.35rem;
   }
 
   .directory-detail-layout {
@@ -6150,6 +6183,25 @@ body.contact-page-body {
     grid-row: 1;
   }
 
+  .directory-detail-title {
+    align-items: flex-start;
+  }
+
+  .directory-detail-head h2 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .directory-detail-address p,
+  .directory-detail-list li,
+  .directory-detail-products .badge-outline {
+    overflow-wrap: anywhere;
+  }
+
+  .directory-detail-favorite {
+    margin-top: 0.12rem;
+  }
+
   .directory-socials {
     grid-column: 1;
     grid-row: 2;
@@ -6204,6 +6256,7 @@ body.contact-page-body {
     max-height: calc(8 * 68px + 1.5rem);
     overflow-y: auto;
     padding-right: 0.75rem;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 

@@ -386,8 +386,6 @@ export default function BusinessDashboardPage() {
             </aside>
           </section>
 
-          <SavedListShelf isLoading={isLoading} savedLists={savedLists} />
-
           <section className="dashboard-mobile-sections">
             <article className="dashboard-mobile-section">
               <button
@@ -440,6 +438,8 @@ export default function BusinessDashboardPage() {
               </div>
             </article>
           </section>
+
+          <SavedListShelf isLoading={isLoading} savedLists={savedLists} />
 
           <article className="panel dashboard-logout-strip">
             <button className="dashboard-logout dashboard-logout-button" onClick={handleDashboardSignOut} type="button">
