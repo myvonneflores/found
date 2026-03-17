@@ -17,6 +17,8 @@ COMPANY_LIST_FIELDS = {
     "name",
     "slug",
     "description",
+    "listing_origin",
+    "is_community_listed",
     "city",
     "state",
     "country",
@@ -36,6 +38,8 @@ COMPANY_DETAIL_FIELDS = {
     "name",
     "slug",
     "description",
+    "listing_origin",
+    "is_community_listed",
     "cuisine_types",
     "website",
     "founded_year",
@@ -77,7 +81,7 @@ CLAIMED_PUBLIC_LIST_FIELDS = {
     "item_count",
 }
 
-USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed"}
+USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed", "badges"}
 BUSINESS_CLAIM_FIELDS = {
     "id",
     "company",
@@ -156,6 +160,8 @@ def test_company_list_result_fields(api_client):
     assert isinstance(item["id_hash"], str) and len(item["id_hash"]) == 8
     assert isinstance(item["name"], str)
     assert isinstance(item["slug"], str)
+    assert isinstance(item["listing_origin"], str)
+    assert isinstance(item["is_community_listed"], bool)
     # business_category is a plain string (SerializerMethodField) or null
     assert item["business_category"] is None or isinstance(item["business_category"], str)
     # M2M fields are lists of strings (StringRelatedField)
@@ -178,6 +184,8 @@ def test_company_detail_fields(api_client):
     assert response.status_code == 200
     data = response.json()
     assert set(data.keys()) == COMPANY_DETAIL_FIELDS
+    assert isinstance(data["listing_origin"], str)
+    assert isinstance(data["is_community_listed"], bool)
     # business_category is a nested taxonomy object
     if data["business_category"] is not None:
         assert set(data["business_category"].keys()) == TAXONOMY_OBJECT_FIELDS
@@ -423,6 +431,7 @@ def test_me_response_shape(authenticated_client):
     assert response.status_code == 200
     data = response.json()
     assert set(data.keys()) == USER_FIELDS
+    assert isinstance(data["badges"], list)
 
 
 @pytest.mark.django_db

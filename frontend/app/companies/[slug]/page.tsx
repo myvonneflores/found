@@ -235,6 +235,7 @@ export default async function CompanyDetailPage({
           </div>
           <div className="filter-chip-row detail-chip-row">
             {company.business_category ? <span className="badge badge-outline">{company.business_category.name}</span> : null}
+            {company.is_community_listed ? <span className="badge badge-community">Community Listed</span> : null}
             {company.ownership_markers.map((marker) => (
               <span className="badge" key={marker.id}>
                 {marker.name}

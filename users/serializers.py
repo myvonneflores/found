@@ -8,6 +8,18 @@ from .models import BusinessClaim, BusinessClaimEvent, PersonalProfile
 User = get_user_model()
 
 
+def get_user_badges(user):
+    badges = []
+    if user.has_community_contributions:
+        badges.append(
+            {
+                "slug": "community-contributor",
+                "label": "Community Contributor",
+            }
+        )
+    return badges
+
+
 def _claim_target_company(attrs, instance=None):
     if "company" in attrs:
         return attrs.get("company")
@@ -83,6 +95,7 @@ def validate_business_claim_attrs(*, attrs, user, instance=None):
 class UserSerializer(serializers.ModelSerializer):
     is_business_verified = serializers.SerializerMethodField()
     verification_status = serializers.SerializerMethodField()
+    badges = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -97,14 +110,26 @@ class UserSerializer(serializers.ModelSerializer):
             "onboarding_completed",
             "is_business_verified",
             "verification_status",
+            "badges",
         )
-        read_only_fields = ("id", "email", "account_type", "public_slug", "is_business_verified", "verification_status")
+        read_only_fields = (
+            "id",
+            "email",
+            "account_type",
+            "public_slug",
+            "is_business_verified",
+            "verification_status",
+            "badges",
+        )
 
     def get_is_business_verified(self, obj):
         return obj.is_business_verified
 
     def get_verification_status(self, obj):
         return obj.business_verification_status
+
+    def get_badges(self, obj):
+        return get_user_badges(obj)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -346,6 +371,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
     public_lists = serializers.SerializerMethodField()
     public_recommendations = serializers.SerializerMethodField()
+    badges = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -356,6 +382,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             "bio",
             "location",
             "avatar_url",
+            "badges",
             "public_lists",
             "public_recommendations",
         )
@@ -379,6 +406,9 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     def get_avatar_url(self, obj):
         profile = self._get_personal_profile(obj)
         return profile.avatar_url if profile else ""
+
+    def get_badges(self, obj):
+        return get_user_badges(obj)
 
     def get_public_lists(self, obj):
         from community.serializers import PublicCuratedListSerializer

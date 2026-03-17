@@ -1,4 +1,8 @@
 export type AccountType = "personal" | "business";
+export type UserBadge = {
+  slug: "community-contributor";
+  label: string;
+};
 
 export type VerificationStatus = "pending" | "verified" | "rejected" | null;
 export type BusinessClaimIntent = "existing" | "new";
@@ -29,6 +33,7 @@ export interface AuthUser {
   onboarding_completed: boolean;
   is_business_verified: boolean;
   verification_status: VerificationStatus;
+  badges: UserBadge[];
 }
 
 export interface LoginResponse {

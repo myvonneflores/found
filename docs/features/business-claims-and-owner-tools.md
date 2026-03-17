@@ -54,6 +54,7 @@ This area currently covers:
 - verified claims unlock business profile creation or editing
 - a verified user with no linked company can create one through `/business/company`
 - a verified user with a linked company is redirected into that company’s public page with `?edit=1`
+- personal users may also add community listings through the account flow, but they do not gain owner edit access
 - owner editing currently depends on fetching the managed business profile and matching its slug to the current company detail route
 - the business user edits the actual company record that powers the public page
 
@@ -62,7 +63,9 @@ This area currently covers:
 What seems true in the code today:
 
 - business users sign up, choose whether they are claiming an existing listing or adding a new business, then go through `/business/claim`
+- personal users can add a business listing later from `/account/add-business` without changing signup
 - existing-business claims now target a real FOUND company during submission
+- those claims may target listings that were originally added by the community
 - the claim page supports both first-time submission and rejected-claim resubmission
 - the pending dashboard shows current claim details, reviewer feedback, and next-step messaging
 - pending business users can still use parts of the dashboard and community experience while waiting

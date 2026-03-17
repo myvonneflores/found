@@ -16,7 +16,7 @@ The app currently centers on four product areas:
 
 - company discovery and public company profiles
 - accounts, auth, and dashboards
-- community tools like favorites and curated lists
+- community tools like favorites, curated lists, and personal-user listing contributions
 - business claims plus verified owner editing flows
 
 ## Repo Map
@@ -67,9 +67,9 @@ docker compose run --rm frontend sh -lc 'npm install && npm run build'
 ### Backend
 
 - Keep domain behavior inside the existing Django apps unless the boundary is genuinely new.
-- `companies` owns public directory data, taxonomies, and the verified business management endpoint.
+- `companies` owns public directory data, taxonomy-backed listing creation, provenance metadata for imported/owner/community listings, and the verified business management endpoint.
 - `community` owns favorites, curated lists, list items, recommendations, and public list exposure.
-- `users` owns auth, account type behavior, public profiles, and business claim workflows.
+- `users` owns auth, account type behavior, public profiles, profile badges, and business claim workflows.
 - API responses are part of the contract. If a serializer shape changes, update or add tests in [`tests/test_api_shapes.py`](./tests/test_api_shapes.py) and any app-specific tests.
 
 ### Frontend
@@ -82,6 +82,8 @@ docker compose run --rm frontend sh -lc 'npm install && npm run build'
 ### Product and UX
 
 - The company detail page is the source of truth for public company presentation and verified owner editing.
+- Personal users can add businesses after signup from the account area without changing the signup flow.
+- Community-submitted listings publish with a `Community Listed` badge until a verified owner claim exists.
 - Business verification gates editing, while broader community tools remain available based on current account rules in code.
 - Preserve metadata and canonical URL behavior on public pages when changing route-level rendering.
 

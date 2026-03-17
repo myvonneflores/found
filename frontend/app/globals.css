@@ -499,6 +499,32 @@ select {
   color: var(--muted);
 }
 
+.badge-community {
+  background: rgba(108, 171, 76, 0.18);
+  border: 1px solid rgba(108, 171, 76, 0.4);
+  color: #3f7c24;
+}
+
+.badge-profile {
+  padding: 0.45rem 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-community-contributor {
+  background: linear-gradient(135deg, rgba(108, 171, 76, 0.95), rgba(118, 167, 215, 0.92));
+  border: 1px solid rgba(255, 248, 239, 0.38);
+  box-shadow: 0 10px 24px rgba(71, 118, 46, 0.18);
+  color: #fff8ef;
+}
+
+.profile-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
 .detail-stack {
   display: grid;
   gap: 1rem;
@@ -746,6 +772,12 @@ select {
   background: #e4bfc0;
   border-color: rgba(187, 116, 160, 0.3);
   color: #bb74a0;
+}
+
+.detail-page-shell .detail-chip-row .badge-community {
+  background: rgba(108, 171, 76, 0.2);
+  border-color: rgba(108, 171, 76, 0.45);
+  color: #4d8a2e;
 }
 
 .detail-page-shell .directory-brand-strip,

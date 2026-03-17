@@ -42,11 +42,21 @@ class OwnershipMarker(NamedTaxonomy):
 
 
 class Company(BaseModel):
+    class ListingOrigin(models.TextChoices):
+        IMPORTED = "imported", "Imported"
+        OWNER = "owner", "Owner"
+        COMMUNITY = "community", "Community"
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(blank=True)
     needs_editorial_review = models.BooleanField(default=False)
     is_published = models.BooleanField(default=True)
+    listing_origin = models.CharField(
+        max_length=20,
+        choices=ListingOrigin.choices,
+        default=ListingOrigin.IMPORTED,
+    )
     website = models.URLField(blank=True)
     founded_year = models.PositiveIntegerField(null=True, blank=True)
     address = models.CharField(max_length=255, blank=True)
@@ -93,6 +103,13 @@ class Company(BaseModel):
     is_gf_friendly = models.BooleanField(default=False)
     annual_revenue = models.BigIntegerField(null=True, blank=True)
     number_of_employees = models.PositiveIntegerField(null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        "users.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submitted_companies",
+    )
 
     class Meta:
         ordering = ["name"]

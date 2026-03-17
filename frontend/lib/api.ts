@@ -11,6 +11,7 @@ import { PersonalProfile, PublicProfile } from "@/types/profile";
 import { Recommendation } from "@/types/recommendation";
 import {
   CompanyDetail,
+  CompanyCreatePayload,
   CompanyListItem,
   ManagedBusinessProfile,
   CompanySearchParams,
@@ -132,6 +133,16 @@ export function createManagedBusinessProfile(
   payload: Omit<ManagedBusinessProfile, "id" | "slug">
 ) {
   return requestJson<ManagedBusinessProfile>("companies/manage/current/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createCommunityListing(token: string, payload: CompanyCreatePayload) {
+  return requestJson<ManagedBusinessProfile>("companies/community-listings/", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

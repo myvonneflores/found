@@ -114,6 +114,27 @@ class MeViewTests(APITestCase):
         self.assertEqual(user.account_type, User.AccountType.PERSONAL)
         self.assertEqual(user.display_name, "Reader")
 
+    def test_me_includes_community_contributor_badge(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        Company.objects.create(
+            name="Corner Pantry",
+            listing_origin=Company.ListingOrigin.COMMUNITY,
+            submitted_by=user,
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(reverse("users:me"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["badges"],
+            [{"slug": "community-contributor", "label": "Community Contributor"}],
+        )
+
 
 class TokenViewTests(APITestCase):
     token_url = reverse("token_obtain_pair")
@@ -272,7 +293,34 @@ class PublicProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["display_name"], "Reader One")
         self.assertEqual(response.data["bio"], profile.bio)
+        self.assertEqual(response.data["badges"], [])
         self.assertEqual(response.data["public_lists"][0]["title"], "Weekend favorites")
+
+    def test_public_profile_includes_community_contributor_badge(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+        profile = user.personal_profile
+        profile.is_public = True
+        profile.save(update_fields=["is_public"])
+        Company.objects.create(
+            name="Corner Pantry",
+            listing_origin=Company.ListingOrigin.COMMUNITY,
+            submitted_by=user,
+        )
+
+        response = self.client.get(
+            reverse("users:public-profile-detail", kwargs={"public_slug": user.public_slug})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["badges"],
+            [{"slug": "community-contributor", "label": "Community Contributor"}],
+        )
 
     def test_public_profile_includes_public_recommendations(self):
         user = User.objects.create_user(
