@@ -26,6 +26,8 @@ class TestCompanyListApi:
         assert response.status_code == 200
         assert response.data["slug"] == company.slug
         assert response.data["claimed_profile"] is None
+        assert response.data["listing_origin"] == Company.ListingOrigin.IMPORTED
+        assert response.data["is_community_listed"] is False
 
     def test_company_detail_includes_boolean_markers_in_sustainability_markers(self, api_client, two_companies):
         first_company = two_companies[0]
@@ -197,6 +199,33 @@ class TestCompanyListApi:
 
         assert response.status_code == 404
 
+    def test_community_listed_flag_clears_after_verified_claim(self, api_client):
+        company = Company.objects.create(
+            name="Neighbor Nook",
+            listing_origin=Company.ListingOrigin.COMMUNITY,
+            is_published=True,
+        )
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+
+        response = api_client.get(
+            reverse("companies:company-detail", kwargs={"slug": company.slug})
+        )
+
+        assert response.status_code == 200
+        assert response.data["listing_origin"] == Company.ListingOrigin.COMMUNITY
+        assert response.data["is_community_listed"] is False
+
 
 @pytest.mark.django_db
 class TestTaxonomyAndCityApis:
@@ -311,6 +340,8 @@ class TestManagedBusinessProfileApi:
         claim.refresh_from_db()
         assert claim.company is not None
         assert claim.company.name == "Fresh Company"
+        assert claim.company.listing_origin == Company.ListingOrigin.OWNER
+        assert claim.company.submitted_by == user
         assert response.data["slug"] == claim.company.slug
 
     def test_managed_company_create_sets_primary_category_from_business_categories(
@@ -378,3 +409,96 @@ class TestManagedBusinessProfileApi:
 
         assert response.status_code == 200
         assert response.data["slug"] == company.slug
+
+
+@pytest.mark.django_db
+class TestCommunityCompanyListingApi:
+    def test_personal_user_can_create_community_listing(self, api_client, taxonomy_set):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Corner Pantry",
+                "description": "A neighborhood staple.",
+                "city": "Portland",
+                "state": "OR",
+                "business_categories": [taxonomy_set["food"].id],
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        company = Company.objects.get(name="Corner Pantry")
+        assert company.listing_origin == Company.ListingOrigin.COMMUNITY
+        assert company.submitted_by == user
+        assert company.is_published is True
+        assert company.needs_editorial_review is True
+        assert company.business_category == taxonomy_set["food"]
+        assert response.data["slug"] == company.slug
+
+    def test_business_user_cannot_create_community_listing(self, api_client):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Corner Pantry",
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "Only personal users can create community business listings." in str(response.data)
+
+    def test_anonymous_user_cannot_create_community_listing(self, api_client):
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Corner Pantry",
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 401
+
+    def test_community_listing_duplicate_check_uses_name_city_state(self, api_client):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        Company.objects.create(
+            name="Corner Pantry",
+            city="Portland",
+            state="OR",
+            listing_origin=Company.ListingOrigin.IMPORTED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Corner Pantry",
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "already exists on FOUND" in str(response.data)

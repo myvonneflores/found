@@ -1,3 +1,4 @@
+import { UserBadge } from "@/types/auth";
 import { PublicCuratedList } from "@/types/community";
 import { Recommendation } from "@/types/recommendation";
 
@@ -15,6 +16,7 @@ export interface PublicProfile {
   bio: string;
   location: string;
   avatar_url: string;
+  badges: UserBadge[];
   public_lists: PublicCuratedList[];
   public_recommendations: Recommendation[];
 }

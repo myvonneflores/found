@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from django.db.models import Count
 from django.db.utils import OperationalError, ProgrammingError
 from rest_framework import serializers
@@ -51,9 +53,22 @@ class CompanyListSerializer(serializers.ModelSerializer):
     product_categories = serializers.StringRelatedField(many=True)
     ownership_markers = serializers.StringRelatedField(many=True)
     sustainability_markers = serializers.StringRelatedField(many=True)
+    is_community_listed = serializers.SerializerMethodField()
 
     def get_business_category(self, obj):
         return obj.business_category.name if obj.business_category else None
+
+    def _has_verified_claim(self, obj):
+        prefetched_claims = getattr(obj, "_prefetched_objects_cache", {}).get("business_claims")
+        if prefetched_claims is not None:
+            return any(claim.status == BusinessClaim.VerificationStatus.VERIFIED for claim in prefetched_claims)
+        return obj.business_claims.filter(status=BusinessClaim.VerificationStatus.VERIFIED).exists()
+
+    def get_is_community_listed(self, obj):
+        return (
+            obj.listing_origin == Company.ListingOrigin.COMMUNITY
+            and not self._has_verified_claim(obj)
+        )
 
     class Meta:
         model = Company
@@ -63,6 +78,8 @@ class CompanyListSerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "description",
+            "listing_origin",
+            "is_community_listed",
             "city",
             "state",
             "country",
@@ -102,6 +119,7 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
     cuisine_types = serializers.SerializerMethodField()
     ownership_markers = OwnershipMarkerSerializer(many=True)
     sustainability_markers = serializers.SerializerMethodField()
+    is_community_listed = serializers.SerializerMethodField()
 
     def get_cuisine_types(self, obj):
         try:
@@ -134,6 +152,19 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "public_lists": list(public_lists[:3]),
         }
         return ClaimedCompanyProfileSerializer(summary).data
+
+    def get_is_community_listed(self, obj):
+        prefetched_claims = getattr(obj, "_prefetched_objects_cache", {}).get("business_claims")
+        if prefetched_claims is not None:
+            has_verified_claim = any(
+                claim.status == BusinessClaim.VerificationStatus.VERIFIED for claim in prefetched_claims
+            )
+        else:
+            has_verified_claim = obj.business_claims.filter(status=BusinessClaim.VerificationStatus.VERIFIED).exists()
+        return (
+            obj.listing_origin == Company.ListingOrigin.COMMUNITY
+            and not has_verified_claim
+        )
 
     def get_sustainability_markers(self, obj):
         markers = SustainabilityMarkerSerializer(obj.sustainability_markers.all(), many=True).data
@@ -168,6 +199,8 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "description",
+            "listing_origin",
+            "is_community_listed",
             "website",
             "founded_year",
             "address",
@@ -194,7 +227,27 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "slug", "is_published")
 
 
-class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
+def _normalize_website(value):
+    value = value.strip()
+    if not value:
+        return ""
+    if "://" not in value:
+        value = f"https://{value}"
+    return value
+
+
+def _normalized_hostname(value):
+    if not value:
+        return ""
+    parsed = urlparse(value)
+    hostname = parsed.netloc or parsed.path
+    hostname = hostname.lower().strip()
+    if hostname.startswith("www."):
+        hostname = hostname[4:]
+    return hostname.rstrip("/")
+
+
+class BaseCompanyWriteSerializer(serializers.ModelSerializer):
     business_category = serializers.PrimaryKeyRelatedField(
         queryset=BusinessCategory.objects.all(),
         allow_null=True,
@@ -225,6 +278,22 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
         many=True,
         required=False,
     )
+
+    def validate_website(self, value):
+        return _normalize_website(value)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if "business_categories" in attrs:
+            attrs["business_category"] = attrs["business_categories"][0] if attrs["business_categories"] else None
+        elif "business_category" in attrs and attrs["business_category"] is not None:
+            attrs["business_categories"] = [attrs["business_category"]]
+
+        return attrs
+
+
+class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
     is_published = serializers.BooleanField(required=False)
 
     class Meta:
@@ -254,12 +323,93 @@ class ManagedBusinessCompanySerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "slug")
 
+
+class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
+    class Meta:
+        model = Company
+        fields = (
+            "id",
+            "slug",
+            "name",
+            "description",
+            "website",
+            "address",
+            "city",
+            "state",
+            "zip_code",
+            "business_category",
+            "business_categories",
+            "product_categories",
+            "cuisine_types",
+            "ownership_markers",
+            "sustainability_markers",
+            "instagram_handle",
+            "facebook_page",
+            "linkedin_page",
+            "is_vegan_friendly",
+            "is_gf_friendly",
+        )
+        read_only_fields = ("id", "slug")
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
 
-        if "business_categories" in attrs:
-            attrs["business_category"] = attrs["business_categories"][0] if attrs["business_categories"] else None
-        elif "business_category" in attrs and attrs["business_category"] is not None:
-            attrs["business_categories"] = [attrs["business_category"]]
+        user = self.context["request"].user
+        if user.account_type != user.AccountType.PERSONAL:
+            raise serializers.ValidationError("Only personal users can create community business listings.")
+
+        address = attrs.get("address", "").strip()
+        city = attrs.get("city", "").strip()
+        website = attrs.get("website", "").strip()
+        if not any((address, city, website)):
+            raise serializers.ValidationError(
+                "Add at least a website, city, or street address so the community can identify this listing."
+            )
+
+        name = attrs.get("name", "").strip()
+        state = attrs.get("state", "").strip()
+        hostname = _normalized_hostname(website)
+
+        duplicate_queryset = Company.objects.all()
+        if hostname:
+            duplicate_queryset = duplicate_queryset.filter(website__icontains=hostname)
+        else:
+            if not city or not state:
+                return attrs
+            duplicate_queryset = duplicate_queryset.filter(
+                name__iexact=name,
+                city__iexact=city,
+                state__iexact=state,
+            )
+
+        if duplicate_queryset.exists():
+            raise serializers.ValidationError(
+                "A similar business listing already exists on FOUND."
+            )
 
         return attrs
+
+    def create(self, validated_data):
+        many_to_many_fields = {}
+        for field_name in (
+            "business_categories",
+            "product_categories",
+            "cuisine_types",
+            "ownership_markers",
+            "sustainability_markers",
+        ):
+            if field_name in validated_data:
+                many_to_many_fields[field_name] = validated_data.pop(field_name)
+
+        company = Company.objects.create(
+            **validated_data,
+            listing_origin=Company.ListingOrigin.COMMUNITY,
+            submitted_by=self.context["request"].user,
+            needs_editorial_review=True,
+            is_published=True,
+        )
+
+        for field_name, values in many_to_many_fields.items():
+            getattr(company, field_name).set(values)
+
+        return company

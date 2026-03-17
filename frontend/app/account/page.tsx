@@ -90,8 +90,9 @@ export default function AccountPage() {
   const safeLists = normalizeLists(lists);
   const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
+  const userBadges = user?.badges ?? [];
   const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
-const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
+  const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
 
   async function toggleListPrivacy(list: CuratedList) {
     if (!accessToken) {
@@ -155,6 +156,15 @@ const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
   const shareContent = (
     <>
       <form className="auth-form dashboard-profile-form" onSubmit={handleProfileSave}>
+        {userBadges.length ? (
+          <div className="profile-badge-row">
+            {userBadges.map((badge) => (
+              <span className={`badge badge-profile badge-${badge.slug}`} key={badge.slug}>
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <label className="contact-field">
           <span className="contact-field-label">Name</span>
           <input disabled value={profileName} />
@@ -198,6 +208,9 @@ const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
             PROFILE
           </Link>
         ) : null}
+        <Link className="button button-secondary dashboard-profile-link" href="/account/add-business">
+          ADD A BUSINESS LISTING
+        </Link>
         {profileSavedMessage ? <p className="contact-form-note is-success">{profileSavedMessage}</p> : null}
       </form>
     </>

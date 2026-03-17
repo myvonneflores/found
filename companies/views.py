@@ -16,6 +16,7 @@ from .models import (
 )
 from .serializers import (
     BusinessCategorySerializer,
+    CommunityCompanyCreateSerializer,
     CompanyDetailSerializer,
     CompanyListSerializer,
     CuisineTypeSerializer,
@@ -38,6 +39,7 @@ class CompanyListView(generics.ListAPIView):
         return (
             Company.objects.select_related("business_category")
             .prefetch_related(
+                "business_claims",
                 "business_categories",
                 "product_categories",
                 "ownership_markers",
@@ -55,6 +57,7 @@ class CompanyDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Company.objects.select_related("business_category").prefetch_related(
+            "business_claims",
             "business_categories",
             "product_categories",
             "ownership_markers",
@@ -104,11 +107,19 @@ class ManagedBusinessCompanyView(generics.RetrieveUpdateAPIView):
         claim = self._get_latest_verified_claim(company_required=False)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        company = serializer.save()
+        company = serializer.save(
+            listing_origin=Company.ListingOrigin.OWNER,
+            submitted_by=request.user,
+        )
         claim.company = company
         claim.save(update_fields=("company",))
         output = self.get_serializer(company)
         return Response(output.data, status=status.HTTP_201_CREATED)
+
+
+class CommunityCompanyCreateView(generics.CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = CommunityCompanyCreateSerializer
 
 
 class BusinessCategoryListView(generics.ListAPIView):

@@ -209,6 +209,15 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
       <article className="panel dashboard-banner public-profile-browser-hero">
         <div className="public-profile-browser-hero-copy">
           <h1 className="home-hero-title">{profile.display_name}</h1>
+          {profile.badges.length ? (
+            <div className="profile-badge-row">
+              {profile.badges.map((badge) => (
+                <span className={`badge badge-profile badge-${badge.slug}`} key={badge.slug}>
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
           {profile.bio ? <p className="lede">{profile.bio}</p> : null}
         </div>
       </article>

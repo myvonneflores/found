@@ -59,6 +59,12 @@ class User(AbstractUser):
             .first()
         )
 
+    @property
+    def has_community_contributions(self):
+        return self.submitted_companies.filter(
+            listing_origin="community"
+        ).exists()
+
     def __str__(self):
         return self.email
 

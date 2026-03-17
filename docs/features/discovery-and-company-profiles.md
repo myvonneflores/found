@@ -15,6 +15,7 @@ This area includes:
 - taxonomy-backed filtering
 - selected-company preview behavior inside the directory
 - full public company profile pages
+- community-submitted listings and provenance badges
 - save/favorite affordances on company detail pages
 - verified owner editing on the company detail page
 
@@ -65,6 +66,7 @@ The central model is `Company` in [`../../companies/models.py`](../../companies/
 Important public-facing fields include:
 
 - identity: `id`, `id_hash`, `name`, `slug`
+- listing provenance: `listing_origin`
 - description and website
 - location: `address`, `city`, `state`, `zip_code`, `country`
 - category and taxonomy relationships
@@ -87,6 +89,7 @@ The public discovery API currently exposes:
 
 - `GET /api/companies/`
 - `GET /api/companies/<slug>/`
+- `POST /api/companies/community-listings/` for authenticated personal users
 - `GET /api/business-categories/`
 - `GET /api/product-categories/`
 - `GET /api/cuisine-types/`
@@ -116,6 +119,7 @@ The company detail page consumes the `CompanyDetailSerializer` shape:
 
 - `business_category` is a nested taxonomy object
 - taxonomy arrays are nested taxonomy objects
+- provenance fields include `listing_origin` and `is_community_listed`
 - timestamps are present
 - richer location and social fields are included
 
@@ -257,6 +261,11 @@ This is intentionally a curated landing surface, not just a mirror of the direct
 The full public company page is implemented in [`../../frontend/app/companies/[slug]/page.tsx`](../../frontend/app/companies/%5Bslug%5D/page.tsx).
 
 It is the canonical public business profile in the app.
+
+Current public badge behavior:
+
+- community-submitted listings show `Community Listed` while no verified owner claim exists
+- once a verified business claim is attached, the listing remains community-origin in data but the public badge is removed
 
 ### Current responsibilities
 

@@ -107,6 +107,8 @@ class SustainabilityMarkerAdmin(admin.ModelAdmin):
 class CompanyAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "listing_origin",
+        "submitted_by",
         "business_category",
         "city",
         "state",
@@ -119,6 +121,7 @@ class CompanyAdmin(admin.ModelAdmin):
     )
     list_filter = (
         CompanyDataQualityFilter,
+        "listing_origin",
         "business_category",
         "city",
         "state",
@@ -126,7 +129,7 @@ class CompanyAdmin(admin.ModelAdmin):
         "is_vegan_friendly",
         "is_gf_friendly",
     )
-    search_fields = ("name", "description", "city", "state", "country")
+    search_fields = ("name", "description", "city", "state", "country", "submitted_by__email")
     prepopulated_fields = {"slug": ("name",)}
     filter_horizontal = (
         "business_categories",

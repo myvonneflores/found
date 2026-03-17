@@ -20,6 +20,7 @@ This area includes:
 - JWT session handling
 - current-user hydration
 - personal profile editing
+- personal-user listing contribution entry points
 - personal dashboard routing
 - pending business dashboard routing
 - verified business dashboard routing
@@ -171,6 +172,12 @@ The frontend currently sends:
 
 The current frontend does not send the business intent to the backend during registration; that intent is only used for post-signup routing.
 
+### What did not change
+
+- personal-user signup still goes straight to `/account`
+- business-user signup still goes to `/business/claim`
+- the new community listing flow starts after signup from the personal account area, not during registration
+
 ## Login Flow
 
 The login page is implemented in [`../../frontend/app/login/page.tsx`](../../frontend/app/login/page.tsx).
@@ -206,6 +213,7 @@ The `user` payload includes:
 - account type
 - public slug
 - verification booleans/status
+- derived profile badges such as `Community Contributor`
 
 This is important because the frontend uses the login response itself to make routing decisions immediately after authentication.
 

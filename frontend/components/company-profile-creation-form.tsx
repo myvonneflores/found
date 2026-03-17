@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
+  createCommunityListing,
   createManagedBusinessProfile,
   listBusinessCategories,
   listCuisineTypes,
@@ -14,7 +15,7 @@ import {
   listSustainabilityMarkers,
 } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
-import type { ManagedBusinessProfile, TaxonomyItem } from "@/types/company";
+import type { CompanyCreatePayload, TaxonomyItem } from "@/types/company";
 
 type TaxonomyState = {
   businessCategories: TaxonomyItem[];
@@ -38,17 +39,19 @@ function toggleId(current: number[], nextId: number) {
 
 export function CompanyProfileCreationForm({
   latestClaim,
+  mode = "owner",
 }: {
-  latestClaim: BusinessClaim | null;
+  latestClaim?: BusinessClaim | null;
+  mode?: "owner" | "community";
 }) {
   const router = useRouter();
-  const { accessToken, getValidAccessToken, user } = useAuth();
+  const { accessToken, getValidAccessToken, refreshUser, user } = useAuth();
   const [isLoadingTaxonomies, setIsLoadingTaxonomies] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [taxonomies, setTaxonomies] = useState<TaxonomyState>(EMPTY_TAXONOMIES);
-  const [profile, setProfile] = useState<Omit<ManagedBusinessProfile, "id" | "slug">>({
-    name: latestClaim?.business_name || user?.display_name || "",
+  const [profile, setProfile] = useState<CompanyCreatePayload>({
+    name: latestClaim?.business_name || (mode === "owner" ? user?.display_name || "" : ""),
     description: "",
     website: latestClaim?.website || "",
     address: "",
@@ -66,7 +69,6 @@ export function CompanyProfileCreationForm({
     linkedin_page: latestClaim?.linkedin_page || "",
     is_vegan_friendly: false,
     is_gf_friendly: false,
-    is_published: false,
   });
 
   useEffect(() => {
@@ -177,9 +179,9 @@ export function CompanyProfileCreationForm({
     [profile.business_categories, foodCategoryIds]
   );
 
-  function updateField<Key extends keyof Omit<ManagedBusinessProfile, "id" | "slug">>(
+  function updateField<Key extends keyof CompanyCreatePayload>(
     key: Key,
-    value: Omit<ManagedBusinessProfile, "id" | "slug">[Key]
+    value: CompanyCreatePayload[Key]
   ) {
     setProfile((current) => ({ ...current, [key]: value }));
     setError("");
@@ -189,7 +191,11 @@ export function CompanyProfileCreationForm({
     event.preventDefault();
 
     if (!accessToken) {
-      setError("Please log in again before creating your business profile.");
+      setError(
+        mode === "community"
+          ? "Please log in again before adding a business listing."
+          : "Please log in again before creating your business profile."
+      );
       return;
     }
 
@@ -199,14 +205,35 @@ export function CompanyProfileCreationForm({
     try {
       const token = await getValidAccessToken();
       if (!token) {
-        setError("Please log in again before creating your business profile.");
+        setError(
+          mode === "community"
+            ? "Please log in again before adding a business listing."
+            : "Please log in again before creating your business profile."
+        );
         return;
       }
 
-      const nextProfile = await createManagedBusinessProfile(token, profile);
-      router.push(`/companies/${nextProfile.slug}?edit=1`);
+      const nextProfile =
+        mode === "community"
+          ? await createCommunityListing(token, profile)
+          : await createManagedBusinessProfile(token, {
+              ...profile,
+              is_published: false,
+            });
+
+      await refreshUser();
+
+      router.push(
+        mode === "community" ? `/companies/${nextProfile.slug}` : `/companies/${nextProfile.slug}?edit=1`
+      );
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to create your business profile.");
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : mode === "community"
+            ? "Unable to add this business listing."
+            : "Unable to create your business profile."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -375,7 +402,7 @@ export function CompanyProfileCreationForm({
 
         <div className="directory-form-actions">
           <button className="contact-submit" disabled={isSaving} type="submit">
-            {isSaving ? "Creating..." : "Create business page"}
+            {isSaving ? "Creating..." : mode === "community" ? "Add listing to FOUND" : "Create business page"}
           </button>
         </div>
       </form>

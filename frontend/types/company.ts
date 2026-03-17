@@ -5,6 +5,8 @@ export type TaxonomyItem = {
   description: string;
 };
 
+export type ListingOrigin = "imported" | "owner" | "community";
+
 export type ClaimedCompanyPublicList = {
   id: number;
   id_hash: string;
@@ -28,6 +30,8 @@ export type CompanyListItem = {
   name: string;
   slug: string;
   description: string;
+  listing_origin: ListingOrigin;
+  is_community_listed: boolean;
   city: string;
   state: string;
   country: string;
@@ -47,6 +51,8 @@ export type CompanyDetail = {
   name: string;
   slug: string;
   description: string;
+  listing_origin: ListingOrigin;
+  is_community_listed: boolean;
   website: string;
   founded_year: number | null;
   address: string;
@@ -93,6 +99,8 @@ export type ManagedBusinessProfile = {
   is_gf_friendly: boolean;
   is_published: boolean;
 };
+
+export type CompanyCreatePayload = Omit<ManagedBusinessProfile, "id" | "slug" | "is_published">;
 
 export type PaginatedResponse<T> = {
   count: number;
