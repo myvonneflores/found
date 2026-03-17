@@ -105,6 +105,14 @@ function saveFilters(params: CompanySearchParams) {
   }
 }
 
+function clearSavedFilters() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.removeItem(FILTER_STORAGE_KEY);
+}
+
 function FilterSection({
   title,
   children,
@@ -589,6 +597,12 @@ export function CompanyDirectory({
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
+  function handleResetFilters() {
+    clearSavedFilters();
+    setSearchValue("");
+    router.push(pathname);
+  }
+
   function toggleOwnershipMarker(value: string) {
     const nextSelected = new Set(selectedOwnership);
     if (nextSelected.has(value)) {
@@ -917,9 +931,9 @@ export function CompanyDirectory({
                 </FilterSection>
 
                 <div className="directory-form-actions">
-                  <Link className="button button-secondary" href="/companies">
+                  <button className="button button-secondary" onClick={handleResetFilters} type="button">
                     Reset
-                  </Link>
+                  </button>
                 </div>
               </form>
             </div>

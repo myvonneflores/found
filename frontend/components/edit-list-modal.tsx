@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { deleteCuratedListItem, updateCuratedList } from "@/lib/api";
 import { CuratedList, CuratedListItem } from "@/types/community";
 
@@ -29,6 +30,7 @@ export function EditListModal({
   const [isPublic, setIsPublic] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<number | null>(null);
+  const [pendingRemovalItem, setPendingRemovalItem] = useState<CuratedListItem | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function EditListModal({
       setError("");
       setIsSaving(false);
       setRemovingItemId(null);
+      setPendingRemovalItem(null);
     }
   }, [canMakePublic, isOpen, list]);
 
@@ -72,23 +75,23 @@ export function EditListModal({
     }
   }
 
-  async function handleRemoveItem(item: CuratedListItem) {
+  async function handleRemoveItem() {
     if (!accessToken || !list) {
       setError("Please log in again before updating this list.");
       return;
     }
 
-    const confirmed = window.confirm(`Remove "${item.company.name}" from "${list.title}"?`);
-    if (!confirmed) {
+    if (!pendingRemovalItem) {
       return;
     }
 
-    setRemovingItemId(item.id);
+    setRemovingItemId(pendingRemovalItem.id);
     setError("");
 
     try {
-      await deleteCuratedListItem(accessToken, item.id);
-      onItemRemoved(item.id);
+      await deleteCuratedListItem(accessToken, pendingRemovalItem.id);
+      onItemRemoved(pendingRemovalItem.id);
+      setPendingRemovalItem(null);
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : "Unable to remove this business from the list.");
     } finally {
@@ -142,7 +145,7 @@ export function EditListModal({
                       <button
                         className="detail-save-item-remove"
                         disabled={removingItemId === item.id}
-                        onClick={() => void handleRemoveItem(item)}
+                        onClick={() => setPendingRemovalItem(item)}
                         type="button"
                       >
                         {removingItemId === item.id ? "removing..." : "remove"}
@@ -186,6 +189,15 @@ export function EditListModal({
           </div>
         </form>
       </div>
+      <ConfirmDialog
+        confirmLabel="remove"
+        isOpen={Boolean(pendingRemovalItem)}
+        isPending={Boolean(pendingRemovalItem) && removingItemId === pendingRemovalItem?.id}
+        message="This cannot be undone."
+        onCancel={() => setPendingRemovalItem(null)}
+        onConfirm={() => void handleRemoveItem()}
+        title="Remove from list?"
+      />
     </div>,
     document.body
   );
