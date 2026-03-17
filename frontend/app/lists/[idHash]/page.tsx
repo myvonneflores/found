@@ -9,10 +9,13 @@ import { useAuth } from "@/components/auth-provider";
 import { EditListModal } from "@/components/edit-list-modal";
 import { SiteHeader } from "@/components/site-header";
 import {
+  createSavedCuratedList,
+  deleteSavedCuratedList,
   deleteCuratedList,
   getCompany,
   getCuratedListByHash,
   getPublicCuratedList,
+  listSavedCuratedLists,
 } from "@/lib/api";
 import { instagramProfileUrl } from "@/lib/social-links";
 import type { CompanyDetail } from "@/types/company";
@@ -131,7 +134,7 @@ function shareLabel(ownerName: string) {
 export default function CuratedListPage() {
   const params = useParams<{ idHash: string }>();
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, getValidAccessToken, isAuthenticated, isReady, signOut, user } = useAuth();
   const [list, setList] = useState<PublicCuratedList | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<CompanyDetail | null>(null);
@@ -142,6 +145,9 @@ export default function CuratedListPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [savedListId, setSavedListId] = useState<number | null>(null);
+  const [isSavePending, setIsSavePending] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const idHash = typeof params?.idHash === "string" ? params.idHash : "";
 
@@ -296,6 +302,51 @@ export default function CuratedListPage() {
     : [];
   const hasCompactDetailList = detailListItems.length > 4;
 
+  function isTokenError(message: string) {
+    const normalized = message.toLowerCase();
+    return normalized.includes("token") || normalized.includes("request failed: 401");
+  }
+
+  useEffect(() => {
+    if (!isReady || !list || isOwner || !isAuthenticated) {
+      setSavedListId(null);
+      return;
+    }
+
+    let isActive = true;
+    const currentListId = list.id;
+
+    async function loadSavedState() {
+      try {
+        const token = await getValidAccessToken();
+        if (!token) {
+          if (isActive) {
+            setSavedListId(null);
+          }
+          return;
+        }
+
+        const savedLists = await listSavedCuratedLists(token);
+        if (!isActive) {
+          return;
+        }
+        const match = savedLists.find((savedList) => savedList.list.id === currentListId);
+        setSavedListId(match?.id ?? null);
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
+        setSaveError(loadError instanceof Error ? loadError.message : "Unable to load save state for this list.");
+      }
+    }
+
+    void loadSavedState();
+
+    return () => {
+      isActive = false;
+    };
+  }, [getValidAccessToken, isAuthenticated, isOwner, isReady, list]);
+
   async function handleShare() {
     const url = window.location.href;
     const title = list?.title || "FOUND list";
@@ -334,6 +385,46 @@ export default function CuratedListPage() {
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Unable to delete this list.");
       setIsDeleting(false);
+    }
+  }
+
+  async function handleToggleSavedList() {
+    if (!list) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+
+    setIsSavePending(true);
+    setSaveError("");
+
+    try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        signOut();
+        router.push("/login");
+        return;
+      }
+
+      if (savedListId) {
+        await deleteSavedCuratedList(token, savedListId);
+        setSavedListId(null);
+      } else {
+        const savedList = await createSavedCuratedList(token, list.id);
+        setSavedListId(savedList.id);
+      }
+    } catch (saveActionError) {
+      if (saveActionError instanceof Error && isTokenError(saveActionError.message)) {
+        signOut();
+        router.push("/login");
+        return;
+      }
+      setSaveError(saveActionError instanceof Error ? saveActionError.message : "Unable to update this saved list.");
+    } finally {
+      setIsSavePending(false);
     }
   }
 
@@ -531,6 +622,15 @@ export default function CuratedListPage() {
                         </>
                       ) : (
                         <>
+                          <button className="list-browser-action-button" onClick={handleToggleSavedList} type="button">
+                            {isSavePending
+                              ? "Saving..."
+                              : savedListId
+                                ? "Unsave list"
+                                : isAuthenticated
+                                  ? "Save list"
+                                  : "Log in to save"}
+                          </button>
                           <button className="list-browser-action-button" onClick={handleShare} type="button">
                             Share
                           </button>
@@ -542,6 +642,7 @@ export default function CuratedListPage() {
                         </>
                       )}
                     </div>
+                    {saveError ? <p className="contact-form-note is-error">{saveError}</p> : null}
                   </aside>
                 </div>
               </section>

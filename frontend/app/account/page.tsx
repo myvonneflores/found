@@ -9,15 +9,17 @@ import { BodyClass } from "@/components/body-class";
 import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
+import { SavedListShelf } from "@/components/saved-list-shelf";
 import { SiteHeader } from "@/components/site-header";
 import {
   getPersonalProfile,
   listCuratedLists,
   listFavorites,
+  listSavedCuratedLists,
   updateCuratedList,
   updatePersonalProfile,
 } from "@/lib/api";
-import { CuratedList, Favorite } from "@/types/community";
+import { CuratedList, Favorite, SavedCuratedList } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
 
 const DASHBOARD_SCROLL_CAP = 15;
@@ -71,6 +73,7 @@ export default function AccountPage() {
   const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
+  const [savedLists, setSavedLists] = useState<SavedCuratedList[]>([]);
   const [profile, setProfile] = useState<PersonalProfile>({
     bio: "",
     location: "",
@@ -257,6 +260,29 @@ export default function AccountPage() {
     void loadCommunityData();
   }, [accessToken, router, signOut, user]);
 
+  useEffect(() => {
+    async function loadSavedLists() {
+      if (!accessToken || !user || user.account_type !== "personal") {
+        setSavedLists([]);
+        return;
+      }
+
+      try {
+        const nextSavedLists = await listSavedCuratedLists(accessToken);
+        setSavedLists(nextSavedLists);
+      } catch (loadError) {
+        if (loadError instanceof Error && isTokenError(loadError.message)) {
+          signOut();
+          router.replace("/login");
+          return;
+        }
+        setSavedLists([]);
+      }
+    }
+
+    void loadSavedLists();
+  }, [accessToken, router, signOut, user]);
+
   async function handleProfileSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -326,6 +352,8 @@ export default function AccountPage() {
               </article>
             </aside>
           </section>
+
+          <SavedListShelf isLoading={isLoading} savedLists={savedLists} />
 
           <section className="dashboard-mobile-sections">
             <article className="dashboard-mobile-section">

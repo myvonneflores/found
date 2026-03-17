@@ -1,9 +1,11 @@
 from django.db import transaction
 from django.db.models import F
-from rest_framework import generics, permissions
+from django.db.models import Count, Prefetch, Q
+from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
-from .models import CuratedList, CuratedListItem, Favorite, Recommendation
+from .models import CuratedList, CuratedListItem, Favorite, Recommendation, SavedCuratedList
 from .serializers import (
     CuratedListItemCreateSerializer,
     CuratedListItemSerializer,
@@ -11,9 +13,28 @@ from .serializers import (
     CuratedListSerializer,
     FavoriteSerializer,
     PublicCuratedListSerializer,
+    PublicCuratedListPreviewSerializer,
     PublicRecommendationSerializer,
     RecommendationSerializer,
+    SavedCuratedListCreateSerializer,
+    SavedCuratedListSerializer,
 )
+
+
+def public_curated_list_preview_queryset():
+    return (
+        CuratedList.objects.filter(is_public=True)
+        .select_related("user")
+        .annotate(item_count=Count("items", distinct=True))
+        .filter(item_count__gt=0)
+        .prefetch_related(
+            Prefetch(
+                "items",
+                queryset=CuratedListItem.objects.select_related("company").order_by("position", "created_at", "pk"),
+            )
+        )
+        .order_by("-updated_at", "-pk")
+    )
 
 
 class CommunityAccessMixin:
@@ -148,6 +169,75 @@ class PublicCuratedListDetailView(generics.RetrieveAPIView):
                 "items__company__sustainability_markers",
             )
         )
+
+
+class PublicCuratedListSearchView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = PublicCuratedListPreviewSerializer
+
+    def get_queryset(self):
+        queryset = public_curated_list_preview_queryset()
+        search = self.request.query_params.get("search", "").strip()
+        if not search:
+            return queryset
+        return queryset.filter(
+            Q(title__icontains=search)
+            | Q(user__display_name__icontains=search)
+            | Q(user__first_name__icontains=search)
+            | Q(user__last_name__icontains=search)
+            | Q(user__public_slug__icontains=search)
+            | Q(items__company__name__icontains=search)
+        ).distinct().order_by("-updated_at", "-pk")
+
+
+class SavedCuratedListListCreateView(CommunityAccessMixin, generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return (
+            SavedCuratedList.objects.filter(user=self.request.user, curated_list__is_public=True)
+            .select_related("curated_list", "curated_list__user")
+            .annotate(item_count=Count("curated_list__items", distinct=True))
+            .filter(item_count__gt=0)
+            .prefetch_related(
+                Prefetch(
+                    "curated_list__items",
+                    queryset=CuratedListItem.objects.select_related("company").order_by("position", "created_at", "pk"),
+                )
+            )
+            .order_by("-created_at", "-pk")
+        )
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return SavedCuratedListCreateSerializer
+        return SavedCuratedListSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        instance = (
+            SavedCuratedList.objects.select_related("curated_list", "curated_list__user")
+            .prefetch_related(
+                Prefetch(
+                    "curated_list__items",
+                    queryset=CuratedListItem.objects.select_related("company").order_by("position", "created_at", "pk"),
+                )
+            )
+            .get(pk=instance.pk)
+        )
+        instance.item_count = instance.curated_list.items.count()
+        response_serializer = SavedCuratedListSerializer(instance, context=self.get_serializer_context())
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class SavedCuratedListDetailView(CommunityAccessMixin, generics.DestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return SavedCuratedList.objects.filter(user=self.request.user)
 
 
 class RecommendationListCreateView(CommunityAccessMixin, generics.ListCreateAPIView):

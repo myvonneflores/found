@@ -10,17 +10,19 @@ import { BusinessProfileCard } from "@/components/business-profile-card";
 import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
+import { SavedListShelf } from "@/components/saved-list-shelf";
 import { SiteHeader } from "@/components/site-header";
 import {
   getPersonalProfile,
   listBusinessClaims,
   listCuratedLists,
   listFavorites,
+  listSavedCuratedLists,
   updateCuratedList,
   updatePersonalProfile,
 } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
-import { CuratedList, Favorite } from "@/types/community";
+import { CuratedList, Favorite, SavedCuratedList } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
 
 const DASHBOARD_SCROLL_CAP = 15;
@@ -92,6 +94,7 @@ export default function BusinessDashboardPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
+  const [savedLists, setSavedLists] = useState<SavedCuratedList[]>([]);
   const [profile, setProfile] = useState<PersonalProfile>({
     bio: "",
     location: "",
@@ -314,6 +317,29 @@ export default function BusinessDashboardPage() {
     void loadCommunityData();
   }, [accessToken, router, signOut, user]);
 
+  useEffect(() => {
+    async function loadSavedLists() {
+      if (!accessToken || !user || !user.is_business_verified) {
+        setSavedLists([]);
+        return;
+      }
+
+      try {
+        const nextSavedLists = await listSavedCuratedLists(accessToken);
+        setSavedLists(nextSavedLists);
+      } catch (loadError) {
+        if (loadError instanceof Error && isTokenError(loadError.message)) {
+          signOut();
+          router.replace("/login");
+          return;
+        }
+        setSavedLists([]);
+      }
+    }
+
+    void loadSavedLists();
+  }, [accessToken, router, signOut, user]);
+
   function handleDashboardSignOut() {
     signOut();
     router.push("/");
@@ -359,6 +385,8 @@ export default function BusinessDashboardPage() {
               <article className="panel dashboard-panel dashboard-panel-share dashboard-panel-profile-combined">{shareContent}</article>
             </aside>
           </section>
+
+          <SavedListShelf isLoading={isLoading} savedLists={savedLists} />
 
           <section className="dashboard-mobile-sections">
             <article className="dashboard-mobile-section">
