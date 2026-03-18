@@ -8,6 +8,7 @@ import { BodyClass } from "@/components/body-class";
 import { useAuth } from "@/components/auth-provider";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditListModal } from "@/components/edit-list-modal";
+import { ShareButton } from "@/components/share-button";
 import { SiteHeader } from "@/components/site-header";
 import {
   createSavedCuratedList,
@@ -144,7 +145,6 @@ export default function CuratedListPage() {
   const [error, setError] = useState("");
   const [companyError, setCompanyError] = useState("");
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [shareFeedback, setShareFeedback] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [savedListId, setSavedListId] = useState<number | null>(null);
@@ -152,15 +152,6 @@ export default function CuratedListPage() {
   const [saveError, setSaveError] = useState("");
 
   const idHash = typeof params?.idHash === "string" ? params.idHash : "";
-
-  useEffect(() => {
-    if (!shareFeedback) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => setShareFeedback(""), 2200);
-    return () => window.clearTimeout(timeout);
-  }, [shareFeedback]);
 
   useEffect(() => {
     if (!idHash || !isReady) {
@@ -348,25 +339,6 @@ export default function CuratedListPage() {
       isActive = false;
     };
   }, [getValidAccessToken, isAuthenticated, isOwner, isReady, list]);
-
-  async function handleShare() {
-    const url = window.location.href;
-    const title = list?.title || "FOUND list";
-    const text = `Check out ${title} on FOUND.`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text, url });
-        setShareFeedback("Shared");
-        return;
-      }
-
-      await navigator.clipboard.writeText(url);
-      setShareFeedback("Link copied");
-    } catch {
-      setShareFeedback("Unable to share right now");
-    }
-  }
 
   async function handleDelete() {
     if (!list || !accessToken) {
@@ -594,21 +566,20 @@ export default function CuratedListPage() {
                   </section>
 
                   <aside className="list-browser-actions-card">
-                    {shareFeedback ? (
-                      <div className="list-browser-actions-header">
-                        <p>{shareFeedback}</p>
-                      </div>
-                    ) : null}
-
                     <div className="list-browser-actions">
                       {isOwner ? (
                         <>
                           <button className="list-browser-action-button" onClick={() => setIsEditOpen(true)} type="button">
                             Edit
                           </button>
-                          <button className="list-browser-action-button" onClick={handleShare} type="button">
-                            Share
-                          </button>
+                          <ShareButton
+                            buttonClassName="list-browser-action-button"
+                            feedbackClassName="list-browser-action-feedback"
+                            shareText={`Check out ${list.title} on FOUND.`}
+                            shareTitle={list.title}
+                            shareUrl={`/lists/${list.id_hash}`}
+                            wrapperClassName="list-browser-share-action"
+                          />
                           <button
                             className="list-browser-action-button is-danger"
                             disabled={isDeleting}
@@ -629,9 +600,14 @@ export default function CuratedListPage() {
                                   ? "Save list"
                                   : "Log in to save"}
                           </button>
-                          <button className="list-browser-action-button" onClick={handleShare} type="button">
-                            Share
-                          </button>
+                          <ShareButton
+                            buttonClassName="list-browser-action-button"
+                            feedbackClassName="list-browser-action-feedback"
+                            shareText={`Check out ${list.title} on FOUND.`}
+                            shareTitle={list.title}
+                            shareUrl={`/lists/${list.id_hash}`}
+                            wrapperClassName="list-browser-share-action"
+                          />
                           {ownerProfileHref ? (
                             <Link className="list-browser-action-button" href={ownerProfileHref}>
                               See More
