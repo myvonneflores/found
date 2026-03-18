@@ -16,10 +16,21 @@ export function SiteHeader({
   brandHref?: string;
 }) {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { hasKnownAccount, isAuthenticated, user } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+
+  const accountHref = isAuthenticated
+    ? user?.account_type === "business"
+      ? user.is_business_verified
+        ? "/business/dashboard"
+        : "/business/pending"
+      : "/account"
+    : hasKnownAccount
+      ? "/login"
+      : "/signup";
+  const accountLabel = isAuthenticated ? "Dashboard" : hasKnownAccount ? "Sign In" : "Sign Up";
 
   void initialSearch;
 
@@ -123,22 +134,14 @@ export function SiteHeader({
               </Link>
               <Link
                 className="directory-menu-link"
-                href={
-                  isAuthenticated
-                    ? user?.account_type === "business"
-                      ? user.is_business_verified
-                        ? "/business/dashboard"
-                        : "/business/pending"
-                      : "/account"
-                    : "/login"
-                }
+                href={accountHref}
                 onClick={() => {
                   setMenuOpen(false);
                   setSearchValue("");
                 }}
                 role="menuitem"
               >
-                Dashboard
+                {accountLabel}
               </Link>
               <Link
                 className="directory-menu-link"

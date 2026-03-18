@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAllowedContactSubmissionOrigin } from "./origin";
 
 const HUBSPOT_PORTAL_ID = "47665661";
 const HUBSPOT_FORM_ID = "8bbf93f5-2478-4957-8094-7e3b7df8a8ca";
@@ -8,10 +9,9 @@ const MAX_FORM_AGE_MS = 1000 * 60 * 60 * 12;
 
 export async function POST(request: Request) {
   try {
-    const requestUrl = new URL(request.url);
     const origin = request.headers.get("origin");
 
-    if (origin && origin !== requestUrl.origin) {
+    if (!isAllowedContactSubmissionOrigin(request, origin)) {
       return NextResponse.json({ error: "Invalid submission origin." }, { status: 403 });
     }
 

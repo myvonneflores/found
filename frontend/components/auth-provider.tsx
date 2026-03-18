@@ -2,12 +2,20 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { clearAuthSession, readAuthSession, writeAuthSession, type AuthSession } from "@/lib/auth-storage";
+import {
+  clearAuthSession,
+  readAuthSession,
+  readKnownAccount,
+  writeAuthSession,
+  writeKnownAccount,
+  type AuthSession,
+} from "@/lib/auth-storage";
 import { getCurrentUser, refreshAccessToken } from "@/lib/api";
 import { AuthUser } from "@/types/auth";
 
 interface AuthContextValue {
   accessToken: string | null;
+  hasKnownAccount: boolean;
   isReady: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
@@ -22,6 +30,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [hasKnownAccount, setHasKnownAccount] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
@@ -29,14 +38,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initializeSession() {
       const session = readAuthSession();
+      const knownAccount = readKnownAccount();
 
       if (!session) {
         if (!isCancelled) {
           setAccessToken(null);
+          setHasKnownAccount(knownAccount);
           setUser(null);
           setIsReady(true);
         }
         return;
+      }
+
+      if (!isCancelled) {
+        setHasKnownAccount(true);
       }
 
       const nextSession = await hydrateSession(session);
@@ -48,13 +63,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!nextSession) {
         clearAuthSession();
         setAccessToken(null);
+        setHasKnownAccount(true);
         setUser(null);
         setIsReady(true);
         return;
       }
 
       writeAuthSession(nextSession);
+      writeKnownAccount(true);
       setAccessToken(nextSession.access);
+      setHasKnownAccount(true);
       setUser(nextSession.user);
       setIsReady(true);
     }
@@ -92,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getValidAccessToken = useCallback(async () => {
     const session = readAuthSession();
     if (!session) {
+      setHasKnownAccount(readKnownAccount());
       setUser(null);
       setAccessToken(null);
       return null;
@@ -101,12 +120,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!nextSession) {
       clearAuthSession();
+      setHasKnownAccount(true);
       setUser(null);
       setAccessToken(null);
       return null;
     }
 
     writeAuthSession(nextSession);
+    writeKnownAccount(true);
+    setHasKnownAccount(true);
     setUser(nextSession.user);
     setAccessToken(nextSession.access);
     return nextSession.access;
@@ -118,7 +140,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback((session: AuthSession) => {
     writeAuthSession(session);
+    writeKnownAccount(true);
     setAccessToken(session.access);
+    setHasKnownAccount(true);
     setUser(session.user);
   }, []);
 
@@ -131,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       accessToken,
+      hasKnownAccount,
       getValidAccessToken,
       isReady,
       isAuthenticated: Boolean(accessToken && user),
@@ -139,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       refreshUser,
     }),
-    [accessToken, getValidAccessToken, isReady, refreshUser, signIn, signOut, user]
+    [accessToken, getValidAccessToken, hasKnownAccount, isReady, refreshUser, signIn, signOut, user]
   );
 
   return (
