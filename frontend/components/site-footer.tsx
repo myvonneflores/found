@@ -45,7 +45,7 @@ function FacebookIcon() {
 
 export function SiteFooter() {
   const router = useRouter();
-  const { isAuthenticated, signOut } = useAuth();
+  const { hasKnownAccount, isAuthenticated, signOut } = useAuth();
 
   function handleSignOut() {
     signOut();
@@ -94,13 +94,17 @@ export function SiteFooter() {
         <div className="site-footer-brand">
           <p className="site-footer-copy">A conscious discovery engine for local, independent, value-aligned businesses.</p>
         </div>
-        {isAuthenticated ? (
-          <div className="site-footer-account">
+        <div className="site-footer-account">
+          {isAuthenticated ? (
             <button className="site-footer-logout" onClick={handleSignOut} type="button">
               Logout
             </button>
-          </div>
-        ) : null}
+          ) : (
+            <Link className="site-footer-logout" href={hasKnownAccount ? "/login" : "/signup"}>
+              {hasKnownAccount ? "Log in" : "Sign Up"}
+            </Link>
+          )}
+        </div>
       </div>
     </footer>
   );

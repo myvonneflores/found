@@ -1,6 +1,7 @@
 import { AuthUser } from "@/types/auth";
 
 const STORAGE_KEY = "found-auth-session";
+const KNOWN_ACCOUNT_KEY = "found-known-account";
 
 export interface AuthSession {
   access: string;
@@ -40,4 +41,25 @@ export function clearAuthSession() {
   }
 
   window.localStorage.removeItem(STORAGE_KEY);
+}
+
+export function readKnownAccount() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem(KNOWN_ACCOUNT_KEY) === "true";
+}
+
+export function writeKnownAccount(value: boolean) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (value) {
+    window.localStorage.setItem(KNOWN_ACCOUNT_KEY, "true");
+    return;
+  }
+
+  window.localStorage.removeItem(KNOWN_ACCOUNT_KEY);
 }
