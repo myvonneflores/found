@@ -73,6 +73,34 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
+function ShareIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M14.5 5.5h4v4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M10.4 13.6 18.5 5.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M18.5 12.6v4.4a1.7 1.7 0 0 1-1.7 1.7H7a1.7 1.7 0 0 1-1.7-1.7V7.2A1.7 1.7 0 0 1 7 5.5h4.4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
 export function CompanySaveFlow({
   companyId,
   companySlug,
@@ -545,38 +573,110 @@ export function CompanySaveFlow({
 
   return (
     <>
-      <div className="detail-save-shell">
-        {isAuthenticated && canUseSaveTools ? (
-          <button
-            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-            className={isFavorited ? "detail-save-heart is-active" : "detail-save-heart"}
-            disabled={isLoading || isSavingFavorite}
-            onClick={handleFavoriteClick}
-            ref={(node) => {
-              heartButtonRef.current = node;
-            }}
-            type="button"
-          >
-            <HeartIcon filled={isFavorited} />
-          </button>
-        ) : (
-          <Link
-            aria-label="Log in to save"
-            className="detail-save-heart"
-            href="/login"
-            ref={(node) => {
-              heartButtonRef.current = node;
-            }}
-          >
-            <HeartIcon filled={false} />
-          </Link>
-        )}
-      </div>
+      {isAuthenticated && canUseSaveTools ? (
+        <button
+          aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          className={isFavorited ? "detail-save-action detail-save-heart detail-header-action is-active" : "detail-save-action detail-save-heart detail-header-action"}
+          disabled={isLoading || isSavingFavorite}
+          onClick={handleFavoriteClick}
+          ref={(node) => {
+            heartButtonRef.current = node;
+          }}
+          type="button"
+        >
+          <HeartIcon filled={isFavorited} />
+        </button>
+      ) : (
+        <Link
+          aria-label="Log in to save"
+          className="detail-save-action detail-save-heart detail-header-action"
+          href="/login"
+          ref={(node) => {
+            heartButtonRef.current = node;
+          }}
+        >
+          <HeartIcon filled={false} />
+        </Link>
+      )}
 
       {listModal}
       {favoritePrompt}
       {successToast}
       {errorToast}
+    </>
+  );
+}
+
+export function CompanyShareButton({
+  shareText,
+  shareTitle,
+  shareUrl,
+}: {
+  shareText: string;
+  shareTitle: string;
+  shareUrl: string;
+}) {
+  const [shareFeedback, setShareFeedback] = useState("");
+
+  useEffect(() => {
+    if (!shareFeedback) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setShareFeedback(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [shareFeedback]);
+
+  async function handleShare() {
+    const url = new URL(shareUrl, window.location.origin).toString();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, text: shareText, url });
+        setShareFeedback("Shared");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareFeedback("Link copied");
+        return;
+      }
+
+      throw new Error("Clipboard unavailable");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      setShareFeedback("Unable to share right now");
+    }
+  }
+
+  const shareToast = shareFeedback
+    ? createPortal(
+        <div className="detail-save-toast detail-save-toast-share" role="status">
+          <div className="detail-save-toast-icon" aria-hidden="true">
+            <ShareIcon />
+          </div>
+          <p>{shareFeedback}</p>
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        aria-label="Share this business profile"
+        className="detail-save-action detail-header-action"
+        onClick={() => void handleShare()}
+        title="Share"
+        type="button"
+      >
+        <ShareIcon />
+      </button>
+      {shareToast}
     </>
   );
 }

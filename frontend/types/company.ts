@@ -70,6 +70,7 @@ export type CompanyDetail = {
   instagram_handle: string;
   facebook_page: string;
   linkedin_page: string;
+  hours_text?: string;
   is_vegan_friendly: boolean;
   is_gf_friendly: boolean;
   created_at: string;

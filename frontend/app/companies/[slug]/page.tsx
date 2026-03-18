@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BodyClass } from "@/components/body-class";
 import { CompanyOwnerEditor } from "@/components/company-owner-editor";
-import { CompanySaveFlow } from "@/components/company-save-flow";
+import { CompanySaveFlow, CompanyShareButton } from "@/components/company-save-flow";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany, getPublicCuratedList } from "@/lib/api";
 import { instagramProfileUrl } from "@/lib/social-links";
@@ -90,16 +90,18 @@ function LinkedInIcon() {
 function LinkLogo({
   href,
   label,
+  className,
   children,
 }: {
   href: string;
   label: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
     <a
       aria-label={label}
-      className="detail-link-logo"
+      className={className ?? "detail-link-logo"}
       href={href}
       rel="noreferrer"
       target="_blank"
@@ -172,6 +174,11 @@ export default async function CompanyDetailPage({
     const hasAnyLinks = Boolean(
       company.website || company.facebook_page || company.linkedin_page || company.instagram_handle
     );
+    const hoursText = typeof company.hours_text === "string" ? company.hours_text.trim() : "";
+    const hoursLines = hoursText
+      .split(/\s*;\s*/)
+      .map((line) => line.trim())
+      .filter(Boolean);
     const claimedProfile = company.claimed_profile;
     const singleRecommendationList =
       claimedProfile && claimedProfile.public_lists.length === 1
@@ -220,16 +227,57 @@ export default async function CompanyDetailPage({
         <CompanyOwnerEditor autoEdit={autoEdit} company={company} />
 
         <section className="detail-card detail-header">
-          <CompanySaveFlow companyId={company.id} companySlug={company.slug} />
-          <h1>
-            {company.website ? (
-              <a href={company.website} rel="noreferrer" target="_blank">
-                {company.name}
-              </a>
-            ) : (
-              company.name
-            )}
-          </h1>
+          <div className="detail-header-top">
+            <div className="detail-header-copy">
+              <h1>
+                {company.website ? (
+                  <a href={company.website} rel="noreferrer" target="_blank">
+                    {company.name}
+                  </a>
+                ) : (
+                  company.name
+                )}
+                <div className="detail-title-actions">
+                  <CompanySaveFlow companyId={company.id} companySlug={company.slug} />
+                  <CompanyShareButton
+                    shareText={`Check out ${company.name} on FOUND.`}
+                    shareTitle={company.name}
+                    shareUrl={`/companies/${company.slug}`}
+                  />
+                </div>
+              </h1>
+            </div>
+            <div className="detail-header-rail">
+              {hasAnyLinks ? (
+                <div className="detail-header-links">
+                  {company.website ? (
+                    <LinkLogo className="detail-header-link" href={company.website} label="Website">
+                      <WebsiteIcon />
+                    </LinkLogo>
+                  ) : null}
+                  {company.facebook_page ? (
+                    <LinkLogo className="detail-header-link" href={company.facebook_page} label="Facebook">
+                      <FacebookIcon />
+                    </LinkLogo>
+                  ) : null}
+                  {company.linkedin_page ? (
+                    <LinkLogo className="detail-header-link" href={company.linkedin_page} label="LinkedIn">
+                      <LinkedInIcon />
+                    </LinkLogo>
+                  ) : null}
+                  {company.instagram_handle ? (
+                    <LinkLogo
+                      className="detail-header-link"
+                      href={instagramProfileUrl(company.instagram_handle)}
+                      label="Instagram"
+                    >
+                      <InstagramIcon />
+                    </LinkLogo>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
           <div className="detail-meta">
             {location ? <div className="muted">{location}</div> : null}
           </div>
@@ -265,33 +313,16 @@ export default async function CompanyDetailPage({
               <p>{location || "Coming soon"}</p>
             </div>
           </article>
-
-          <article className="detail-card detail-socials-card">
-            <span className="field-label">Socials</span>
-            <div className="detail-links">
-              {company.website ? (
-                <LinkLogo href={company.website} label="Website">
-                  <WebsiteIcon />
-                </LinkLogo>
-              ) : null}
-              {company.facebook_page ? (
-                <LinkLogo href={company.facebook_page} label="Facebook">
-                  <FacebookIcon />
-                </LinkLogo>
-              ) : null}
-              {company.linkedin_page ? (
-                <LinkLogo href={company.linkedin_page} label="LinkedIn">
-                  <LinkedInIcon />
-                </LinkLogo>
-              ) : null}
-              {company.instagram_handle ? (
-                <LinkLogo href={instagramProfileUrl(company.instagram_handle)} label="Instagram">
-                  <InstagramIcon />
-                </LinkLogo>
-              ) : null}
-            </div>
-            {!hasAnyLinks ? <p className="muted">Coming soon</p> : null}
-          </article>
+          {hoursLines.length ? (
+            <article className="detail-card detail-hours-card">
+              <span className="field-label">Business Hours</span>
+              <div className="detail-hours-list">
+                {hoursLines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </article>
+          ) : null}
         </section>
 
         <section className="detail-grid">
