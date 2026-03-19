@@ -5,11 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
 
-const socialLinks = {
-  instagram: "https://www.instagram.com/found.in_/",
-  linkedin: "https://www.linkedin.com/company/f-o-u-n-d/",
-};
-
 function InstagramIcon() {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
@@ -27,18 +22,6 @@ function LinkedInIcon() {
       <path d="M8 10.2V16" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
       <path d="M12 16v-3.2c0-1.3.9-2.3 2.1-2.3 1.2 0 1.9.8 1.9 2.4V16" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
       <circle cx="8" cy="7.5" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path
-        d="M13.1 20v-6.2h2.3l.4-2.8h-2.7V9.1c0-.8.3-1.5 1.6-1.5h1.3V5.1c-.2 0-.9-.1-1.8-.1-2.5 0-4 1.3-4 3.8V11H8v2.8h2.2V20h2.9Z"
-        fill="currentColor"
-      />
-      <rect x="4" y="4" width="16" height="16" rx="3.5" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }
@@ -86,9 +69,6 @@ export function SiteFooter() {
             >
               <LinkedInIcon />
             </a>
-            <span aria-label="Facebook coming soon" className="site-footer-social is-disabled" title="Facebook coming soon">
-              <FacebookIcon />
-            </span>
           </div>
         </div>
         <div className="site-footer-brand">

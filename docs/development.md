@@ -15,6 +15,8 @@ This starts:
 - `web` for Django + DRF
 - `frontend` for the SSR React app
 
+The frontend dev server uses Webpack by default. Turbopack currently hangs on local `/companies/[slug]` renders in this repo, so use `npm run dev:turbopack` only if you are debugging that behavior specifically.
+
 ## Seed data
 The repository includes a seed CSV at `data/companies_enriched.csv`.
 
