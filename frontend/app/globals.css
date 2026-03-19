@@ -7094,6 +7094,62 @@ body.contact-page-body {
   }
 }
 
+/* ── Page transition animation ── */
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition-wrapper > .page-shell {
+  animation: page-enter 280ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition-wrapper > .page-shell {
+    animation: none;
+  }
+}
+
+/* ── Navigation progress bar ── */
+
+@keyframes nav-progress-grow {
+  0% { width: 0; }
+  20% { width: 30%; }
+  50% { width: 60%; }
+  80% { width: 85%; }
+  100% { width: 95%; }
+}
+
+@keyframes nav-progress-finish {
+  from { width: 95%; opacity: 1; }
+  to { width: 100%; opacity: 0; }
+}
+
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.nav-progress[data-state="loading"] {
+  animation: nav-progress-grow 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.nav-progress[data-state="complete"] {
+  animation: nav-progress-finish 300ms ease-out forwards;
+}
+
 /* ── Skeleton loading utilities ── */
 
 @keyframes skeleton-shimmer {

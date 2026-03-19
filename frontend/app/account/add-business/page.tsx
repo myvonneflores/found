@@ -11,7 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 
 export default function AddBusinessListingPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
 
   useEffect(() => {
     if (!isReady) {
@@ -19,14 +19,16 @@ export default function AddBusinessListingPage() {
     }
 
     if (!isAuthenticated || !accessToken) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type === "business") {
+      setRedirecting(true);
       router.replace(user.is_business_verified ? "/business/dashboard" : "/business/pending");
     }
-  }, [accessToken, isAuthenticated, isReady, router, user]);
+  }, [accessToken, isAuthenticated, isReady, router, setRedirecting, user]);
 
   if (!isReady || !user || user.account_type !== "personal") {
     return <AuthGuardShell />;

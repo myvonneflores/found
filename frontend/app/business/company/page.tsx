@@ -40,7 +40,7 @@ function isMissingManagedProfileError(message: string) {
 
 export default function BusinessCompanyPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
   const [latestClaim, setLatestClaim] = useState<BusinessClaim | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,16 +51,19 @@ export default function BusinessCompanyPage() {
     }
 
     if (!isAuthenticated || !accessToken) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (!user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/pending");
       return;
     }

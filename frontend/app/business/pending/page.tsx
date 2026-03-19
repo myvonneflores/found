@@ -91,7 +91,7 @@ function formatTimestamp(value: string | null) {
 
 export default function BusinessPendingPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
@@ -250,19 +250,22 @@ export default function BusinessPendingPage() {
     }
 
     if (!isAuthenticated) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/dashboard");
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
     async function loadData() {

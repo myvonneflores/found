@@ -58,7 +58,7 @@ function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
 function BusinessClaimPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
   const [intent, setIntent] = useState<BusinessClaimIntent>(
     searchParams.get("intent") === "new" ? "new" : "existing"
   );
@@ -96,20 +96,23 @@ function BusinessClaimPageContent() {
     }
 
     if (!isAuthenticated) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/dashboard");
       return;
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
     if (!user) {
