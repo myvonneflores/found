@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { CompanyProfileCreationForm } from "@/components/company-profile-creation-form";
 import { SiteHeader } from "@/components/site-header";
@@ -28,7 +29,7 @@ export default function AddBusinessListingPage() {
   }, [accessToken, isAuthenticated, isReady, router, user]);
 
   if (!isReady || !user || user.account_type !== "personal") {
-    return null;
+    return <AuthGuardShell />;
   }
 
   return (

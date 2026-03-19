@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useDeferredValue, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -300,7 +301,7 @@ function BusinessClaimPageContent() {
   }
 
   if (!isReady || !user || user.account_type !== "business") {
-    return null;
+    return <AuthGuardShell />;
   }
 
   const isExistingIntent = intent === "existing";
@@ -603,7 +604,7 @@ function BusinessClaimPageContent() {
 
 export default function BusinessClaimPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AuthGuardShell />}>
       <BusinessClaimPageContent />
     </Suspense>
   );

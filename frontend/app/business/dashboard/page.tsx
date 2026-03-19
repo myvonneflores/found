@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { BusinessProfileCard } from "@/components/business-profile-card";
 import { CreateListModal } from "@/components/create-list-modal";
@@ -151,7 +152,13 @@ export default function BusinessDashboardPage() {
 
   const favoritesContent = (
     <>
-      {isLoading ? <p className="lede">Loading your business favorites...</p> : null}
+      {isLoading ? (
+        <>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading && safeFavorites.length === 0 ? (
         <p className="lede">No favorites yet. Save the local businesses you want to keep close.</p>
       ) : null}
@@ -167,7 +174,12 @@ export default function BusinessDashboardPage() {
 
   const listsContent = (
     <>
-      {isLoading ? <p className="lede">Loading your lists...</p> : null}
+      {isLoading ? (
+        <>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Use them to spotlight neighboring businesses and share your local taste."
@@ -346,7 +358,7 @@ export default function BusinessDashboardPage() {
   }
 
   if (!isReady || !user || user.account_type !== "business" || !user.is_business_verified) {
-    return null;
+    return <AuthGuardShell />;
   }
 
   return (

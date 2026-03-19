@@ -324,7 +324,8 @@ export default function CuratedListPage() {
         <section className="public-list-stage list-browser-stage">
           {isLoading ? (
             <div className="company-card public-list-hero-card">
-              <h1 className="auth-title">Loading list…</h1>
+              <div className="skeleton skeleton-title" style={{ width: "50%" }} />
+              <div className="skeleton skeleton-text" style={{ width: "30%" }} />
             </div>
           ) : error || !list ? (
             <div className="company-card public-list-hero-card">
