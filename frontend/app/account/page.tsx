@@ -128,6 +128,7 @@ export default function AccountPage() {
     <>
       {isLoading ? (
         <>
+          <p className="visually-hidden" role="status">Loading your saved businesses...</p>
           <div className="skeleton skeleton-row" />
           <div className="skeleton skeleton-row" />
           <div className="skeleton skeleton-row" />
@@ -150,6 +151,7 @@ export default function AccountPage() {
     <>
       {isLoading ? (
         <>
+          <p className="visually-hidden" role="status">Loading your lists...</p>
           <div className="skeleton skeleton-row" />
           <div className="skeleton skeleton-row" />
         </>

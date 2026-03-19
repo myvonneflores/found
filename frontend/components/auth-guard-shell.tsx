@@ -1,8 +1,11 @@
+"use client";
+
 import { SiteHeader } from "@/components/site-header";
 
 export function AuthGuardShell() {
   return (
     <main className="page-shell directory-page-shell auth-page-shell dashboard-page-shell">
+      <p className="visually-hidden" role="status">Loading...</p>
       <div className="directory-shell">
         <SiteHeader />
 

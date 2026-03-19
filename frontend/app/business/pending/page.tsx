@@ -197,6 +197,7 @@ export default function BusinessPendingPage() {
     <>
       {isLoading ? (
         <>
+          <p className="visually-hidden" role="status">Loading your saved businesses...</p>
           <div className="skeleton skeleton-row" />
           <div className="skeleton skeleton-row" />
           <div className="skeleton skeleton-row" />
@@ -220,6 +221,7 @@ export default function BusinessPendingPage() {
       <p className="lede">Build private lists now. Public sharing unlocks after your business is verified.</p>
       {isLoading ? (
         <>
+          <p className="visually-hidden" role="status">Loading your lists...</p>
           <div className="skeleton skeleton-row" />
           <div className="skeleton skeleton-row" />
         </>

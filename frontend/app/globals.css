@@ -7150,6 +7150,20 @@ body.contact-page-body {
   animation: nav-progress-finish 300ms ease-out forwards;
 }
 
+/* ── Accessibility utilities ── */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Skeleton loading utilities ── */
 
 @keyframes skeleton-shimmer {

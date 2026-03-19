@@ -5,14 +5,19 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 type ProgressState = "idle" | "loading" | "complete";
 
+function buildUrl(pathname: string, searchParams: URLSearchParams) {
+  const search = searchParams.toString();
+  return search ? `${pathname}?${search}` : pathname;
+}
+
 function NavigationProgressInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useState<ProgressState>("idle");
-  const previousUrl = useRef(pathname + searchParams.toString());
+  const previousUrl = useRef(buildUrl(pathname, searchParams));
 
   useEffect(() => {
-    const currentUrl = pathname + searchParams.toString();
+    const currentUrl = buildUrl(pathname, searchParams);
 
     if (currentUrl === previousUrl.current) {
       return;
@@ -37,19 +42,32 @@ function NavigationProgressInner() {
       if (!anchor) return;
 
       const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("#") || href.startsWith("http") || href.startsWith("mailto:")) return;
+      if (!href || href.startsWith("http") || href.startsWith("mailto:")) return;
       if (anchor.target === "_blank") return;
       if (event.metaKey || event.ctrlKey || event.shiftKey) return;
 
-      const currentUrl = pathname + searchParams.toString();
-      if (href === currentUrl || href === pathname) return;
+      try {
+        const currentUrl = new URL(window.location.href);
+        const linkUrl = new URL(href, window.location.origin);
+
+        if (linkUrl.origin !== currentUrl.origin) return;
+
+        const samePathAndSearch =
+          linkUrl.pathname === currentUrl.pathname &&
+          linkUrl.search === currentUrl.search;
+
+        // Hash-only or identical navigations stay on the same page
+        if (samePathAndSearch) return;
+      } catch {
+        return;
+      }
 
       setState("loading");
     }
 
     document.addEventListener("click", handleClick, true);
     return () => document.removeEventListener("click", handleClick, true);
-  }, [pathname, searchParams]);
+  }, []);
 
   if (state === "idle") return null;
 

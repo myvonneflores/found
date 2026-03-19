@@ -228,6 +228,7 @@ export default function PublicListsPage() {
           <section className="public-list-directory-grid">
             {isLoading ? (
               <>
+                <p className="visually-hidden" role="status">Loading public lists...</p>
                 {Array.from({ length: 4 }, (_, i) => (
                   <article className="panel public-list-directory-card" key={i}>
                     <div className="skeleton skeleton-text" style={{ width: "40%" }} />
