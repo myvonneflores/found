@@ -55,8 +55,14 @@ From `frontend/`:
 
 ```bash
 fly secrets set \
-  SITE_URL="https://www.found-places.com"
+  SITE_URL="https://www.found-places.com" \
+  RESEND_API_KEY="<resend-api-key>" \
+  CONTACT_TO_EMAIL="hello@found-places.com" \
+  CONTACT_FROM_EMAIL="FOUND <hello@found-places.com>"
 ```
+
+`/contact` now sends email through Resend. Verify `found-places.com` in Resend
+before using `hello@found-places.com` as the sender address.
 
 > **Note:** `NEXT_PUBLIC_API_BASE_URL` is a build-time variable (Next.js
 > inlines `NEXT_PUBLIC_*` values during `next build`). The production default
