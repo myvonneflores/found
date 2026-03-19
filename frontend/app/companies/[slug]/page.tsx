@@ -250,7 +250,7 @@ export default async function CompanyDetailPage({
                 ))}
               </div>
             ) : (
-              <p className="muted">Hours not listed</p>
+              <p className="muted">Coming soon</p>
             )}
             {businessHours && company.business_hours_timezone && hasListedHours(businessHours) ? (
               <p className="detail-hours-timezone">Timezone: {company.business_hours_timezone}</p>
@@ -276,7 +276,7 @@ export default async function CompanyDetailPage({
             </div>
           </article>
           <article className="detail-card">
-            <span className="field-label">Why We Love Them</span>
+            <span className="field-label">More to Love</span>
             <div className="filter-chip-row">
               {company.sustainability_markers.length ? (
                 company.sustainability_markers.map((item) => (

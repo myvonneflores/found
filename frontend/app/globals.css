@@ -5676,7 +5676,14 @@ body.contact-page-body {
   scrollbar-color: #bb74a0 rgba(250, 238, 232, 0.88);
 }
 
-.directory-panel-filters .directory-form,
+.directory-panel-filters .directory-form {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+
 .directory-panel-list .directory-company-list {
   min-height: 0;
   height: 100%;
@@ -5999,6 +6006,12 @@ body.contact-page-body {
   background: #df857f;
   color: #fff7f1;
   border-color: #df857f;
+}
+
+.directory-company-row.is-active .directory-company-favorite:not(.is-active) {
+  color: #fff7f1;
+  border-color: rgba(255, 247, 241, 0.92);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .directory-company-favorite:disabled {
