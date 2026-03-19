@@ -9,6 +9,21 @@ from users.models import BusinessClaim
 User = get_user_model()
 
 
+def build_business_hours():
+    return {
+        "open_by_week": {
+            "monday": [{"start": "08:00", "end": "18:00"}],
+            "tuesday": [{"start": "08:00", "end": "18:00"}],
+            "wednesday": [{"start": "08:00", "end": "18:00"}],
+            "thursday": [{"start": "08:00", "end": "18:00"}],
+            "friday": [{"start": "08:00", "end": "18:00"}],
+            "saturday": [{"start": "09:00", "end": "14:00"}],
+            "sunday": [],
+        },
+        "open_by_date": {},
+    }
+
+
 @pytest.mark.django_db
 class TestCompanyListApi:
     def test_company_list_is_public(self, api_client, two_companies):
@@ -288,6 +303,139 @@ class TestManagedBusinessProfileApi:
         assert company.description == "Fresh profile copy"
         assert company.city == "Portland"
         assert company.state == "OR"
+
+    def test_partial_patch_without_business_hours_leaves_hours_untouched(self, api_client, two_companies):
+        company = two_companies[0]
+        company.business_hours = build_business_hours()
+        company.business_hours_timezone = "America/Los_Angeles"
+        company.save(update_fields=["business_hours", "business_hours_timezone"])
+        original_hours = company.business_hours
+        user = User.objects.create_user(
+            email="hours-untouched@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {"description": "Hours unchanged"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        company.refresh_from_db()
+        assert company.business_hours == original_hours
+        assert company.business_hours_timezone == "America/Los_Angeles"
+
+    def test_invalid_business_hours_patch_returns_field_errors(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="hours-invalid@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {
+                "business_hours": {
+                    "open_by_week": {
+                        "monday": [{"start": "22:00", "end": "02:00"}],
+                        "tuesday": [],
+                        "wednesday": [],
+                        "thursday": [],
+                        "friday": [],
+                        "saturday": [],
+                        "sunday": [],
+                    },
+                    "open_by_date": {},
+                },
+                "business_hours_timezone": "America/Los_Angeles",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "business_hours" in response.data
+
+    def test_patch_hours_without_timezone_returns_timezone_error(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="hours-missing-timezone@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {"business_hours": build_business_hours()},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "business_hours_timezone" in response.data
+
+    def test_managed_business_hours_save_sets_manual_source_metadata(self, api_client, two_companies):
+        company = two_companies[0]
+        company.business_hours_raw = "Mon-Fri 8am-6pm"
+        company.business_hours_source_url = "https://example.com/hours"
+        company.business_hours_source = Company.BusinessHoursSource.BULK_IMPORT
+        company.save(
+            update_fields=["business_hours_raw", "business_hours_source_url", "business_hours_source"]
+        )
+        user = User.objects.create_user(
+            email="hours-manual@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {
+                "business_hours": build_business_hours(),
+                "business_hours_timezone": "America/Los_Angeles",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        company.refresh_from_db()
+        assert company.business_hours_source == Company.BusinessHoursSource.OWNER_MANUAL
+        assert company.business_hours_source_url == ""
+        assert company.business_hours_raw == ""
+        assert company.business_hours_last_verified_at is not None
 
     def test_pending_business_user_cannot_manage_company(self, api_client, two_companies):
         company = two_companies[0]

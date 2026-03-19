@@ -15,6 +15,7 @@ This area currently covers:
 - pending versus verified business state
 - create-or-edit business profile routing
 - owner editing from the public company page
+- owner-managed weekly business hours with strict validation
 
 ## Current Entry Points
 
@@ -57,6 +58,7 @@ This area currently covers:
 - personal users may also add community listings through the account flow, but they do not gain owner edit access
 - owner editing currently depends on fetching the managed business profile and matching its slug to the current company detail route
 - the business user edits the actual company record that powers the public page
+- owner-entered business hours are stored as structured JSON plus a timezone, not free text
 
 ## Current Flow Snapshot
 
@@ -71,6 +73,7 @@ What seems true in the code today:
 - pending business users can still use parts of the dashboard and community experience while waiting
 - verified business users use `/business/company` as a create-or-redirect entry point
 - existing claimed businesses route into the public company page in edit mode
+- both the verified-business creation form and owner editor support recurring weekly business hours
 
 ## Areas Still In Flux
 

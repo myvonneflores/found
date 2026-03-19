@@ -1013,56 +1013,58 @@ export function CompanyDirectory({
               {!isMobileStack || mobileFindOpen ? (
                 selectedCompany ? (
                 <div className="directory-detail-body">
-                <div className="directory-detail-header-grid">
-                  <div className="directory-detail-head">
-                    <div className="directory-detail-title">
-                      <h2>
-                        <Link href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}>{selectedCompany.name}</Link>
-                      </h2>
-                      <button
-                        className={`directory-company-favorite directory-detail-favorite${favoriteMap[selectedCompany.id] ? " is-active" : ""}`}
-                        type="button"
-                        aria-pressed={Boolean(favoriteMap[selectedCompany.id])}
-                        aria-label={favoriteMap[selectedCompany.id] ? "Remove from favorites" : "Save to favorites"}
-                        disabled={togglingFavorites.has(selectedCompany.id)}
-                        onClick={(event) => handleFavoriteClick(event, selectedCompany)}
-                      >
-                        <HeartIcon filled={Boolean(favoriteMap[selectedCompany.id])} />
-                      </button>
+                  <div className="directory-detail-header-grid directory-search-detail-header">
+                    <div className="directory-detail-head directory-search-detail-head">
+                      <div className="directory-search-detail-copy">
+                        <div className="directory-detail-title">
+                          <h2>
+                            <Link href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}>{selectedCompany.name}</Link>
+                          </h2>
+                          <button
+                            className={`directory-company-favorite directory-detail-favorite${favoriteMap[selectedCompany.id] ? " is-active" : ""}`}
+                            type="button"
+                            aria-pressed={Boolean(favoriteMap[selectedCompany.id])}
+                            aria-label={favoriteMap[selectedCompany.id] ? "Remove from favorites" : "Save to favorites"}
+                            disabled={togglingFavorites.has(selectedCompany.id)}
+                            onClick={(event) => handleFavoriteClick(event, selectedCompany)}
+                          >
+                            <HeartIcon filled={Boolean(favoriteMap[selectedCompany.id])} />
+                          </button>
+                        </div>
+
+                        <div className="directory-detail-address directory-search-detail-address">
+                          {selectedCompany.address ? <p>{selectedCompany.address}</p> : null}
+                          <p>{locationLabel(selectedCompany)}</p>
+                        </div>
+                      </div>
+
+                      <div className="directory-socials directory-detail-socials-inline">
+                        {selectedCompany.website ? (
+                          <QuickLinkLogo href={selectedCompany.website} label="Website">
+                            <WebsiteIcon />
+                          </QuickLinkLogo>
+                        ) : null}
+                        {selectedCompany.linkedin_page ? (
+                          <QuickLinkLogo href={selectedCompany.linkedin_page} label="LinkedIn">
+                            <LinkedInIcon />
+                          </QuickLinkLogo>
+                        ) : null}
+                        {selectedCompany.facebook_page ? (
+                          <QuickLinkLogo href={selectedCompany.facebook_page} label="Facebook">
+                            <FacebookIcon />
+                          </QuickLinkLogo>
+                        ) : null}
+                        {selectedCompany.instagram_handle ? (
+                          <QuickLinkLogo
+                            href={instagramProfileUrl(selectedCompany.instagram_handle)}
+                            label="Instagram"
+                          >
+                            <InstagramIcon />
+                          </QuickLinkLogo>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="directory-socials">
-                    {selectedCompany.website ? (
-                      <QuickLinkLogo href={selectedCompany.website} label="Website">
-                        <WebsiteIcon />
-                      </QuickLinkLogo>
-                    ) : null}
-                    {selectedCompany.linkedin_page ? (
-                      <QuickLinkLogo href={selectedCompany.linkedin_page} label="LinkedIn">
-                        <LinkedInIcon />
-                      </QuickLinkLogo>
-                    ) : null}
-                    {selectedCompany.facebook_page ? (
-                      <QuickLinkLogo href={selectedCompany.facebook_page} label="Facebook">
-                        <FacebookIcon />
-                      </QuickLinkLogo>
-                    ) : null}
-                    {selectedCompany.instagram_handle ? (
-                      <QuickLinkLogo
-                        href={instagramProfileUrl(selectedCompany.instagram_handle)}
-                        label="Instagram"
-                      >
-                        <InstagramIcon />
-                      </QuickLinkLogo>
-                    ) : null}
-                  </div>
-
-                  <div className="directory-detail-address">
-                    {selectedCompany.address ? <p>{selectedCompany.address}</p> : null}
-                    <p>{locationLabel(selectedCompany)}</p>
-                  </div>
-                </div>
 
                 <div
                   className={

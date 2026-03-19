@@ -58,6 +58,7 @@ That shows up in a few current product choices:
 - the directory is filter-first
 - the unfiltered directory intentionally starts empty
 - the company detail page is the canonical public representation of a business
+- the company detail page now pairs the location card with a Business Hours card
 
 ## Core Domain Model
 
@@ -69,6 +70,7 @@ Important public-facing fields include:
 - listing provenance: `listing_origin`
 - description and website
 - location: `address`, `city`, `state`, `zip_code`, `country`
+- business hours: `business_hours`, `business_hours_timezone`
 - category and taxonomy relationships
 - social links
 - boolean feature flags such as vegan-friendly and gluten-free-friendly
@@ -120,6 +122,8 @@ The company detail page consumes the `CompanyDetailSerializer` shape:
 - `business_category` is a nested taxonomy object
 - taxonomy arrays are nested taxonomy objects
 - provenance fields include `listing_origin` and `is_community_listed`
+- `business_hours` is a canonical JSON object with `open_by_week` and `open_by_date`
+- `business_hours_timezone` is the IANA timezone used to interpret those hours
 - timestamps are present
 - richer location and social fields are included
 
@@ -130,6 +134,7 @@ This shape is designed for presentation depth rather than list efficiency.
 The verified owner editor uses `ManagedBusinessCompanySerializer`:
 
 - taxonomy relationships are read and written as primary key IDs
+- business hours are edited as a full validated JSON object rather than a free-text field
 - the payload is designed for form editing, not public display
 
 Do not assume these three representations should be unified unless the underlying UX also changes.

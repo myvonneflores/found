@@ -2,11 +2,13 @@ from urllib.parse import urlparse
 
 from django.db.models import Count
 from django.db.utils import OperationalError, ProgrammingError
+from django.utils import timezone
 from rest_framework import serializers
 
 from community.models import CuratedList
 from users.models import BusinessClaim
 
+from .business_hours import validate_business_hours, validate_timezone
 from .models import (
     BusinessCategory,
     Company,
@@ -208,6 +210,8 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "state",
             "zip_code",
             "country",
+            "business_hours",
+            "business_hours_timezone",
             "business_category",
             "business_categories",
             "product_categories",
@@ -248,6 +252,8 @@ def _normalized_hostname(value):
 
 
 class BaseCompanyWriteSerializer(serializers.ModelSerializer):
+    business_hours = serializers.JSONField(required=False, allow_null=True)
+    business_hours_timezone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     business_category = serializers.PrimaryKeyRelatedField(
         queryset=BusinessCategory.objects.all(),
         allow_null=True,
@@ -282,6 +288,9 @@ class BaseCompanyWriteSerializer(serializers.ModelSerializer):
     def validate_website(self, value):
         return _normalize_website(value)
 
+    def validate_business_hours_timezone(self, value):
+        return validate_timezone(value)
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
 
@@ -289,6 +298,27 @@ class BaseCompanyWriteSerializer(serializers.ModelSerializer):
             attrs["business_category"] = attrs["business_categories"][0] if attrs["business_categories"] else None
         elif "business_category" in attrs and attrs["business_category"] is not None:
             attrs["business_categories"] = [attrs["business_category"]]
+
+        next_hours = attrs["business_hours"] if "business_hours" in attrs else getattr(self.instance, "business_hours", None)
+        next_timezone = (
+            attrs["business_hours_timezone"]
+            if "business_hours_timezone" in attrs
+            else getattr(self.instance, "business_hours_timezone", None)
+        )
+
+        if next_hours is not None and next_timezone is None:
+            raise serializers.ValidationError({"business_hours_timezone": "Business hours require a valid timezone."})
+
+        if "business_hours" in attrs:
+            try:
+                attrs["business_hours"] = validate_business_hours(attrs["business_hours"], next_timezone)
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({"business_hours": exc.detail}) from exc
+        elif next_hours is not None and "business_hours_timezone" in attrs:
+            try:
+                validate_business_hours(next_hours, attrs["business_hours_timezone"])
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({"business_hours": exc.detail}) from exc
 
         return attrs
 
@@ -308,6 +338,8 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
             "city",
             "state",
             "zip_code",
+            "business_hours",
+            "business_hours_timezone",
             "business_category",
             "business_categories",
             "product_categories",
@@ -323,6 +355,24 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
         )
         read_only_fields = ("id", "slug")
 
+    def _inject_manual_hours_metadata(self, validated_data):
+        if "business_hours" not in validated_data:
+            return validated_data
+
+        validated_data["business_hours_source"] = Company.BusinessHoursSource.OWNER_MANUAL
+        validated_data["business_hours_source_url"] = ""
+        validated_data["business_hours_raw"] = ""
+        validated_data["business_hours_last_verified_at"] = timezone.now()
+        return validated_data
+
+    def create(self, validated_data):
+        self._inject_manual_hours_metadata(validated_data)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        self._inject_manual_hours_metadata(validated_data)
+        return super().update(instance, validated_data)
+
 
 class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
     class Meta:
@@ -337,6 +387,8 @@ class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
             "city",
             "state",
             "zip_code",
+            "business_hours",
+            "business_hours_timezone",
             "business_category",
             "business_categories",
             "product_categories",
