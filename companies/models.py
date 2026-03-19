@@ -47,6 +47,14 @@ class Company(BaseModel):
         OWNER = "owner", "Owner"
         COMMUNITY = "community", "Community"
 
+    class BusinessHoursSource(models.TextChoices):
+        OWNER_MANUAL = "owner_manual", "Owner manual"
+        WEBSITE_STRUCTURED_DATA = "website_structured_data", "Website structured data"
+        WEBSITE_TEXT_EXTRACTION = "website_text_extraction", "Website text extraction"
+        GOOGLE_BUSINESS_PROFILE = "google_business_profile", "Google Business Profile"
+        BULK_IMPORT = "bulk_import", "Bulk import"
+        EDITORIAL_MANUAL = "editorial_manual", "Editorial manual"
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(blank=True)
@@ -64,6 +72,17 @@ class Company(BaseModel):
     state = models.CharField(max_length=120, blank=True)
     zip_code = models.CharField(max_length=20, blank=True)
     country = models.CharField(max_length=120, blank=True)
+    business_hours = models.JSONField(null=True, blank=True)
+    business_hours_timezone = models.CharField(max_length=64, null=True, blank=True)
+    business_hours_raw = models.TextField(blank=True)
+    business_hours_source = models.CharField(
+        max_length=32,
+        choices=BusinessHoursSource.choices,
+        null=True,
+        blank=True,
+    )
+    business_hours_source_url = models.URLField(blank=True)
+    business_hours_last_verified_at = models.DateTimeField(null=True, blank=True)
     business_category = models.ForeignKey(
         BusinessCategory,
         null=True,

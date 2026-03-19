@@ -50,6 +50,8 @@ COMPANY_DETAIL_FIELDS = {
     "state",
     "zip_code",
     "country",
+    "business_hours",
+    "business_hours_timezone",
     "business_category",
     "business_categories",
     "product_categories",
@@ -63,6 +65,32 @@ COMPANY_DETAIL_FIELDS = {
     "is_gf_friendly",
     "created_at",
     "updated_at",
+    "is_published",
+}
+
+MANAGED_COMPANY_FIELDS = {
+    "id",
+    "slug",
+    "name",
+    "description",
+    "website",
+    "address",
+    "city",
+    "state",
+    "zip_code",
+    "business_hours",
+    "business_hours_timezone",
+    "business_category",
+    "business_categories",
+    "product_categories",
+    "cuisine_types",
+    "ownership_markers",
+    "sustainability_markers",
+    "instagram_handle",
+    "facebook_page",
+    "linkedin_page",
+    "is_vegan_friendly",
+    "is_gf_friendly",
     "is_published",
 }
 
@@ -201,6 +229,12 @@ def test_company_detail_fields(api_client):
     assert set(data.keys()) == COMPANY_DETAIL_FIELDS
     assert isinstance(data["listing_origin"], str)
     assert isinstance(data["is_community_listed"], bool)
+    assert "business_hours_raw" not in data
+    assert "business_hours_source" not in data
+    assert "business_hours_source_url" not in data
+    assert "business_hours_last_verified_at" not in data
+    assert data["business_hours"] is None or isinstance(data["business_hours"], dict)
+    assert data["business_hours_timezone"] is None or isinstance(data["business_hours_timezone"], str)
     # business_category is a nested taxonomy object
     if data["business_category"] is not None:
         assert set(data["business_category"].keys()) == TAXONOMY_OBJECT_FIELDS
@@ -227,6 +261,36 @@ def test_company_detail_fields(api_client):
     # Timestamps are ISO-format strings
     assert isinstance(data["created_at"], str)
     assert isinstance(data["updated_at"], str)
+
+
+@pytest.mark.django_db
+def test_managed_company_fields(api_client):
+    company = CompanyFactory()
+    user = User.objects.create_user(
+        email="managed-shape@example.com",
+        password="supersecure123",
+        account_type=User.AccountType.BUSINESS,
+    )
+    BusinessClaim.objects.create(
+        user=user,
+        company=company,
+        business_name=company.name,
+        business_email=user.email,
+        status=BusinessClaim.VerificationStatus.VERIFIED,
+    )
+    api_client.force_authenticate(user=user)
+
+    response = api_client.get(reverse("companies:company-manage-current"))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == MANAGED_COMPANY_FIELDS
+    assert "business_hours_raw" not in data
+    assert "business_hours_source" not in data
+    assert "business_hours_source_url" not in data
+    assert "business_hours_last_verified_at" not in data
+    assert data["business_hours"] is None or isinstance(data["business_hours"], dict)
+    assert data["business_hours_timezone"] is None or isinstance(data["business_hours_timezone"], str)
 
 
 @pytest.mark.django_db

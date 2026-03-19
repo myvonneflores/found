@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { BusinessHoursEditor } from "@/components/business-hours-editor";
 import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
   createCommunityListing,
@@ -58,6 +59,8 @@ export function CompanyProfileCreationForm({
     city: "",
     state: "",
     zip_code: "",
+    business_hours: null,
+    business_hours_timezone: null,
     business_category: null,
     business_categories: [],
     product_categories: [],
@@ -294,6 +297,15 @@ export function CompanyProfileCreationForm({
             </label>
           </div>
         </div>
+
+        {mode === "owner" ? (
+          <BusinessHoursEditor
+            businessHours={profile.business_hours}
+            onBusinessHoursChange={(value) => updateField("business_hours", value)}
+            onTimezoneChange={(value) => updateField("business_hours_timezone", value || null)}
+            timezone={profile.business_hours_timezone}
+          />
+        ) : null}
 
         <div className="company-owner-taxonomy-section">
           <span className="contact-field-label">Business categories</span>

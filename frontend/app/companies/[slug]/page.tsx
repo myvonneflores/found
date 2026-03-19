@@ -5,10 +5,12 @@ import { notFound } from "next/navigation";
 import { BodyClass } from "@/components/body-class";
 import { CompanyOwnerEditor } from "@/components/company-owner-editor";
 import { CompanySaveFlow, CompanyShareButton } from "@/components/company-save-flow";
+import { formatHoursRange, WEEKDAYS, WEEKDAY_LABELS } from "@/lib/business-hours";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany, getPublicCuratedList } from "@/lib/api";
 import { instagramProfileUrl } from "@/lib/social-links";
 import { SiteHeader } from "@/components/site-header";
+import type { BusinessHours, Weekday } from "@/types/company";
 
 export const dynamic = "force-dynamic";
 
@@ -90,25 +92,22 @@ function LinkedInIcon() {
 function LinkLogo({
   href,
   label,
-  className,
   children,
 }: {
   href: string;
   label: string;
-  className?: string;
   children: React.ReactNode;
 }) {
   return (
     <a
       aria-label={label}
-      className={className ?? "detail-link-logo"}
+      className="directory-link-logo"
       href={href}
       rel="noreferrer"
       target="_blank"
       title={label}
     >
-      <span className="detail-link-logo-mark">{children}</span>
-      <span className="detail-link-logo-text">{label}</span>
+      <span className="directory-link-logo-mark">{children}</span>
     </a>
   );
 }
@@ -116,6 +115,19 @@ function LinkLogo({
 function absoluteSiteUrl(path: string) {
   const base = process.env.SITE_URL ?? "http://localhost:3000";
   return new URL(path, base).toString();
+}
+
+function hasListedHours(businessHours: BusinessHours | null) {
+  return Boolean(businessHours && WEEKDAYS.some((day) => businessHours.open_by_week[day].length > 0));
+}
+
+function renderDayHours(businessHours: BusinessHours, day: Weekday) {
+  const intervals = businessHours.open_by_week[day];
+  if (intervals.length === 0) {
+    return "Closed";
+  }
+
+  return intervals.map((interval) => formatHoursRange(interval.start, interval.end)).join(", ");
 }
 
 export async function generateMetadata({
@@ -174,11 +186,7 @@ export default async function CompanyDetailPage({
     const hasAnyLinks = Boolean(
       company.website || company.facebook_page || company.linkedin_page || company.instagram_handle
     );
-    const hoursText = typeof company.hours_text === "string" ? company.hours_text.trim() : "";
-    const hoursLines = hoursText
-      .split(/\s*;\s*/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const businessHours = company.business_hours;
     const claimedProfile = company.claimed_profile;
     const singleRecommendationList =
       claimedProfile && claimedProfile.public_lists.length === 1
@@ -248,26 +256,26 @@ export default async function CompanyDetailPage({
               </h1>
             </div>
             <div className="detail-header-rail">
+              <span className="field-label">Socials</span>
               {hasAnyLinks ? (
                 <div className="detail-header-links">
                   {company.website ? (
-                    <LinkLogo className="detail-header-link" href={company.website} label="Website">
+                    <LinkLogo href={company.website} label="Website">
                       <WebsiteIcon />
                     </LinkLogo>
                   ) : null}
                   {company.facebook_page ? (
-                    <LinkLogo className="detail-header-link" href={company.facebook_page} label="Facebook">
+                    <LinkLogo href={company.facebook_page} label="Facebook">
                       <FacebookIcon />
                     </LinkLogo>
                   ) : null}
                   {company.linkedin_page ? (
-                    <LinkLogo className="detail-header-link" href={company.linkedin_page} label="LinkedIn">
+                    <LinkLogo href={company.linkedin_page} label="LinkedIn">
                       <LinkedInIcon />
                     </LinkLogo>
                   ) : null}
                   {company.instagram_handle ? (
                     <LinkLogo
-                      className="detail-header-link"
                       href={instagramProfileUrl(company.instagram_handle)}
                       label="Instagram"
                     >
@@ -275,7 +283,9 @@ export default async function CompanyDetailPage({
                     </LinkLogo>
                   ) : null}
                 </div>
-              ) : null}
+              ) : (
+                <p className="muted">No links listed</p>
+              )}
             </div>
           </div>
           <div className="detail-meta">
@@ -313,16 +323,24 @@ export default async function CompanyDetailPage({
               <p>{location || "Coming soon"}</p>
             </div>
           </article>
-          {hoursLines.length ? (
-            <article className="detail-card detail-hours-card">
-              <span className="field-label">Business Hours</span>
+          <article className="detail-card detail-hours-card">
+            <span className="field-label">Business Hours</span>
+            {businessHours ? (
               <div className="detail-hours-list">
-                {hoursLines.map((line) => (
-                  <p key={line}>{line}</p>
+                {WEEKDAYS.map((day) => (
+                  <div className="detail-hours-row" key={day}>
+                    <span className="detail-hours-day">{WEEKDAY_LABELS[day]}</span>
+                    <span className="detail-hours-value">{renderDayHours(businessHours, day)}</span>
+                  </div>
                 ))}
               </div>
-            </article>
-          ) : null}
+            ) : (
+              <p className="muted">Hours not listed</p>
+            )}
+            {businessHours && company.business_hours_timezone && hasListedHours(businessHours) ? (
+              <p className="detail-hours-timezone">Timezone: {company.business_hours_timezone}</p>
+            ) : null}
+          </article>
         </section>
 
         <section className="detail-grid">

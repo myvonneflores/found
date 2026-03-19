@@ -7,6 +7,25 @@ export type TaxonomyItem = {
 
 export type ListingOrigin = "imported" | "owner" | "community";
 
+export type BusinessHoursInterval = {
+  start: string;
+  end: string;
+};
+
+export type Weekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export type BusinessHours = {
+  open_by_week: Record<Weekday, BusinessHoursInterval[]>;
+  open_by_date: Record<string, BusinessHoursInterval[]>;
+};
+
 export type ClaimedCompanyPublicList = {
   id: number;
   id_hash: string;
@@ -60,6 +79,8 @@ export type CompanyDetail = {
   state: string;
   zip_code: string;
   country: string;
+  business_hours: BusinessHours | null;
+  business_hours_timezone: string | null;
   business_category: TaxonomyItem | null;
   business_categories: TaxonomyItem[];
   product_categories: TaxonomyItem[];
@@ -70,7 +91,6 @@ export type CompanyDetail = {
   instagram_handle: string;
   facebook_page: string;
   linkedin_page: string;
-  hours_text?: string;
   is_vegan_friendly: boolean;
   is_gf_friendly: boolean;
   created_at: string;
@@ -87,6 +107,8 @@ export type ManagedBusinessProfile = {
   city: string;
   state: string;
   zip_code: string;
+  business_hours: BusinessHours | null;
+  business_hours_timezone: string | null;
   business_category: number | null;
   business_categories: number[];
   product_categories: number[];

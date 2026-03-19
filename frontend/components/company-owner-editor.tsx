@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { BusinessHoursEditor } from "@/components/business-hours-editor";
 import { clearAuthSession, readAuthSession, writeAuthSession } from "@/lib/auth-storage";
 import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
@@ -435,6 +436,13 @@ export function CompanyOwnerEditor({
               </label>
             </div>
           </div>
+
+          <BusinessHoursEditor
+            businessHours={profile.business_hours}
+            onBusinessHoursChange={(value) => updateField("business_hours", value)}
+            onTimezoneChange={(value) => updateField("business_hours_timezone", value || null)}
+            timezone={profile.business_hours_timezone}
+          />
 
           <div className="company-owner-taxonomy-section">
             <span className="contact-field-label">Business categories</span>
