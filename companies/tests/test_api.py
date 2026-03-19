@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from companies.models import Company, CuisineType
+from companies.models import Company, CuisineType, OwnershipMarker, ProductCategory, SustainabilityMarker
 from community.models import CuratedList, CuratedListItem
 from users.models import BusinessClaim
 
@@ -145,17 +145,42 @@ class TestCompanyListApi:
         assert response.data["results"][0]["name"] == "North Star Market"
 
     def test_filters_by_multi_value_taxonomy(self, api_client, two_companies):
+        two_companies[0].product_categories.add(ProductCategory.objects.get(name="Clothing"))
+
         response = api_client.get(
             reverse("companies:company-list"),
             {"product_categories": "Clothing,Gifts"},
         )
 
-        assert response.data["count"] == 2
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "North Star Market"
 
     def test_filters_by_ownership_markers(self, api_client, two_companies):
         response = api_client.get(
             reverse("companies:company-list"),
             {"ownership_markers": "Woman Owned"},
+        )
+
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "North Star Market"
+
+    def test_filters_require_all_selected_ownership_markers(self, api_client, two_companies):
+        two_companies[0].ownership_markers.add(OwnershipMarker.objects.get(name="BIPOC Owned"))
+
+        response = api_client.get(
+            reverse("companies:company-list"),
+            {"ownership_markers": "Woman Owned,BIPOC Owned"},
+        )
+
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "North Star Market"
+
+    def test_filters_require_all_selected_sustainability_markers(self, api_client, two_companies):
+        two_companies[0].sustainability_markers.add(SustainabilityMarker.objects.get(name="Vintage Goods"))
+
+        response = api_client.get(
+            reverse("companies:company-list"),
+            {"sustainability_markers": "Sustainable Products,Vintage Goods"},
         )
 
         assert response.data["count"] == 1

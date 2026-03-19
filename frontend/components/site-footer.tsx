@@ -93,6 +93,13 @@ export function SiteFooter() {
         </div>
         <div className="site-footer-brand">
           <p className="site-footer-copy">A conscious discovery engine for local, independent, value-aligned businesses.</p>
+          <p className="site-footer-copy">
+            Say hello at{" "}
+            <a className="contact-link" href="mailto:hello@found-places.com">
+              hello@found-places.com
+            </a>
+            .
+          </p>
         </div>
         <div className="site-footer-account">
           {isAuthenticated ? (

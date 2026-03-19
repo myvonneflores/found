@@ -416,6 +416,7 @@ export function CompanyDirectory({
   const heightFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<number | null>(null);
   const sidePanelHeightRef = useRef<string | undefined>(undefined);
+  const previousSelectedSlugRef = useRef<string | undefined>(searchParams.selected);
   const [searchValue, setSearchValue] = useState(searchParams.search ?? "");
   const [sidePanelHeight, setSidePanelHeight] = useState<string | undefined>(undefined);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
@@ -742,6 +743,26 @@ export function CompanyDirectory({
   }, [hasActiveFilters, isMobileStack, selectedCompany]);
 
   useEffect(() => {
+    const previousSelectedSlug = previousSelectedSlugRef.current;
+    previousSelectedSlugRef.current = selectedSlug;
+
+    if (!isMobileStack || !selectedCompany || !selectedSlug || previousSelectedSlug === selectedSlug) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      detailPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [isMobileStack, selectedCompany, selectedSlug]);
+
+  useEffect(() => {
     const grid = gridRef.current;
     const filtersPanel = filtersPanelRef.current;
     const filtersSurface = filtersSurfaceRef.current;
@@ -817,15 +838,6 @@ export function CompanyDirectory({
     };
   }, [hasActiveFilters, selectedCompany, searchParams, viewportWidth]);
 
-  const directoryGridStyle = {
-    "--directory-side-panel-height": sidePanelHeight,
-  } as CSSProperties;
-  const surfaceHeightStyle =
-    sidePanelHeight &&
-    viewportWidth !== undefined &&
-    viewportWidth > MOBILE_STACK_BREAKPOINT
-      ? ({ height: sidePanelHeight, maxHeight: sidePanelHeight } as CSSProperties)
-      : undefined;
   const detailSurfaceStyle =
     sidePanelHeight && viewportWidth !== undefined && viewportWidth > DETAIL_HEIGHT_SYNC_BREAKPOINT
       ? ({ minHeight: sidePanelHeight } as CSSProperties)
@@ -838,7 +850,6 @@ export function CompanyDirectory({
         <div
           className={isResizing ? "directory-grid is-resizing" : "directory-grid"}
           ref={gridRef}
-          style={directoryGridStyle}
         >
           <aside className="directory-panel directory-panel-filters" ref={filtersPanelRef}>
             <MobilePanelToggle
@@ -847,7 +858,7 @@ export function CompanyDirectory({
               label="filters"
               onToggle={() => setMobileFiltersOpen((open) => !open)}
             />
-            <div className="directory-panel-surface" ref={filtersSurfaceRef} style={surfaceHeightStyle}>
+            <div className="directory-panel-surface" ref={filtersSurfaceRef}>
               <form
                 action="/companies"
                 className={
@@ -946,7 +957,7 @@ export function CompanyDirectory({
               label="finds"
               onToggle={() => setMobileFindsOpen((open) => !open)}
             />
-            <div className="directory-panel-surface" style={surfaceHeightStyle}>
+            <div className="directory-panel-surface">
               <div
                 className={
                   !isMobileStack || mobileFindsOpen
@@ -967,6 +978,7 @@ export function CompanyDirectory({
                         <Link
                           className="directory-company-link"
                           href={buildDirectoryHref(searchParams, company.slug)}
+                          scroll={false}
                         >
                           <span className="directory-company-name">{company.name}</span>
                           {description ? <span className="directory-company-meta">{description}</span> : null}
