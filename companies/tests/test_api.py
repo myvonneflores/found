@@ -374,6 +374,31 @@ class TestManagedBusinessProfileApi:
         assert response.status_code == 400
         assert "business_hours" in response.data
 
+    def test_patch_hours_without_timezone_returns_timezone_error(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="hours-missing-timezone@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {"business_hours": build_business_hours()},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "business_hours_timezone" in response.data
+
     def test_managed_business_hours_save_sets_manual_source_metadata(self, api_client, two_companies):
         company = two_companies[0]
         company.business_hours_raw = "Mon-Fri 8am-6pm"

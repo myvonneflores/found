@@ -355,33 +355,23 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
         )
         read_only_fields = ("id", "slug")
 
-    def _apply_manual_hours_metadata(self, company, *, hours_were_updated):
-        if not hours_were_updated:
-            return company
+    def _inject_manual_hours_metadata(self, validated_data):
+        if "business_hours" not in validated_data:
+            return validated_data
 
-        company.business_hours_source = Company.BusinessHoursSource.OWNER_MANUAL
-        company.business_hours_source_url = ""
-        company.business_hours_raw = ""
-        company.business_hours_last_verified_at = timezone.now()
-        company.save(
-            update_fields=[
-                "business_hours_source",
-                "business_hours_source_url",
-                "business_hours_raw",
-                "business_hours_last_verified_at",
-            ]
-        )
-        return company
+        validated_data["business_hours_source"] = Company.BusinessHoursSource.OWNER_MANUAL
+        validated_data["business_hours_source_url"] = ""
+        validated_data["business_hours_raw"] = ""
+        validated_data["business_hours_last_verified_at"] = timezone.now()
+        return validated_data
 
     def create(self, validated_data):
-        hours_were_updated = "business_hours" in validated_data
-        company = super().create(validated_data)
-        return self._apply_manual_hours_metadata(company, hours_were_updated=hours_were_updated)
+        self._inject_manual_hours_metadata(validated_data)
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        hours_were_updated = "business_hours" in validated_data
-        company = super().update(instance, validated_data)
-        return self._apply_manual_hours_metadata(company, hours_were_updated=hours_were_updated)
+        self._inject_manual_hours_metadata(validated_data)
+        return super().update(instance, validated_data)
 
 
 class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
