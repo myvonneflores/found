@@ -3,8 +3,8 @@ import Link from "next/link";
 
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
-import { getCompany, listCompanies } from "@/lib/api";
-import { CompanyDetail, CompanyListItem } from "@/types/company";
+import { listCompanies } from "@/lib/api";
+import { CompanyListItem } from "@/types/company";
 
 export const metadata: Metadata = {
   title: "Found",
@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     canonical: "/",
   },
 };
+
+export const revalidate = 300;
 
 const fallbackFeaturedCompanies = [
   {
@@ -115,21 +117,6 @@ function hasStrongPreview(company: CompanyListItem) {
   );
 }
 
-function isFullProfile(detail: CompanyDetail) {
-  return Boolean(
-    normalizeText(detail.description) &&
-      normalizeText(detail.website) &&
-      normalizeText(detail.address) &&
-      normalizeText(detail.city) &&
-      normalizeText(detail.state) &&
-      detail.business_category &&
-      (detail.ownership_markers.length > 0 ||
-        detail.sustainability_markers.length > 0 ||
-        detail.product_categories.length > 0 ||
-        detail.cuisine_types.length > 0),
-  );
-}
-
 function previewScore(company: CompanyListItem) {
   return (
     normalizeText(company.description).length +
@@ -139,23 +126,8 @@ function previewScore(company: CompanyListItem) {
   );
 }
 
-function detailScore(detail: CompanyDetail) {
-  return (
-    normalizeText(detail.description).length +
-    (normalizeText(detail.website) ? 24 : 0) +
-    (normalizeText(detail.address) ? 24 : 0) +
-    detail.ownership_markers.length * 18 +
-    detail.sustainability_markers.length * 14 +
-    detail.product_categories.length * 10 +
-    detail.cuisine_types.length * 10 +
-    (detail.instagram_handle ? 8 : 0) +
-    (detail.facebook_page ? 6 : 0) +
-    (detail.linkedin_page ? 6 : 0)
-  );
-}
-
-function selectDiverseCompanies(companies: CompanyListItem[], limit: number, detailsBySlug?: Map<string, CompanyDetail>) {
-  const pool = companies.filter((company) => (detailsBySlug ? detailsBySlug.has(company.slug) : hasStrongPreview(company)));
+function selectDiverseCompanies(companies: CompanyListItem[], limit: number) {
+  const pool = companies.filter(hasStrongPreview);
   const selected: CompanyListItem[] = [];
   const usedCities = new Set<string>();
   const usedCategories = new Set<string>();
@@ -173,9 +145,8 @@ function selectDiverseCompanies(companies: CompanyListItem[], limit: number, det
       const cityKey = normalizeText(company.city).toLowerCase();
       const categoryKey = normalizeText(company.business_category).toLowerCase();
       const ownershipKey = normalizeText(primaryOwnership(company)).toLowerCase();
-      const detail = detailsBySlug?.get(company.slug);
 
-      let score = detailsBySlug && detail ? detailScore(detail) : previewScore(company);
+      let score = previewScore(company);
       if (cityKey && !usedCities.has(cityKey)) {
         score += 120;
       }
@@ -231,20 +202,8 @@ function companyLocation(company: CompanyListItem) {
 }
 
 export default async function HomePage() {
-  const companiesResult = await listCompanies({}).catch(() => null);
-  const previewCandidates = companiesResult ? selectDiverseCompanies(companiesResult.results, 24) : [];
-
-  const detailResults = await Promise.allSettled(previewCandidates.map((company) => getCompany(company.slug)));
-  const detailsBySlug = new Map<string, CompanyDetail>();
-
-  detailResults.forEach((result) => {
-    if (result.status === "fulfilled" && isFullProfile(result.value)) {
-      detailsBySlug.set(result.value.slug, result.value);
-    }
-  });
-
-  const curatedFeaturedCompanies =
-    previewCandidates.length > 0 ? selectDiverseCompanies(previewCandidates, 4, detailsBySlug) : [];
+  const companiesResult = await listCompanies({}, { pageSize: 48 }).catch(() => null);
+  const curatedFeaturedCompanies = companiesResult ? selectDiverseCompanies(companiesResult.results, 4) : [];
   const featuredCompanies = mergeFallbacks(curatedFeaturedCompanies, 4);
 
   return (

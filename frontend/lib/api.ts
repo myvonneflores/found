@@ -193,10 +193,14 @@ function unwrapListResponse<T>(data: T[] | PaginatedResponse<T>): T[] {
   return Array.isArray(data) ? data : data.results;
 }
 
-export function listCompanies(searchParams: CompanySearchParams) {
+type ListCompaniesOptions = {
+  pageSize?: number;
+};
+
+export function listCompanies(searchParams: CompanySearchParams, options?: ListCompaniesOptions) {
   return fetchJson<PaginatedResponse<CompanyListItem>>("companies/", {
     ...searchParams,
-    page_size: "200",
+    page_size: String(options?.pageSize ?? 200),
   });
 }
 
