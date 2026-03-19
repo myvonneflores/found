@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
@@ -43,6 +43,85 @@ function isTokenError(message: string) {
   return normalized.includes("token") || normalized.includes("request failed: 401");
 }
 
+const LIST_CARD_PALETTE = [
+  "is-blue",
+  "is-green",
+  "is-pink",
+  "is-yellow",
+  "is-true-yellow",
+  "is-orange",
+  "is-plum",
+  "is-lavender",
+] as const;
+const LIST_FIRST_ROW_PALETTE = ["is-green", "is-orange", "is-pink"] as const;
+
+function listCardColorOrder(seed: string) {
+  const hash = Array.from(seed).reduce((total, char) => total + char.charCodeAt(0), 0);
+  return LIST_CARD_PALETTE.map((_, index) => LIST_CARD_PALETTE[(hash + index) % LIST_CARD_PALETTE.length]);
+}
+
+function listGridColumns(width: number) {
+  if (width <= 760) {
+    return 1;
+  }
+  if (width <= 1180) {
+    return 2;
+  }
+  return 3;
+}
+
+function buildCardColorMap(lists: PublicCuratedListPreview[], columns: number) {
+  const assignedColors: (typeof LIST_CARD_PALETTE)[number][] = [];
+  const colorMap = new Map<number, (typeof LIST_CARD_PALETTE)[number]>();
+  const colorUsage = new Map<(typeof LIST_CARD_PALETTE)[number], number>(
+    LIST_CARD_PALETTE.map((colorClass) => [colorClass, 0])
+  );
+
+  lists.forEach((list, index) => {
+    if (index < Math.min(columns, LIST_FIRST_ROW_PALETTE.length)) {
+      const firstRowColor = LIST_FIRST_ROW_PALETTE[index];
+      assignedColors.push(firstRowColor);
+      colorMap.set(list.id, firstRowColor);
+      colorUsage.set(firstRowColor, (colorUsage.get(firstRowColor) ?? 0) + 1);
+      return;
+    }
+
+    const blocked = new Set<(typeof LIST_CARD_PALETTE)[number]>();
+
+    if (index % columns !== 0) {
+      const leftColor = assignedColors[index - 1];
+      if (leftColor) {
+        blocked.add(leftColor);
+      }
+    }
+
+    if (index >= columns) {
+      const topColor = assignedColors[index - columns];
+      if (topColor) {
+        blocked.add(topColor);
+      }
+    }
+
+    const seed = list.id_hash || String(list.id);
+    const orderedCandidates = listCardColorOrder(seed).filter((colorClass) => !blocked.has(colorClass));
+    const nextColor =
+      orderedCandidates.reduce<(typeof LIST_CARD_PALETTE)[number] | null>((best, candidate) => {
+        if (!best) {
+          return candidate;
+        }
+        const bestUsage = colorUsage.get(best) ?? 0;
+        const candidateUsage = colorUsage.get(candidate) ?? 0;
+        return candidateUsage < bestUsage ? candidate : best;
+      }, null) ?? LIST_CARD_PALETTE[index % LIST_CARD_PALETTE.length];
+
+    assignedColors.push(nextColor);
+    colorMap.set(list.id, nextColor);
+    colorUsage.set(nextColor, (colorUsage.get(nextColor) ?? 0) + 1);
+  });
+
+  return colorMap;
+}
+
 export default function PublicListsPage() {
   const router = useRouter();
   const { getValidAccessToken, isAuthenticated, isReady, signOut, user } = useAuth();
@@ -54,7 +133,23 @@ export default function PublicListsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavedLoading, setIsSavedLoading] = useState(true);
   const [pendingListIds, setPendingListIds] = useState<Set<number>>(new Set());
+  const [gridColumns, setGridColumns] = useState(3);
   const deferredQuery = useDeferredValue(query.trim());
+
+  useEffect(() => {
+    function syncGridColumns() {
+      setGridColumns(listGridColumns(window.innerWidth));
+    }
+
+    syncGridColumns();
+    window.addEventListener("resize", syncGridColumns);
+
+    return () => {
+      window.removeEventListener("resize", syncGridColumns);
+    };
+  }, []);
+
+  const cardColorMap = useMemo(() => buildCardColorMap(lists, gridColumns), [gridColumns, lists]);
 
   useEffect(() => {
     let isActive = true;
@@ -250,11 +345,12 @@ export default function PublicListsPage() {
                   const savedMatch = savedLists.find((savedList) => savedList.list.id === list.id);
                   const isOwner = Boolean(user && user.public_slug === list.owner.public_slug);
                   const isPending = pendingListIds.has(list.id);
-                  const previewCompany = list.preview_companies[0] ?? null;
-                  const additionalCompanyCount = Math.max(0, list.item_count - (previewCompany ? 1 : 0));
+                  const previewCompanies = list.preview_companies.slice(0, 3);
+                  const additionalCompanyCount = Math.max(0, list.item_count - previewCompanies.length);
+                  const cardColorClass = cardColorMap.get(list.id) ?? LIST_CARD_PALETTE[0];
 
                   return (
-                    <article className="panel public-list-directory-card" key={list.id}>
+                    <article className={`panel public-list-directory-card ${cardColorClass}`} key={list.id}>
                       <div className="public-list-directory-card-top">
                         {list.owner.public_slug ? (
                           <Link className="auth-text-link" href={`/profiles/${list.owner.public_slug}`}>
@@ -300,21 +396,27 @@ export default function PublicListsPage() {
 
                       <div
                         className={
-                          previewCompany
+                          previewCompanies.length > 0
                             ? "public-list-directory-preview-grid"
                             : "public-list-directory-preview-grid is-empty"
                         }
                       >
-                        {previewCompany ? (
+                        {previewCompanies.length > 0 ? (
                           <>
-                            <Link className="public-list-directory-preview-pill" href={`/companies/${previewCompany.slug}`}>
-                              <strong>{previewCompany.name}</strong>
-                              <span>{companyLocationLabel(previewCompany) || "Location pending"}</span>
-                            </Link>
+                            {previewCompanies.map((previewCompany) => (
+                              <Link
+                                className="public-list-directory-preview-pill"
+                                href={`/companies/${previewCompany.slug}`}
+                                key={previewCompany.id}
+                              >
+                                <strong>{previewCompany.name}</strong>
+                                <span>{companyLocationLabel(previewCompany) || "Location pending"}</span>
+                              </Link>
+                            ))}
                             {additionalCompanyCount > 0 ? (
-                              <span className="public-list-directory-preview-meta">
+                              <Link className="public-list-directory-preview-more" href={`/lists/${list.id_hash}`}>
                                 +{additionalCompanyCount} more {additionalCompanyCount === 1 ? "place" : "places"}
-                              </span>
+                              </Link>
                             ) : null}
                           </>
                         ) : (

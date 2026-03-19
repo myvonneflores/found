@@ -143,19 +143,18 @@ body.public-list-page-body {
 
 .public-list-directory-page-shell .directory-brand-strip,
 .public-list-directory-page-shell .directory-brand-strip-menu {
-  background: rgba(255, 248, 239, 0.88);
-  color: #b5624d;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(181, 98, 77, 0.08);
+  background: #78a5d5;
+  color: #f2dec7;
+  border: 1px solid rgba(120, 165, 213, 0.92);
 }
 
 .public-list-directory-page-shell .directory-brand-link {
-  color: #b5624d;
+  color: #f2dec7;
 }
 
 .public-list-directory-page-shell .directory-menu-trigger {
-  background: rgba(181, 98, 77, 0.08);
-  color: #b5624d;
+  background: transparent;
+  color: #f2dec7;
 }
 
 .public-list-directory-page-shell .directory-menu-popover {
@@ -344,7 +343,7 @@ body:not(.home-page-body):not(.about-page-body):not(.contact-page-body):not(.det
 }
 
 body.public-list-directory-page-body .site-footer-shell {
-  color: #4f79d8;
+  color: #b36507;
 }
 
 body.public-list-directory-page-body .site-footer-mark,
@@ -352,7 +351,7 @@ body.public-list-directory-page-body .site-footer-copy,
 body.public-list-directory-page-body .site-footer-nav a,
 body.public-list-directory-page-body .site-footer-social,
 body.public-list-directory-page-body .site-footer-logout {
-  color: #4f79d8;
+  color: #b36507;
 }
 
 .hero {
@@ -3621,11 +3620,11 @@ body.contact-page-body {
 }
 
 .public-list-directory-page-body {
-  background: #f5ddd4;
+  background: #ddb4ac;
 }
 
 .public-list-directory-page-shell {
-  background: #f5ddd4;
+  background: transparent;
   border-radius: 24px;
 }
 
@@ -3636,15 +3635,18 @@ body.contact-page-body {
 .public-list-directory-hero,
 .public-list-directory-search-card,
 .public-list-directory-card {
-  background: rgba(255, 248, 239, 0.82);
+  background: #f2dec7;
+  box-shadow: none;
 }
 
 .public-list-directory-hero {
-  color: #b58b62;
+  color: #b3749f;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.75rem;
+  background: #d9c5ee;
+  border: 1px solid rgba(179, 116, 159, 0.28);
 }
 
 .public-list-directory-hero .home-hero-title,
@@ -3678,15 +3680,15 @@ body.contact-page-body {
   width: 100%;
   min-height: 4.4rem;
   border-radius: 24px;
-  border: 1px solid rgba(181, 139, 98, 0.16);
-  background: rgba(255, 255, 255, 0.76);
-  color: #9d7556;
+  border: 1px solid rgba(179, 116, 159, 0.26);
+  background: #fff8ef;
+  color: #b3749f;
   padding: 1rem 1.15rem;
   font: inherit;
 }
 
 .public-list-directory-hero-search input::placeholder {
-  color: rgba(157, 117, 86, 0.72);
+  color: rgba(179, 116, 159, 0.7);
 }
 
 .public-list-directory-grid {
@@ -3699,6 +3701,10 @@ body.contact-page-body {
 }
 
 .public-list-directory-card {
+  --public-list-card-bg: #76a7d7;
+  --public-list-card-ink: #fff8ef;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.22);
+  --public-list-card-accent-border: rgba(255, 248, 239, 0.3);
   display: grid;
   gap: 0.8rem;
   grid-template-rows: auto minmax(4.2rem, auto) minmax(0, 1fr);
@@ -3709,6 +3715,68 @@ body.contact-page-body {
   height: auto;
   overflow: hidden;
   justify-self: stretch;
+  border: 1px solid var(--public-list-card-accent-border);
+  box-shadow: none;
+  background: var(--public-list-card-bg);
+  color: var(--public-list-card-ink);
+  position: static;
+  top: auto;
+}
+
+.public-list-directory-card.is-blue {
+  --public-list-card-bg: #76a7d7;
+  --public-list-card-ink: #fff8ef;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.22);
+  --public-list-card-accent-border: rgba(255, 248, 239, 0.34);
+}
+
+.public-list-directory-card.is-green {
+  --public-list-card-bg: #6cab4c;
+  --public-list-card-ink: #fff8ef;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.2);
+  --public-list-card-accent-border: rgba(255, 248, 239, 0.32);
+}
+
+.public-list-directory-card.is-pink {
+  --public-list-card-bg: #d68e81;
+  --public-list-card-ink: #fff8ef;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.22);
+  --public-list-card-accent-border: rgba(255, 248, 239, 0.34);
+}
+
+.public-list-directory-card.is-yellow {
+  --public-list-card-bg: #f2dec7;
+  --public-list-card-ink: #b36507;
+  --public-list-card-accent-bg: rgba(179, 101, 7, 0.1);
+  --public-list-card-accent-border: rgba(179, 101, 7, 0.18);
+}
+
+.public-list-directory-card.is-true-yellow {
+  --public-list-card-bg: #f7e58a;
+  --public-list-card-ink: #8a4f06;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.3);
+  --public-list-card-accent-border: rgba(138, 79, 6, 0.2);
+}
+
+.public-list-directory-card.is-orange {
+  --public-list-card-bg: #efb162;
+  --public-list-card-ink: #fff8ef;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.22);
+  --public-list-card-accent-border: rgba(255, 248, 239, 0.34);
+}
+
+.public-list-directory-card.is-plum {
+  --public-list-card-bg: #b3749f;
+  --public-list-card-ink: #fff8ef;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.22);
+  --public-list-card-accent-border: rgba(255, 248, 239, 0.34);
+}
+
+.public-list-directory-card.is-lavender {
+  --public-list-card-bg: #d9c5ee;
+  --public-list-card-ink: #7d4e95;
+  --public-list-card-accent-bg: rgba(255, 248, 239, 0.34);
+  --public-list-card-accent-border: rgba(179, 116, 159, 0.24);
 }
 
 .public-list-directory-card-top {
@@ -3730,9 +3798,9 @@ body.contact-page-body {
   min-height: 2.75rem;
   padding: 0.5rem 0.95rem;
   border-radius: 999px;
-  border: 1px solid rgba(181, 139, 98, 0.18);
-  background: rgba(255, 248, 239, 0.42);
-  color: #b58b62;
+  border: 1px solid var(--public-list-card-accent-border);
+  background: var(--public-list-card-accent-bg);
+  color: inherit;
   font-family: var(--font-display);
   font-size: 0.92rem;
   font-weight: 700;
@@ -3746,10 +3814,10 @@ body.contact-page-body {
   width: 2.9rem;
   height: 2.9rem;
   padding: 0;
-  border: 1px solid rgba(181, 139, 98, 0.18);
+  border: 1px solid var(--public-list-card-accent-border);
   border-radius: 999px;
-  background: rgba(255, 248, 239, 0.42);
-  color: #b58b62;
+  background: var(--public-list-card-accent-bg);
+  color: inherit;
   cursor: pointer;
   transition:
     background-color 160ms ease,
@@ -3765,15 +3833,15 @@ body.contact-page-body {
 
 .public-list-directory-save-button:hover,
 .public-list-directory-save-button:focus-visible {
-  background: rgba(241, 222, 212, 0.9);
-  border-color: rgba(181, 139, 98, 0.28);
+  background: rgba(255, 248, 239, 0.34);
+  border-color: var(--public-list-card-accent-border);
   outline: none;
-  transform: translateY(-1px);
 }
 
 .public-list-directory-save-button.is-saved {
-  background: rgba(241, 222, 212, 0.88);
-  color: #a76446;
+  background: rgba(255, 248, 239, 0.42);
+  border-color: var(--public-list-card-accent-border);
+  color: inherit;
 }
 
 .public-list-directory-save-button:disabled {
@@ -3811,10 +3879,6 @@ body.contact-page-body {
   overflow: hidden;
 }
 
-.public-list-directory-card-copy-empty {
-  opacity: 0.72;
-}
-
 .public-list-directory-card-copy h2 a {
   color: inherit;
   text-decoration: none;
@@ -3826,12 +3890,12 @@ body.contact-page-body {
 }
 
 .public-list-directory-preview-grid {
-  display: grid;
-  gap: 0.45rem;
-  grid-template-rows: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   min-height: 6.5rem;
-  align-content: start;
-  align-items: start;
+  height: 100%;
+  align-items: stretch;
 }
 
 .public-list-directory-preview-grid.is-empty {
@@ -3841,9 +3905,10 @@ body.contact-page-body {
 .public-list-directory-preview-pill {
   display: grid;
   gap: 0.2rem;
-  padding: 0.72rem 0.82rem;
+  padding: 0.66rem 0.82rem;
   border-radius: 18px;
-  background: rgba(241, 222, 212, 0.55);
+  background: var(--public-list-card-accent-bg);
+  border: 1px solid var(--public-list-card-accent-border);
   color: inherit;
   text-decoration: none;
   align-content: start;
@@ -3851,7 +3916,7 @@ body.contact-page-body {
 
 .public-list-directory-preview-pill:hover,
 .public-list-directory-preview-pill:focus-visible {
-  background: rgba(241, 222, 212, 0.78);
+  background: rgba(255, 248, 239, 0.34);
 }
 
 .public-list-directory-preview-pill strong,
@@ -3869,14 +3934,41 @@ body.contact-page-body {
 }
 
 .public-list-directory-preview-meta {
+  margin-top: auto;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(181, 139, 98, 0.88);
+  color: inherit;
+}
+
+.public-list-directory-preview-more {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 2.2rem;
+  padding: 0.4rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid var(--public-list-card-accent-border);
+  background: var(--public-list-card-accent-bg);
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.public-list-directory-preview-more:hover,
+.public-list-directory-preview-more:focus-visible {
+  background: rgba(255, 248, 239, 0.34);
+  outline: none;
 }
 
 .public-list-directory-preview-empty {
+  flex: 1 1 auto;
   width: 100%;
   min-height: 6.5rem;
   display: flex;
@@ -3884,8 +3976,8 @@ body.contact-page-body {
   justify-content: center;
   padding: 0.9rem;
   border-radius: 18px;
-  background: rgba(241, 222, 212, 0.35);
-  border: 1px dashed rgba(181, 139, 98, 0.22);
+  background: #fff8ef;
+  border: 1px dashed rgba(179, 101, 7, 0.24);
   text-align: center;
 }
 
@@ -3906,10 +3998,6 @@ body.contact-page-body {
 @media (max-width: 760px) {
   .public-list-directory-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .public-list-directory-card {
-    aspect-ratio: auto;
   }
 }
 
@@ -4220,7 +4308,7 @@ body.contact-page-body {
   grid-template-areas: "sidebar detail actions";
   grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) minmax(6rem, 7.25rem);
   gap: 1.15rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .list-browser-frame {
@@ -4247,7 +4335,9 @@ body.contact-page-body {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 1rem;
-  min-height: clamp(32rem, 62vh, 44rem);
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .list-browser-sidebar-copy {
@@ -4276,10 +4366,14 @@ body.contact-page-body {
 .list-browser-company-list {
   display: grid;
   gap: 0.55rem;
-  align-self: start;
+  align-self: stretch;
   align-content: start;
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
   padding-top: 0.8rem;
   border-top: 1px solid rgba(223, 151, 64, 0.18);
 }
@@ -4401,17 +4495,29 @@ body.contact-page-body {
   grid-area: detail;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  align-self: start;
+  height: auto;
+  min-height: 0;
   min-width: 0;
 }
 
 .list-browser-detail-surface {
-  min-height: 100%;
+  align-self: start;
+  height: auto;
+  min-height: 0;
   width: 100%;
+  overflow: visible;
   padding: clamp(1.7rem, 2.8vw, 2.2rem);
   border-radius: 34px;
   background: rgba(255, 244, 229, 0.86);
   box-shadow: none;
+}
+
+.list-browser-detail-panel .directory-detail-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  gap: 1rem;
 }
 
 .list-browser-detail-panel .directory-detail-header-grid {
@@ -4436,6 +4542,9 @@ body.contact-page-body {
 .list-browser-detail-panel .directory-detail-layout {
   grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
+  min-height: auto;
+  align-items: start;
+  flex: 0 0 auto;
 }
 
 .list-browser-detail-panel .directory-detail-copy {
@@ -4444,6 +4553,7 @@ body.contact-page-body {
 
 .list-browser-detail-panel .directory-detail-media {
   margin-top: 0;
+  min-height: auto;
 }
 
 .list-browser-detail-panel .directory-detail-head h2 a {
@@ -4471,6 +4581,23 @@ body.contact-page-body {
 
 .list-browser-detail-panel .directory-detail-map {
   background: rgba(255, 248, 238, 0.94);
+  height: clamp(250px, 34vh, 320px);
+  min-height: clamp(250px, 34vh, 320px);
+  max-height: clamp(250px, 34vh, 320px);
+}
+
+.list-browser-detail-panel .directory-detail-map iframe {
+  height: 100%;
+  min-height: 100%;
+}
+
+.list-browser-detail-panel .directory-detail-products {
+  margin-top: 0;
+  flex: 0 0 auto;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(223, 151, 64, 0.18);
+  align-self: stretch;
+  background: rgba(255, 244, 229, 0.86);
 }
 
 .list-browser-actions-card {
@@ -4794,6 +4921,35 @@ body.contact-page-body {
       "sidebar"
       "detail";
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .list-browser-sidebar,
+  .list-browser-detail-panel {
+    height: auto;
+  }
+
+  .list-browser-sidebar {
+    overflow: visible;
+  }
+
+  .list-browser-company-list,
+  .list-browser-detail-surface {
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .list-browser-detail-surface {
+    height: auto;
+  }
+
+  .list-browser-sidebar {
+    overflow: visible;
+  }
+
+  .list-browser-company-list {
+    height: auto;
+    overflow: visible;
+    scrollbar-gutter: auto;
   }
 
   .list-browser-actions-card {
