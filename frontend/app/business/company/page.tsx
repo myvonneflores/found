@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { CompanyProfileCreationForm } from "@/components/company-profile-creation-form";
 import { SiteHeader } from "@/components/site-header";
@@ -39,7 +40,7 @@ function isMissingManagedProfileError(message: string) {
 
 export default function BusinessCompanyPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
   const [latestClaim, setLatestClaim] = useState<BusinessClaim | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,16 +51,19 @@ export default function BusinessCompanyPage() {
     }
 
     if (!isAuthenticated || !accessToken) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (!user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/pending");
       return;
     }
@@ -129,7 +133,7 @@ export default function BusinessCompanyPage() {
   }, [accessToken, isAuthenticated, isReady, router, user]);
 
   if (!isReady || !user || user.account_type !== "business" || !user.is_business_verified) {
-    return null;
+    return <AuthGuardShell />;
   }
 
   return (
@@ -149,7 +153,10 @@ export default function BusinessCompanyPage() {
 
           {isLoading ? (
             <article className="detail-card">
-              <p className="lede">Loading your business profile workspace...</p>
+              <div className="skeleton skeleton-title" style={{ width: "50%" }} />
+              <div className="skeleton skeleton-input" />
+              <div className="skeleton skeleton-input" />
+              <div className="skeleton skeleton-input" />
             </article>
           ) : null}
 

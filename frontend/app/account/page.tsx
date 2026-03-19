@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
@@ -70,7 +71,7 @@ function isTokenError(message: string) {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [savedLists, setSavedLists] = useState<SavedCuratedList[]>([]);
@@ -125,7 +126,14 @@ export default function AccountPage() {
 
   const favoritesContent = (
     <>
-      {isLoading ? <p className="lede">Loading your saved businesses...</p> : null}
+      {isLoading ? (
+        <>
+          <p className="visually-hidden" role="status">Loading your saved businesses...</p>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading && safeFavorites.length === 0 ? (
         <p className="lede">You haven’t favorited any businesses yet. Save favs from the business&apos; detail page.</p>
       ) : null}
@@ -141,7 +149,13 @@ export default function AccountPage() {
 
   const listsContent = (
     <>
-      {isLoading ? <p className="lede">Loading your lists...</p> : null}
+      {isLoading ? (
+        <>
+          <p className="visually-hidden" role="status">Loading your lists...</p>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Create your first one to start curating neighborhoods and favorites."
@@ -219,14 +233,16 @@ export default function AccountPage() {
     }
 
     if (!isAuthenticated) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type === "business") {
+      setRedirecting(true);
       router.replace(user.is_business_verified ? "/business/dashboard" : "/business/pending");
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
     async function loadCommunityData() {
@@ -313,7 +329,7 @@ export default function AccountPage() {
   }
 
   if (!isReady || !user || user.account_type !== "personal") {
-    return null;
+    return <AuthGuardShell />;
   }
 
   return (

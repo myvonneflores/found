@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { BusinessProfileCard } from "@/components/business-profile-card";
 import { CreateListModal } from "@/components/create-list-modal";
@@ -90,7 +91,7 @@ function formatTimestamp(value: string | null) {
 
 export default function BusinessPendingPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
@@ -194,7 +195,14 @@ export default function BusinessPendingPage() {
 
   const favoritesContent = (
     <>
-      {isLoading ? <p className="lede">Loading your saved businesses...</p> : null}
+      {isLoading ? (
+        <>
+          <p className="visually-hidden" role="status">Loading your saved businesses...</p>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading && safeFavorites.length === 0 ? (
         <p className="lede">No favorites yet. Start saving businesses you want to stay close to while we review your claim.</p>
       ) : null}
@@ -211,7 +219,13 @@ export default function BusinessPendingPage() {
   const listsContent = (
     <>
       <p className="lede">Build private lists now. Public sharing unlocks after your business is verified.</p>
-      {isLoading ? <p className="lede">Loading your lists...</p> : null}
+      {isLoading ? (
+        <>
+          <p className="visually-hidden" role="status">Loading your lists...</p>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Start one now so your curation is ready to share once verification is complete."
@@ -238,19 +252,22 @@ export default function BusinessPendingPage() {
     }
 
     if (!isAuthenticated) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/dashboard");
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
     async function loadData() {
@@ -289,7 +306,7 @@ export default function BusinessPendingPage() {
   }
 
   if (!isReady || !user || user.account_type !== "business" || user.is_business_verified) {
-    return null;
+    return <AuthGuardShell />;
   }
 
   return (

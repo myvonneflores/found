@@ -18,8 +18,10 @@ interface AuthContextValue {
   hasKnownAccount: boolean;
   isReady: boolean;
   isAuthenticated: boolean;
+  isRedirecting: boolean;
   user: AuthUser | null;
   getValidAccessToken: () => Promise<string | null>;
+  setRedirecting: (value: boolean) => void;
   signIn: (session: AuthSession) => void;
   signOut: () => void;
   refreshUser: () => Promise<void>;
@@ -29,6 +31,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
+  const [isRedirecting, setRedirecting] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [hasKnownAccount, setHasKnownAccount] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -159,12 +162,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       getValidAccessToken,
       isReady,
       isAuthenticated: Boolean(accessToken && user),
+      isRedirecting,
       user,
+      setRedirecting,
       signIn,
       signOut,
       refreshUser,
     }),
-    [accessToken, getValidAccessToken, hasKnownAccount, isReady, refreshUser, signIn, signOut, user]
+    [accessToken, getValidAccessToken, hasKnownAccount, isReady, isRedirecting, refreshUser, signIn, signOut, user]
   );
 
   return (

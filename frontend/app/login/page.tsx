@@ -35,7 +35,7 @@ function friendlyAuthError(message: string) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, isReady, signIn, user } = useAuth();
+  const { isAuthenticated, isReady, setRedirecting, signIn, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,9 +44,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isReady && isAuthenticated && user) {
+      setRedirecting(true);
       router.replace(destinationForUser(user.account_type, user.is_business_verified));
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { BusinessProfileCard } from "@/components/business-profile-card";
 import { CreateListModal } from "@/components/create-list-modal";
@@ -90,7 +91,7 @@ function isTokenError(message: string) {
 
 export default function BusinessDashboardPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, signOut, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
@@ -151,7 +152,14 @@ export default function BusinessDashboardPage() {
 
   const favoritesContent = (
     <>
-      {isLoading ? <p className="lede">Loading your business favorites...</p> : null}
+      {isLoading ? (
+        <>
+          <p className="visually-hidden" role="status">Loading your business favorites...</p>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading && safeFavorites.length === 0 ? (
         <p className="lede">No favorites yet. Save the local businesses you want to keep close.</p>
       ) : null}
@@ -167,7 +175,13 @@ export default function BusinessDashboardPage() {
 
   const listsContent = (
     <>
-      {isLoading ? <p className="lede">Loading your lists...</p> : null}
+      {isLoading ? (
+        <>
+          <p className="visually-hidden" role="status">Loading your lists...</p>
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+        </>
+      ) : null}
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Use them to spotlight neighboring businesses and share your local taste."
@@ -269,19 +283,22 @@ export default function BusinessDashboardPage() {
     }
 
     if (!isAuthenticated) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (!user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/pending");
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
     async function loadCommunityData() {
@@ -346,7 +363,7 @@ export default function BusinessDashboardPage() {
   }
 
   if (!isReady || !user || user.account_type !== "business" || !user.is_business_verified) {
-    return null;
+    return <AuthGuardShell />;
   }
 
   return (

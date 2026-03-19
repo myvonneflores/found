@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 
 import { AuthProvider } from "@/components/auth-provider";
+import { NavigationProgress } from "@/components/navigation-progress";
 import { SiteFooter } from "@/components/site-footer";
 
 import "./globals.css";
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.className} ${poppins.variable}`}>
         <AuthProvider>
+          <NavigationProgress />
           {children}
           <SiteFooter />
         </AuthProvider>

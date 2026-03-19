@@ -226,7 +226,18 @@ export default function PublicListsPage() {
           ) : null}
 
           <section className="public-list-directory-grid">
-            {isLoading ? <p className="lede">Loading public lists...</p> : null}
+            {isLoading ? (
+              <>
+                <p className="visually-hidden" role="status">Loading public lists...</p>
+                {Array.from({ length: 4 }, (_, i) => (
+                  <article className="panel public-list-directory-card" key={i}>
+                    <div className="skeleton skeleton-text" style={{ width: "40%" }} />
+                    <div className="skeleton skeleton-title" style={{ width: "70%", marginTop: "0.5rem" }} />
+                    <div className="skeleton skeleton-text" style={{ width: "50%" }} />
+                  </article>
+                ))}
+              </>
+            ) : null}
             {!isLoading && !error && lists.length === 0 ? (
               <article className="panel public-list-directory-card public-list-directory-empty">
                 <h2>No matching lists yet</h2>

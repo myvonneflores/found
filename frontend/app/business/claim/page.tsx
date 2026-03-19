@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useDeferredValue, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -57,7 +58,7 @@ function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
 function BusinessClaimPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { accessToken, isAuthenticated, isReady, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
   const [intent, setIntent] = useState<BusinessClaimIntent>(
     searchParams.get("intent") === "new" ? "new" : "existing"
   );
@@ -95,20 +96,23 @@ function BusinessClaimPageContent() {
     }
 
     if (!isAuthenticated) {
+      setRedirecting(true);
       router.replace("/login");
       return;
     }
 
     if (user?.account_type !== "business") {
+      setRedirecting(true);
       router.replace("/account");
       return;
     }
 
     if (user.is_business_verified) {
+      setRedirecting(true);
       router.replace("/business/dashboard");
       return;
     }
-  }, [isAuthenticated, isReady, router, user]);
+  }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
     if (!user) {
@@ -300,7 +304,7 @@ function BusinessClaimPageContent() {
   }
 
   if (!isReady || !user || user.account_type !== "business") {
-    return null;
+    return <AuthGuardShell />;
   }
 
   const isExistingIntent = intent === "existing";
@@ -603,7 +607,7 @@ function BusinessClaimPageContent() {
 
 export default function BusinessClaimPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AuthGuardShell />}>
       <BusinessClaimPageContent />
     </Suspense>
   );
