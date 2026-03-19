@@ -42,6 +42,7 @@ docker compose run --rm frontend sh -lc 'npm install && npm run build'
 ## Notes
 - The frontend fetches API data server-side from `http://web:8000/api` inside Docker.
 - Public company pages are available at `/companies` and `/companies/<slug>`.
+- The contact form runs through the Next.js app, so email-related variables such as `RESEND_API_KEY`, `CONTACT_TO_EMAIL`, and `CONTACT_FROM_EMAIL` need to be available to the `frontend` service in `.env`.
 - If `3000`, `5432`, or `8000` are already in use on your machine, override them when starting Compose:
 
 ```bash

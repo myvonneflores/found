@@ -5,6 +5,8 @@ import { isAllowedContactSubmissionOrigin } from "./origin";
 
 const MIN_FORM_FILL_MS = 1500;
 const MAX_FORM_AGE_MS = 1000 * 60 * 60 * 12;
+const CONTACT_FALLBACK_MESSAGE =
+  "The contact form is unavailable right now. Please email hello@found-places.com.";
 
 export const runtime = "nodejs";
 
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       if (error instanceof Error && error.message === "Contact email is not configured.") {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: CONTACT_FALLBACK_MESSAGE }, { status: 503 });
       }
 
       return NextResponse.json(
