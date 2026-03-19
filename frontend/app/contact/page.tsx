@@ -19,6 +19,13 @@ export default function ContactPage() {
                     Know a great local business we should feature? Found something that could work better? We&apos;d
                     love your feedback. Send us a note and we&apos;ll be in touch soon.
                   </p>
+                  <p className="contact-field-note">
+                    Prefer email? Reach us at{" "}
+                    <a className="contact-link" href="mailto:hello@found-places.com">
+                      hello@found-places.com
+                    </a>
+                    .
+                  </p>
                 </div>
               </div>
 

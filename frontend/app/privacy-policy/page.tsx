@@ -20,7 +20,7 @@ const privacySections = [
   },
   {
     title: "Questions or Requests",
-    body: "Contact us through the Contact page if you need help reviewing, correcting, or deleting data associated with your account.",
+    body: "Contact us through the Contact page, or email support@found-places.com, if you need help reviewing, correcting, or deleting data associated with your account.",
   },
 ] as const;
 
@@ -38,6 +38,13 @@ export default function PrivacyPolicyPage() {
               <p className="legal-intro">
                 This page summarizes the kinds of information we collect, how we use it, and how you can manage your
                 privacy choices as the product grows.
+              </p>
+              <p className="contact-field-note">
+                Privacy or account questions can also go to{" "}
+                <a className="contact-link" href="mailto:support@found-places.com">
+                  support@found-places.com
+                </a>
+                .
               </p>
             </div>
           </article>

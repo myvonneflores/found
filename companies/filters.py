@@ -21,13 +21,13 @@ class CompanyFilterSet(django_filters.FilterSet):
     country = django_filters.CharFilter(field_name="country", lookup_expr="iexact")
     business_category = django_filters.CharFilter(method="filter_business_category")
     product_categories = CharInFilter(
-        field_name="product_categories__name",
+        method="filter_product_categories",
     )
     ownership_markers = CharInFilter(
-        field_name="ownership_markers__name",
+        method="filter_ownership_markers",
     )
     sustainability_markers = CharInFilter(
-        field_name="sustainability_markers__name",
+        method="filter_sustainability_markers",
     )
     is_vegan_friendly = django_filters.BooleanFilter(field_name="is_vegan_friendly")
     is_gf_friendly = django_filters.BooleanFilter(field_name="is_gf_friendly")
@@ -117,3 +117,22 @@ class CompanyFilterSet(django_filters.FilterSet):
         return queryset.filter(
             Q(business_category__name__iexact=value) | Q(business_categories__name__iexact=value)
         ).distinct()
+
+    def filter_product_categories(self, queryset, name, value):
+        return self.filter_all_selected_taxonomy_values(queryset, "product_categories", value)
+
+    def filter_ownership_markers(self, queryset, name, value):
+        return self.filter_all_selected_taxonomy_values(queryset, "ownership_markers", value)
+
+    def filter_sustainability_markers(self, queryset, name, value):
+        return self.filter_all_selected_taxonomy_values(queryset, "sustainability_markers", value)
+
+    def filter_all_selected_taxonomy_values(self, queryset, relation_name, values):
+        selected_values = [value.strip() for value in values if value and value.strip()]
+        if not selected_values:
+            return queryset
+
+        for selected_value in selected_values:
+            queryset = queryset.filter(**{f"{relation_name}__name__iexact": selected_value})
+
+        return queryset.distinct()
