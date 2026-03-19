@@ -5,10 +5,10 @@ import { notFound } from "next/navigation";
 import { BodyClass } from "@/components/body-class";
 import { CompanyOwnerEditor } from "@/components/company-owner-editor";
 import { CompanySaveFlow, CompanyShareButton } from "@/components/company-save-flow";
+import { CompanySocialLinks, hasCompanySocialLinks } from "@/components/company-social-links";
 import { formatHoursRange, WEEKDAYS, WEEKDAY_LABELS } from "@/lib/business-hours";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany, getPublicCuratedList } from "@/lib/api";
-import { instagramProfileUrl } from "@/lib/social-links";
 import { SiteHeader } from "@/components/site-header";
 import type { BusinessHours, Weekday } from "@/types/company";
 
@@ -43,73 +43,6 @@ function displayLabel(value: string) {
   };
 
   return labels[value] ?? value;
-}
-
-function WebsiteIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="10.5" stroke="currentColor" strokeWidth="2.8" />
-      <path d="M5.5 16h21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M16 5.5c3 3.2 4.5 6.7 4.5 10.5S19 23.3 16 26.5" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M16 5.5c-3 3.2-4.5 6.7-4.5 10.5S13 23.3 16 26.5" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function InstagramIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <rect x="6" y="6" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="2.8" />
-      <circle cx="16" cy="16" r="4.6" stroke="currentColor" strokeWidth="2.8" />
-      <circle cx="22.1" cy="9.9" r="1.4" fill="currentColor" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <path
-        d="M18.8 26V17.4h3.1l.7-4.1h-3.8v-2.1c0-1.7.7-2.7 2.8-2.7H23V5c-.9-.1-1.9-.2-3.1-.2-3.4 0-5.6 2.1-5.6 5.9v2.6H11v4.1h3.3V26h4.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function LinkedInIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" strokeWidth="2.8" />
-      <path d="M11.2 13.4V21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <circle cx="11.2" cy="10.5" r="1.5" fill="currentColor" />
-      <path d="M16 21v-4.5c0-1.8 1.1-3.1 2.8-3.1 1.6 0 2.5 1.1 2.5 2.9V21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 13.4V21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function LinkLogo({
-  href,
-  label,
-  children,
-}: {
-  href: string;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      aria-label={label}
-      className="directory-link-logo"
-      href={href}
-      rel="noreferrer"
-      target="_blank"
-      title={label}
-    >
-      <span className="directory-link-logo-mark">{children}</span>
-    </a>
-  );
 }
 
 function absoluteSiteUrl(path: string) {
@@ -183,9 +116,12 @@ export default async function CompanyDetailPage({
       ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
       : null;
     const description = detailDescription(company);
-    const hasAnyLinks = Boolean(
-      company.website || company.facebook_page || company.linkedin_page || company.instagram_handle
-    );
+    const hasAnyLinks = hasCompanySocialLinks({
+      website: company.website,
+      linkedinPage: company.linkedin_page,
+      facebookPage: company.facebook_page,
+      instagramHandle: company.instagram_handle,
+    });
     const businessHours = company.business_hours;
     const claimedProfile = company.claimed_profile;
     const singleRecommendationList =
@@ -239,11 +175,11 @@ export default async function CompanyDetailPage({
             <div className="detail-header-copy">
               <h1>
                 {company.website ? (
-                  <a href={company.website} rel="noreferrer" target="_blank">
+                  <a className="detail-header-title-text" href={company.website} rel="noreferrer" target="_blank">
                     {company.name}
                   </a>
                 ) : (
-                  company.name
+                  <span className="detail-header-title-text">{company.name}</span>
                 )}
                 <div className="detail-title-actions">
                   <CompanySaveFlow companyId={company.id} companySlug={company.slug} />
@@ -254,42 +190,21 @@ export default async function CompanyDetailPage({
                   />
                 </div>
               </h1>
+              <div className="detail-meta">
+                {location ? <div className="muted">{location}</div> : null}
+              </div>
             </div>
-            <div className="detail-header-rail">
-              <span className="field-label">Socials</span>
-              {hasAnyLinks ? (
-                <div className="detail-header-links">
-                  {company.website ? (
-                    <LinkLogo href={company.website} label="Website">
-                      <WebsiteIcon />
-                    </LinkLogo>
-                  ) : null}
-                  {company.facebook_page ? (
-                    <LinkLogo href={company.facebook_page} label="Facebook">
-                      <FacebookIcon />
-                    </LinkLogo>
-                  ) : null}
-                  {company.linkedin_page ? (
-                    <LinkLogo href={company.linkedin_page} label="LinkedIn">
-                      <LinkedInIcon />
-                    </LinkLogo>
-                  ) : null}
-                  {company.instagram_handle ? (
-                    <LinkLogo
-                      href={instagramProfileUrl(company.instagram_handle)}
-                      label="Instagram"
-                    >
-                      <InstagramIcon />
-                    </LinkLogo>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="muted">No links listed</p>
-              )}
-            </div>
-          </div>
-          <div className="detail-meta">
-            {location ? <div className="muted">{location}</div> : null}
+            {hasAnyLinks ? (
+              <div className="detail-header-rail">
+                <CompanySocialLinks
+                  className="detail-header-links"
+                  facebookPage={company.facebook_page}
+                  instagramHandle={company.instagram_handle}
+                  linkedinPage={company.linkedin_page}
+                  website={company.website}
+                />
+              </div>
+            ) : null}
           </div>
           <div className="filter-chip-row detail-chip-row">
             {company.business_category ? <span className="badge badge-outline">{company.business_category.name}</span> : null}

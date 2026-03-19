@@ -629,19 +629,16 @@ select {
 
 .detail-header-copy {
   display: grid;
-  gap: 0.9rem;
+  gap: 0;
   flex: 1 1 18rem;
 }
 
 .detail-header-rail {
-  display: grid;
-  align-content: start;
-  gap: 0.85rem;
-  flex: 0 1 18rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex: 0 0 auto;
   margin-left: auto;
-  padding: 0.95rem 1rem;
-  border-radius: 24px;
-  background: rgba(247, 232, 220, 0.24);
 }
 
 .detail-header p {
@@ -659,15 +656,20 @@ select {
 
 .detail-meta {
   gap: 0;
-  margin-top: -0.08rem;
+  margin-top: -0.42rem;
 }
 
 .detail-meta .muted {
   margin: 0;
+  line-height: 1;
 }
 
 .detail-header h1 a {
   color: inherit;
+}
+
+.detail-header-title-text {
+  min-width: 0;
 }
 
 .detail-title-actions {
@@ -861,11 +863,6 @@ select {
   color: #fff7f1;
 }
 
-.detail-page-shell .detail-back-link {
-  background: #f0dec1;
-  color: #efc18a;
-}
-
 .detail-page-shell .detail-card {
   background: #eab063;
   color: #fff8ef;
@@ -901,15 +898,11 @@ select {
 }
 
 .detail-page-shell .detail-header-links .directory-link-logo {
-  color: #b36507;
-}
-
-.detail-page-shell .detail-header-rail {
-  background: rgba(247, 232, 220, 0.3);
+  color: #fff8ef;
 }
 
 .detail-page-shell .detail-header-links .directory-link-logo:hover {
-  color: #8f4f04;
+  color: #f6eadb;
 }
 
 .detail-page-shell .badge {
@@ -926,14 +919,6 @@ select {
 
 .detail-page-shell .detail-link-logo-text {
   color: inherit;
-}
-
-.detail-page-shell .detail-header-links .directory-link-logo {
-  color: #fff8ef;
-}
-
-.detail-page-shell .detail-header-links .directory-link-logo:hover {
-  color: #f6eadb;
 }
 
 .detail-page-shell .detail-chip-row .badge-outline {
@@ -4550,41 +4535,78 @@ body.contact-page-body {
 }
 
 @media (max-width: 720px) {
-  .detail-header-top {
+  .detail-header {
     display: grid;
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+    row-gap: 0.7rem;
+    align-items: start;
+  }
+
+  .detail-header-top {
+    display: contents;
   }
 
   .detail-header-rail {
-    width: 100%;
+    display: flex;
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    justify-self: end;
     margin-left: 0;
-    gap: 0.75rem;
+    width: auto;
   }
 
   .detail-header-copy {
+    grid-column: 1 / -1;
     min-width: 0;
   }
 
   .detail-header h1 {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.55rem;
+    row-gap: 0.1rem;
+    align-items: start;
     min-width: 0;
     padding-right: 0;
     line-height: 0.98;
   }
 
+  .detail-header-title-text {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
   .detail-title-actions {
-    position: static;
     display: flex;
+    grid-column: 2;
+    grid-row: 1;
     gap: 0.45rem;
-    margin-top: 0.6rem;
+    margin-top: 0;
+    justify-self: end;
   }
 
   .detail-header-links {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 0.45rem;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
     max-width: none;
+  }
+
+  .detail-chip-row {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+    margin-bottom: 0;
+    padding-right: 0.4rem;
+  }
+
+  .detail-header > .lede {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin: 0;
   }
 
   .detail-header-actions {
@@ -4593,13 +4615,13 @@ body.contact-page-body {
   }
 
   .detail-header-links .directory-link-logo {
-    width: 3rem;
-    height: 3rem;
+    width: 2.8rem;
+    height: 2.8rem;
   }
 
   .detail-save-action {
-    width: 2.65rem;
-    height: 2.65rem;
+    width: 2.8rem;
+    height: 2.8rem;
   }
 
   .detail-header-links .directory-link-logo-mark {
@@ -5604,10 +5626,10 @@ body.contact-page-body {
   color: #df857f;
   display: flex;
   flex-direction: column;
-  overflow: visible;
-  height: auto;
+  overflow: hidden;
+  height: 100%;
   min-height: 0;
-  max-height: none;
+  max-height: var(--directory-side-panel-max-height);
 }
 
 .directory-panel-list .directory-panel-surface {
@@ -5615,10 +5637,10 @@ body.contact-page-body {
   color: #df857f;
   display: flex;
   flex-direction: column;
-  overflow: visible;
-  height: auto;
+  overflow: hidden;
+  height: 100%;
   min-height: 0;
-  max-height: none;
+  max-height: var(--directory-side-panel-max-height);
 }
 
 .directory-panel-detail .directory-panel-surface {
@@ -5645,10 +5667,11 @@ body.contact-page-body {
 .directory-form {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: visible;
+  overflow-y: auto;
   align-content: start;
   padding-top: 0.4rem;
-  padding-right: 0;
+  padding-right: 0.6rem;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: #bb74a0 rgba(250, 238, 232, 0.88);
 }
@@ -5656,8 +5679,9 @@ body.contact-page-body {
 .directory-panel-filters .directory-form,
 .directory-panel-list .directory-company-list {
   min-height: 0;
-  height: auto;
-  overscroll-behavior: auto;
+  height: 100%;
+  max-height: 100%;
+  overscroll-behavior: contain;
 }
 
 .directory-filter-list,
@@ -6431,11 +6455,13 @@ body.contact-page-body {
   .directory-company-list {
     overflow-x: hidden;
     padding-right: 0;
+    scrollbar-gutter: auto;
   }
 
   .directory-panel-list .directory-company-list {
     min-height: 0;
-    height: auto;
+    height: 100%;
+    max-height: 100%;
     overflow-y: auto;
   }
 
@@ -6538,12 +6564,12 @@ body.contact-page-body {
   }
 
   .directory-form {
-    height: auto;
-    overflow: visible;
+    height: 100%;
+    overflow-y: auto;
   }
 
   .directory-company-list {
-    height: auto;
+    height: 100%;
     overflow-y: auto;
     min-height: 0;
   }
@@ -6816,22 +6842,44 @@ body.contact-page-body {
     max-height: none;
   }
 
+  .directory-panel-filters .directory-panel-surface,
+  .directory-panel-list .directory-panel-surface {
+    overflow: visible;
+    height: auto;
+    max-height: none;
+  }
+
   .directory-form,
   .directory-company-list {
     overflow-x: hidden;
+    touch-action: pan-y;
     padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+
+  .directory-form {
+    height: auto;
+    overflow: visible;
+  }
+
+  .directory-panel-filters .directory-form,
+  .directory-panel-list .directory-company-list {
+    height: auto;
+    max-height: none;
+    overscroll-behavior: auto;
+  }
+
+  .directory-panel-surface,
+  .directory-custom-select-trigger,
+  .directory-panel-search input {
+    touch-action: pan-y;
   }
 
   .directory-panel-list .directory-company-list {
     max-height: 26rem;
     overflow-y: auto;
-  }
-
-  .directory-panel-list .directory-panel-surface {
-    max-height: none;
-    overflow: visible;
-    display: flex;
-    flex-direction: column;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .directory-panel-list .directory-company-list {
