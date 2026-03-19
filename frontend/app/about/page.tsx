@@ -14,8 +14,8 @@ export default function AboutPage() {
             <div className="about-hero">
               <h1 className="about-title">About Us</h1>
               <p className="about-tagline">
-                Helping people discover locally owned businesses, save the ones they love, and share them with their
-                communities.
+                A conscious discovery engine for local, independent, value-aligned businesses without the noise of
+                paid ads, corporate business, or negative reviews
               </p>
             </div>
           </div>
