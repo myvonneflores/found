@@ -6,8 +6,8 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
+import { CompanySocialLinks } from "@/components/company-social-links";
 import { detailDescription, listDescription } from "@/lib/company-copy";
-import { instagramProfileUrl } from "@/lib/social-links";
 import { useAuth } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { BrandedSelect } from "@/components/branded-select";
@@ -312,73 +312,6 @@ function BrandedMultiSelect({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function WebsiteIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="10.5" stroke="currentColor" strokeWidth="2.8" />
-      <path d="M5.5 16h21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M16 5.5c3 3.2 4.5 6.7 4.5 10.5S19 23.3 16 26.5" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M16 5.5c-3 3.2-4.5 6.7-4.5 10.5S13 23.3 16 26.5" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function InstagramIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <rect x="6" y="6" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="2.8" />
-      <circle cx="16" cy="16" r="4.6" stroke="currentColor" strokeWidth="2.8" />
-      <circle cx="22.1" cy="9.9" r="1.4" fill="currentColor" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <path
-        d="M18.8 26V17.4h3.1l.7-4.1h-3.8v-2.1c0-1.7.7-2.7 2.8-2.7H23V5c-.9-.1-1.9-.2-3.1-.2-3.4 0-5.6 2.1-5.6 5.9v2.6H11v4.1h3.3V26h4.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function LinkedInIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 32 32">
-      <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" strokeWidth="2.8" />
-      <path d="M11.2 13.4V21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <circle cx="11.2" cy="10.5" r="1.5" fill="currentColor" />
-      <path d="M16 21v-4.5c0-1.8 1.1-3.1 2.8-3.1 1.6 0 2.5 1.1 2.5 2.9V21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 13.4V21" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function QuickLinkLogo({
-  href,
-  label,
-  children,
-}: {
-  href: string;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      aria-label={label}
-      className="directory-link-logo"
-      href={href}
-      rel="noreferrer"
-      target="_blank"
-      title={label}
-    >
-      <span className="directory-link-logo-mark">{children}</span>
-    </a>
   );
 }
 
@@ -838,6 +771,12 @@ export function CompanyDirectory({
     };
   }, [hasActiveFilters, selectedCompany, searchParams, viewportWidth]);
 
+  const surfaceHeightStyle =
+    sidePanelHeight &&
+    viewportWidth !== undefined &&
+    viewportWidth > MOBILE_STACK_BREAKPOINT
+      ? ({ height: sidePanelHeight, maxHeight: sidePanelHeight } as CSSProperties)
+      : undefined;
   const detailSurfaceStyle =
     sidePanelHeight && viewportWidth !== undefined && viewportWidth > DETAIL_HEIGHT_SYNC_BREAKPOINT
       ? ({ minHeight: sidePanelHeight } as CSSProperties)
@@ -858,7 +797,7 @@ export function CompanyDirectory({
               label="filters"
               onToggle={() => setMobileFiltersOpen((open) => !open)}
             />
-            <div className="directory-panel-surface" ref={filtersSurfaceRef}>
+            <div className="directory-panel-surface" ref={filtersSurfaceRef} style={surfaceHeightStyle}>
               <form
                 action="/companies"
                 className={
@@ -957,7 +896,7 @@ export function CompanyDirectory({
               label="finds"
               onToggle={() => setMobileFindsOpen((open) => !open)}
             />
-            <div className="directory-panel-surface">
+            <div className="directory-panel-surface" style={surfaceHeightStyle}>
               <div
                 className={
                   !isMobileStack || mobileFindsOpen
@@ -1050,31 +989,13 @@ export function CompanyDirectory({
                         </div>
                       </div>
 
-                      <div className="directory-socials directory-detail-socials-inline">
-                        {selectedCompany.website ? (
-                          <QuickLinkLogo href={selectedCompany.website} label="Website">
-                            <WebsiteIcon />
-                          </QuickLinkLogo>
-                        ) : null}
-                        {selectedCompany.linkedin_page ? (
-                          <QuickLinkLogo href={selectedCompany.linkedin_page} label="LinkedIn">
-                            <LinkedInIcon />
-                          </QuickLinkLogo>
-                        ) : null}
-                        {selectedCompany.facebook_page ? (
-                          <QuickLinkLogo href={selectedCompany.facebook_page} label="Facebook">
-                            <FacebookIcon />
-                          </QuickLinkLogo>
-                        ) : null}
-                        {selectedCompany.instagram_handle ? (
-                          <QuickLinkLogo
-                            href={instagramProfileUrl(selectedCompany.instagram_handle)}
-                            label="Instagram"
-                          >
-                            <InstagramIcon />
-                          </QuickLinkLogo>
-                        ) : null}
-                      </div>
+                      <CompanySocialLinks
+                        className="directory-socials directory-detail-socials-inline"
+                        facebookPage={selectedCompany.facebook_page}
+                        instagramHandle={selectedCompany.instagram_handle}
+                        linkedinPage={selectedCompany.linkedin_page}
+                        website={selectedCompany.website}
+                      />
                     </div>
                   </div>
 
