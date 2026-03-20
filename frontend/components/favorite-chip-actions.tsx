@@ -28,8 +28,10 @@ export function FavoriteChipActions({
         type="button"
       >
         <span className="dashboard-chip-label">
-          <strong>{favorite.company.name}</strong>
-          <span>{[favorite.company.city, favorite.company.state].filter(Boolean).join(", ") || "Location pending"}</span>
+          <strong className="favorite-chip-name">{favorite.company.name}</strong>
+          <span className="favorite-chip-location">
+            {[favorite.company.city, favorite.company.state].filter(Boolean).join(", ") || "Location pending"}
+          </span>
         </span>
       </button>
 
