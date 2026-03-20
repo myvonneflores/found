@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/found-admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="found-admin-brand">
+  <a class="found-admin-brand-link" href="{% url 'admin:index' %}">
+    <img alt="" aria-hidden="true" class="found-admin-logo" src="{% static 'admin/img/found-logo.png' %}">
+    <span class="found-admin-badge">admin</span>
+  </a>
+  <p class="found-admin-tagline">Manage users, directory data, claims, and community activity.</p>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
