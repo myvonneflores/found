@@ -4,6 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .business_categories import normalize_business_category_name
 from .cities import canonicalize_city
 from .filters import CompanyFilterSet
 from .models import (
@@ -127,6 +128,20 @@ class BusinessCategoryListView(generics.ListAPIView):
     queryset = BusinessCategory.objects.all()
     serializer_class = BusinessCategorySerializer
     pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        categories_by_name = {}
+
+        for category in self.get_queryset():
+            normalized_name = normalize_business_category_name(category.name)
+            serialized = self.get_serializer(category).data
+            serialized["name"] = normalized_name
+
+            existing = categories_by_name.get(normalized_name)
+            if existing is None or category.name == normalized_name:
+                categories_by_name[normalized_name] = serialized
+
+        return Response([categories_by_name[name] for name in sorted(categories_by_name)])
 
 
 class ProductCategoryListView(generics.ListAPIView):

@@ -708,6 +708,7 @@ select {
 
 .detail-header-title-text {
   min-width: 0;
+  color: #4f79d8;
 }
 
 .detail-title-actions {
@@ -930,6 +931,11 @@ select {
 .detail-page-shell .detail-stack .detail-meta .muted,
 .detail-page-shell .detail-map-caption p {
   color: #fff8ef;
+}
+
+.detail-page-shell .detail-header .detail-header-title-text,
+.detail-page-shell .detail-header h1 a .detail-header-title-text {
+  color: #4f79d8;
 }
 
 .detail-page-shell .detail-map-frame {

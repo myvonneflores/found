@@ -6,6 +6,7 @@ import { BodyClass } from "@/components/body-class";
 import { CompanyOwnerEditor } from "@/components/company-owner-editor";
 import { CompanySaveFlow, CompanyShareButton } from "@/components/company-save-flow";
 import { CompanySocialLinks, hasCompanySocialLinks } from "@/components/company-social-links";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { formatHoursRange, WEEKDAYS, WEEKDAY_LABELS } from "@/lib/business-hours";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany, getPublicCuratedList } from "@/lib/api";
@@ -159,6 +160,7 @@ export default async function CompanyDetailPage({
     return (
       <main className="page-shell detail-stack detail-page-shell">
         <BodyClass className="detail-page-body" />
+        <ScrollToTop />
         <script
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           type="application/ld+json"
