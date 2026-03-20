@@ -4,6 +4,7 @@ import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { SiteFooter } from "@/components/site-footer";
+import { getSiteUrl } from "@/lib/site-url";
 
 import "./globals.css";
 
@@ -14,7 +15,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: "Found Directory",
     template: "%s | Found Directory",

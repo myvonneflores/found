@@ -4,10 +4,15 @@ primary_region = "lax"
 [build]
   dockerfile = "Dockerfile"
 
+  [build.args]
+    SITE_URL = "https://www.found-places.com"
+    NEXT_PUBLIC_SITE_URL = "https://www.found-places.com"
+
 [env]
   HOSTNAME = "0.0.0.0"
   PORT = "3000"
   SITE_URL = "https://www.found-places.com"
+  NEXT_PUBLIC_SITE_URL = "https://www.found-places.com"
 
 [http_service]
   internal_port = 3000

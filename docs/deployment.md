@@ -64,9 +64,10 @@ fly secrets set \
 `/contact` now sends email through Resend. Verify `found-places.com` in Resend
 before using `hello@found-places.com` as the sender address.
 
-> **Note:** `NEXT_PUBLIC_API_BASE_URL` is a build-time variable (Next.js
-> inlines `NEXT_PUBLIC_*` values during `next build`). The production default
-> is already set in the Dockerfile. To override it, pass a build arg:
+> **Note:** `NEXT_PUBLIC_API_BASE_URL` and the site URL used for static
+> metadata are build-time variables. The production defaults are already set in
+> the frontend Dockerfile and `frontend/fly.toml`. To override the API base
+> URL, pass a build arg:
 >
 > ```bash
 > fly deploy --build-arg NEXT_PUBLIC_API_BASE_URL="https://api.found-places.com/api"
