@@ -431,6 +431,7 @@ export function CompanySaveFlow({
                         value: String(list.id),
                       }))}
                       disabled={isLoading || safeLists.length === 0}
+                      portal
                     />
                   </label>
                 ) : (
