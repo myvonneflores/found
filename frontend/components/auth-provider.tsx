@@ -54,7 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!isCancelled) {
+        setAccessToken(session.access);
         setHasKnownAccount(true);
+        setUser(session.user);
+        setIsReady(true);
       }
 
       const nextSession = await hydrateSession(session);
@@ -68,7 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccessToken(null);
         setHasKnownAccount(true);
         setUser(null);
-        setIsReady(true);
         return;
       }
 
@@ -77,7 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccessToken(nextSession.access);
       setHasKnownAccount(true);
       setUser(nextSession.user);
-      setIsReady(true);
     }
 
     void initializeSession();

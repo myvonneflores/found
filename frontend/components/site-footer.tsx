@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { getStoredDirectoryHref } from "@/lib/directory-session";
 
 function InstagramIcon() {
   return (
@@ -29,6 +31,13 @@ function LinkedInIcon() {
 export function SiteFooter() {
   const router = useRouter();
   const { hasKnownAccount, isAuthenticated, signOut } = useAuth();
+  const [directoryHref, setDirectoryHref] = useState("/companies");
+
+  useEffect(() => {
+    const nextDirectoryHref = getStoredDirectoryHref();
+    setDirectoryHref(nextDirectoryHref);
+    void router.prefetch(nextDirectoryHref);
+  }, [router]);
 
   function handleSignOut() {
     signOut();
@@ -44,7 +53,7 @@ export function SiteFooter() {
             <Link href="/">Home</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
-            <Link href="/companies">Search</Link>
+            <Link href={directoryHref}>Search</Link>
             <Link href="/lists">Lists</Link>
             <Link href="/privacy-policy">Privacy Policy</Link>
             <Link href="/terms-and-conditions">Terms &amp; Conditions</Link>

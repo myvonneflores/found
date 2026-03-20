@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { getStoredDirectoryHref } from "@/lib/directory-session";
 
 export function SiteHeader({
   initialSearch = "",
@@ -20,6 +21,7 @@ export function SiteHeader({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [directoryHref, setDirectoryHref] = useState("/companies");
 
   const accountHref = isAuthenticated
     ? user?.account_type === "business"
@@ -31,8 +33,16 @@ export function SiteHeader({
       ? "/login"
       : "/signup";
   const accountLabel = isAuthenticated ? "Dashboard" : hasKnownAccount ? "Sign In" : "Sign Up";
+  const resolvedBrandHref = brandHref === "/companies" ? directoryHref : brandHref;
 
   void initialSearch;
+
+  useEffect(() => {
+    const nextDirectoryHref = getStoredDirectoryHref();
+    setDirectoryHref(nextDirectoryHref);
+    void router.prefetch(nextDirectoryHref);
+    void router.prefetch("/lists");
+  }, [router]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -73,7 +83,7 @@ export function SiteHeader({
   return (
     <div className="directory-brand-strip directory-brand-strip-menu">
       <div aria-hidden="true" className="directory-header-balance" />
-      <Link className="directory-brand-link" href={brandHref}>
+      <Link className="directory-brand-link" href={resolvedBrandHref}>
         Found
       </Link>
       <div className="directory-header-actions">
@@ -145,7 +155,7 @@ export function SiteHeader({
               </Link>
               <Link
                 className="directory-menu-link"
-                href="/companies"
+                href={directoryHref}
                 onClick={() => {
                   setMenuOpen(false);
                   setSearchValue("");

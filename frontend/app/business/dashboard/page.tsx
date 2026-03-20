@@ -301,48 +301,31 @@ export default function BusinessDashboardPage() {
   }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
-    async function loadCommunityData() {
+    async function loadDashboardData() {
       if (!accessToken || !user || !user.is_business_verified) {
+        setFavorites([]);
+        setLists([]);
+        setClaims([]);
+        setSavedLists([]);
         setIsLoading(false);
         return;
       }
 
+      setIsLoading(true);
+
       try {
-        const [nextFavorites, nextLists, nextClaims, nextProfile] = await Promise.all([
+        const [nextFavorites, nextLists, nextClaims, nextProfile, nextSavedLists] = await Promise.all([
           listFavorites(accessToken),
           listCuratedLists(accessToken),
           listBusinessClaims(accessToken),
           getPersonalProfile(accessToken),
+          listSavedCuratedLists(accessToken),
         ]);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
         setClaims(normalizeClaims(nextClaims));
         setProfile(nextProfile);
         setSavedProfileIsPublic(nextProfile.is_public);
-      } catch (loadError) {
-        if (loadError instanceof Error && isTokenError(loadError.message)) {
-          signOut();
-          router.replace("/login");
-          return;
-        }
-        setError(loadError instanceof Error ? loadError.message : "Unable to load your community tools.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    void loadCommunityData();
-  }, [accessToken, router, signOut, user]);
-
-  useEffect(() => {
-    async function loadSavedLists() {
-      if (!accessToken || !user || !user.is_business_verified) {
-        setSavedLists([]);
-        return;
-      }
-
-      try {
-        const nextSavedLists = await listSavedCuratedLists(accessToken);
         setSavedLists(nextSavedLists);
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
@@ -350,11 +333,17 @@ export default function BusinessDashboardPage() {
           router.replace("/login");
           return;
         }
+        setFavorites([]);
+        setLists([]);
+        setClaims([]);
         setSavedLists([]);
+        setError(loadError instanceof Error ? loadError.message : "Unable to load your community tools.");
+      } finally {
+        setIsLoading(false);
       }
     }
 
-    void loadSavedLists();
+    void loadDashboardData();
   }, [accessToken, router, signOut, user]);
 
   function handleDashboardSignOut() {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { AuthGuardShell } from "@/components/auth-guard-shell";
@@ -24,6 +24,7 @@ import { CuratedList, Favorite, SavedCuratedList } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
 
 const DASHBOARD_SCROLL_CAP = 15;
+const DASHBOARD_DESKTOP_BREAKPOINT = 980;
 
 function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
   if (Array.isArray(value)) {
@@ -90,12 +91,20 @@ export default function AccountPage() {
   const [mobileFavoritesOpen, setMobileFavoritesOpen] = useState(true);
   const [mobileListsOpen, setMobileListsOpen] = useState(false);
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState<number | null>(null);
+  const [syncedPanelHeight, setSyncedPanelHeight] = useState<string | undefined>(undefined);
+  const communityPanelRef = useRef<HTMLElement | null>(null);
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
   const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
   const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
   const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
+  const isDesktopDashboard = viewportWidth !== null && viewportWidth > DASHBOARD_DESKTOP_BREAKPOINT;
+  const syncedPanelStyle =
+    isDesktopDashboard && syncedPanelHeight
+      ? ({ height: syncedPanelHeight, maxHeight: syncedPanelHeight } as CSSProperties)
+      : undefined;
 
   async function toggleListPrivacy(list: CuratedList) {
     if (!accessToken) {
@@ -138,7 +147,7 @@ export default function AccountPage() {
         <p className="lede">You haven’t favorited any businesses yet. Save favs from the business&apos; detail page.</p>
       ) : null}
       {!isLoading && safeFavorites.length > 0 ? (
-        <div className={safeFavorites.length > DASHBOARD_SCROLL_CAP ? "dashboard-stack dashboard-scroll-region is-capped" : "dashboard-stack"}>
+        <div className="dashboard-stack">
           {safeFavorites.map((favorite) => (
             <FavoriteChipActions favorite={favorite} key={favorite.id} />
           ))}
@@ -159,7 +168,7 @@ export default function AccountPage() {
       {!isLoading ? (
         <ListManager
           emptyMessage="No lists yet. Create your first one to start curating neighborhoods and favorites."
-          enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
+          enableScroll={!isDesktopDashboard && safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
           togglingListIds={togglingListIds}
@@ -228,6 +237,65 @@ export default function AccountPage() {
   );
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+
+    updateViewportWidth();
+    window.addEventListener("resize", updateViewportWidth);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportWidth);
+    };
+  }, []);
+
+  useEffect(() => {
+    const communityPanel = communityPanelRef.current;
+
+    if (!communityPanel || !isDesktopDashboard || typeof ResizeObserver === "undefined") {
+      setSyncedPanelHeight(undefined);
+      return;
+    }
+
+    let frame: number | null = null;
+
+    const updateHeight = () => {
+      const nextHeight = `${Math.ceil(communityPanel.getBoundingClientRect().height)}px`;
+      setSyncedPanelHeight((current) => (current === nextHeight ? current : nextHeight));
+    };
+
+    const scheduleUpdate = () => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+
+      frame = window.requestAnimationFrame(() => {
+        updateHeight();
+        frame = null;
+      });
+    };
+
+    scheduleUpdate();
+
+    const observer = new ResizeObserver(() => {
+      scheduleUpdate();
+    });
+
+    observer.observe(communityPanel);
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", scheduleUpdate);
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [isDesktopDashboard, profile, profileHref, profileName, profileSavedMessage, safeLists.length]);
+
+  useEffect(() => {
     if (!isReady) {
       return;
     }
@@ -245,46 +313,28 @@ export default function AccountPage() {
   }, [isAuthenticated, isReady, router, setRedirecting, user]);
 
   useEffect(() => {
-    async function loadCommunityData() {
+    async function loadDashboardData() {
       if (!accessToken || !user || user.account_type !== "personal") {
+        setFavorites([]);
+        setLists([]);
+        setSavedLists([]);
         setIsLoading(false);
         return;
       }
 
+      setIsLoading(true);
+
       try {
-        const [nextFavorites, nextLists, nextProfile] = await Promise.all([
+        const [nextFavorites, nextLists, nextProfile, nextSavedLists] = await Promise.all([
           listFavorites(accessToken),
           listCuratedLists(accessToken),
           getPersonalProfile(accessToken),
+          listSavedCuratedLists(accessToken),
         ]);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
         setProfile(nextProfile);
         setSavedProfileIsPublic(nextProfile.is_public);
-      } catch (loadError) {
-        if (loadError instanceof Error && isTokenError(loadError.message)) {
-          signOut();
-          router.replace("/login");
-          return;
-        }
-        setError(loadError instanceof Error ? loadError.message : "Unable to load your community data.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    void loadCommunityData();
-  }, [accessToken, router, signOut, user]);
-
-  useEffect(() => {
-    async function loadSavedLists() {
-      if (!accessToken || !user || user.account_type !== "personal") {
-        setSavedLists([]);
-        return;
-      }
-
-      try {
-        const nextSavedLists = await listSavedCuratedLists(accessToken);
         setSavedLists(nextSavedLists);
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
@@ -292,11 +342,16 @@ export default function AccountPage() {
           router.replace("/login");
           return;
         }
+        setFavorites([]);
+        setLists([]);
         setSavedLists([]);
+        setError(loadError instanceof Error ? loadError.message : "Unable to load your community data.");
+      } finally {
+        setIsLoading(false);
       }
     }
 
-    void loadSavedLists();
+    void loadDashboardData();
   }, [accessToken, router, signOut, user]);
 
   async function handleProfileSave(event: FormEvent<HTMLFormElement>) {
@@ -354,16 +409,29 @@ export default function AccountPage() {
           </div>
 
           <section className="dashboard-board">
-            <article className="panel dashboard-panel dashboard-panel-favorites">
-              {favoritesContent}
+            <article
+              className="panel dashboard-panel dashboard-panel-favorites dashboard-panel-scroll-shell"
+              style={syncedPanelStyle}
+            >
+              <div className="dashboard-panel-scroll-region">
+                {favoritesContent}
+              </div>
             </article>
 
-            <article className="panel dashboard-panel dashboard-panel-lists">
-              {listsContent}
+            <article
+              className="panel dashboard-panel dashboard-panel-lists dashboard-panel-scroll-shell"
+              style={syncedPanelStyle}
+            >
+              <div className="dashboard-panel-scroll-region">
+                {listsContent}
+              </div>
             </article>
 
             <aside className="dashboard-sidebar">
-              <article className="panel dashboard-panel dashboard-panel-share dashboard-panel-profile-combined">
+              <article
+                className="panel dashboard-panel dashboard-panel-share dashboard-panel-profile-combined"
+                ref={communityPanelRef}
+              >
                 {shareContent}
               </article>
             </aside>
