@@ -176,22 +176,7 @@ export default function BusinessPendingPage() {
         </button>
       ) : null}
     </article>
-  ) : (
-    <article className="auth-card business-claim-status-card">
-      <span className="badge">Start here</span>
-      <h2>Submit your business verification</h2>
-      <p className="lede">
-        You haven't submitted a verification claim yet. Once you do, we'll review it here.
-      </p>
-      <button
-        className="contact-submit"
-        onClick={() => router.push("/business/claim")}
-        type="button"
-      >
-        Start verification
-      </button>
-    </article>
-  );
+  ) : null;
 
   const favoritesContent = (
     <>
