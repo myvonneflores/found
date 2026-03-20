@@ -180,7 +180,17 @@ export default function AccountPage() {
 
   const shareContent = (
     <>
-      <form className="auth-form dashboard-profile-form" onSubmit={handleProfileSave}>
+      <form className="auth-form dashboard-profile-form dashboard-profile-form-with-top-actions" onSubmit={handleProfileSave}>
+        <div className={`dashboard-profile-top-actions${hasPublicPresence && profileHref ? "" : " is-single"}`}>
+          {hasPublicPresence && profileHref ? (
+            <Link className="button button-secondary dashboard-profile-link" href={profileHref}>
+              VIEW PROFILE
+            </Link>
+          ) : null}
+          <Link className="button button-secondary dashboard-profile-link" href="/account/add-business">
+            + YOUR FAV BIZ
+          </Link>
+        </div>
         <p className="dashboard-profile-helper">
           create a profile for easy sharing. don&apos;t see your favs listed? contribute to the community by adding a
           business listing.
@@ -222,15 +232,6 @@ export default function AccountPage() {
             {isSavingProfile ? "Saving..." : "Save"}
           </button>
         </div>
-
-        {hasPublicPresence && profileHref ? (
-          <Link className="button button-secondary dashboard-profile-link" href={profileHref}>
-            VIEW PROFILE
-          </Link>
-        ) : null}
-        <Link className="button button-secondary dashboard-profile-link" href="/account/add-business">
-          + YOUR FAV BIZ
-        </Link>
         {profileSavedMessage ? <p className="contact-form-note is-success">{profileSavedMessage}</p> : null}
       </form>
     </>
@@ -262,7 +263,11 @@ export default function AccountPage() {
     let frame: number | null = null;
 
     const updateHeight = () => {
-      const nextHeight = `${Math.ceil(communityPanel.getBoundingClientRect().height)}px`;
+      const panelStyles = window.getComputedStyle(communityPanel);
+      const borderHeight =
+        Number.parseFloat(panelStyles.borderTopWidth) +
+        Number.parseFloat(panelStyles.borderBottomWidth);
+      const nextHeight = `${Math.ceil(communityPanel.scrollHeight + borderHeight)}px`;
       setSyncedPanelHeight((current) => (current === nextHeight ? current : nextHeight));
     };
 

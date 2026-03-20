@@ -2555,6 +2555,7 @@ body.contact-page-body {
 .dashboard-panel-scroll-shell {
   min-height: 0;
   overflow: hidden;
+  align-content: stretch;
 }
 
 .dashboard-panel-scroll-region {
@@ -2853,6 +2854,10 @@ body.contact-page-body {
   width: 100%;
 }
 
+.dashboard-profile-form-with-top-actions {
+  margin-top: 0;
+}
+
 .dashboard-profile-helper {
   margin: 0;
   color: #ad5e05;
@@ -2891,6 +2896,23 @@ body.contact-page-body {
   justify-items: center;
 }
 
+.dashboard-profile-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  width: 100%;
+  align-items: stretch;
+  margin-top: 0.65rem;
+}
+
+.dashboard-profile-top-actions > * {
+  flex: 1 1 10.5rem;
+}
+
+.dashboard-profile-top-actions.is-single > * {
+  flex-basis: 100%;
+}
+
 .dashboard-profile-link {
   justify-self: center;
   min-width: 12rem;
@@ -2898,6 +2920,12 @@ body.contact-page-body {
   text-align: center;
   letter-spacing: 0.04em;
   font-weight: 700;
+}
+
+.dashboard-profile-top-actions .dashboard-profile-link {
+  justify-self: auto;
+  width: auto;
+  min-width: 0;
 }
 
 .dashboard-profile-toggle-row {
@@ -2927,6 +2955,47 @@ body.contact-page-body {
 .dashboard-profile-save:hover,
 .dashboard-profile-save:focus-visible {
   background: #77b857;
+}
+
+@media (max-width: 1180px) {
+  .dashboard-board,
+  .dashboard-column-headings {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-row {
+    gap: 0.65rem;
+    padding: 0.75rem 0.8rem;
+  }
+
+  .list-picker-chip-row {
+    padding-inline: 0.45rem;
+  }
+
+  .dashboard-panel .list-manager-create-button {
+    padding: 0.85rem 0.8rem;
+    font-size: 0.94rem;
+    letter-spacing: 0.03em;
+    line-height: 1.15;
+  }
+
+  .list-picker-chip-row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-block: 0.3rem;
+  }
+
+  .list-picker-chip-row .list-picker-chip {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .list-pill-toggle {
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+  }
 }
 
 .dashboard-panel-profile-combined .detail-save-toggle-copy,
@@ -3056,6 +3125,25 @@ body.contact-page-body {
   flex: 0 0 auto;
   opacity: 0.94;
   text-align: right;
+}
+
+.favorite-chip-location {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-chip-name {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .favorite-chip-location {
+    display: none;
+  }
 }
 
 .dashboard-row-link {
