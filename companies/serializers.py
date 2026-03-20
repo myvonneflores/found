@@ -9,6 +9,7 @@ from community.models import CuratedList
 from users.models import BusinessClaim
 
 from .business_hours import validate_business_hours, validate_timezone
+from .cities import canonicalize_city
 from .models import (
     BusinessCategory,
     Company,
@@ -17,6 +18,14 @@ from .models import (
     ProductCategory,
     SustainabilityMarker,
 )
+
+
+class CanonicalCityField(serializers.CharField):
+    def to_representation(self, value):
+        return canonicalize_city(super().to_representation(value))
+
+    def to_internal_value(self, data):
+        return canonicalize_city(super().to_internal_value(data))
 
 
 class TaxonomySerializer(serializers.ModelSerializer):
@@ -50,6 +59,7 @@ class SustainabilityMarkerSerializer(TaxonomySerializer):
 
 
 class CompanyListSerializer(serializers.ModelSerializer):
+    city = CanonicalCityField(read_only=True)
     business_category = serializers.SerializerMethodField()
     business_categories = serializers.StringRelatedField(many=True)
     product_categories = serializers.StringRelatedField(many=True)
@@ -114,6 +124,7 @@ class ClaimedCompanyProfileSerializer(serializers.Serializer):
 
 
 class CompanyDetailSerializer(serializers.ModelSerializer):
+    city = CanonicalCityField(read_only=True)
     claimed_profile = serializers.SerializerMethodField()
     business_category = BusinessCategorySerializer()
     business_categories = BusinessCategorySerializer(many=True)
@@ -252,6 +263,7 @@ def _normalized_hostname(value):
 
 
 class BaseCompanyWriteSerializer(serializers.ModelSerializer):
+    city = CanonicalCityField(required=False, allow_blank=True)
     business_hours = serializers.JSONField(required=False, allow_null=True)
     business_hours_timezone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     business_category = serializers.PrimaryKeyRelatedField(

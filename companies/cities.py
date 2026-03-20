@@ -5,6 +5,10 @@ CITY_ALIASES = {
     "Long Beach": "Los Angeles",
     "Venice": "Los Angeles",
     "West Hollywood": "Los Angeles",
+    "Carolina": "Puerto Rico",
+    "San Juan": "Puerto Rico",
+    "Vieques": "Puerto Rico",
+    "Viequez": "Puerto Rico",
 }
 
 
