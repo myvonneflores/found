@@ -3777,9 +3777,8 @@ body.contact-page-body {
   gap: 0.8rem;
   grid-template-rows: auto minmax(4.2rem, auto) minmax(0, 1fr);
   align-content: start;
-  aspect-ratio: 1 / 1;
   width: 100%;
-  min-height: 0;
+  min-height: clamp(24rem, 34vw, 28rem);
   height: auto;
   overflow: hidden;
   justify-self: stretch;
@@ -7282,6 +7281,11 @@ body.contact-page-body {
     grid-row: 1;
   }
 
+  .directory-detail-address {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .directory-detail-title {
     align-items: flex-start;
   }
@@ -7303,12 +7307,12 @@ body.contact-page-body {
 
   .directory-socials {
     grid-column: 1;
-    grid-row: 2;
-    justify-content: flex-end;
-    justify-self: end;
+    grid-row: 3;
+    justify-content: flex-start;
+    justify-self: start;
     align-self: start;
     margin-left: 0;
-    width: 100%;
+    width: auto;
     max-width: 100%;
   }
 
