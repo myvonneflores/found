@@ -199,6 +199,7 @@ export function AddCompanyToList({
                 }))}
                 onSelect={(value) => setSelectedListId(value)}
                 disabled={isLoading || safeLists.length === 0}
+                portal
               />
             </label>
           </>

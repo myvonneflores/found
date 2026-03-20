@@ -120,10 +120,13 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
   const [pendingListIds, setPendingListIds] = useState<Set<number>>(new Set());
   const [pendingFavoriteIds, setPendingFavoriteIds] = useState<Set<number>>(new Set());
   const [isSaveStateLoading, setIsSaveStateLoading] = useState(true);
+  const [actionFeedback, setActionFeedback] = useState("");
   const [favoritePromptCompany, setFavoritePromptCompany] = useState<{ id: number; slug: string } | null>(null);
   const [favoritePromptPosition, setFavoritePromptPosition] = useState({ top: 96, left: 16 });
   const [listPromptCompanyId, setListPromptCompanyId] = useState<number | null>(null);
+  const [activeListMenu, setActiveListMenu] = useState<{ listId: number; top: number; left: number } | null>(null);
   const favoritePromptAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const listMenuRef = useRef<HTMLDivElement | null>(null);
   const canUseSaveTools = Boolean(user?.account_type === "personal" || user?.account_type === "business");
 
   const selectedList = useMemo(
@@ -294,6 +297,66 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
           document.body
         )
       : null;
+  const feedbackToast =
+    actionFeedback && typeof document !== "undefined"
+      ? createPortal(
+          <div className="detail-save-toast detail-save-toast-share" role="status">
+            <div className="detail-save-toast-copy">
+              <p>{actionFeedback}</p>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+  const activeMenuList = activeListMenu
+    ? profile.public_lists.find((list) => list.id === activeListMenu.listId) ?? null
+    : null;
+  const listActionsMenu =
+    activeListMenu && activeMenuList && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="public-profile-browser-list-menu"
+            ref={listMenuRef}
+            role="menu"
+            style={{
+              left: `${activeListMenu.left}px`,
+              top: `${activeListMenu.top}px`,
+            }}
+          >
+            <button
+              className="public-profile-browser-list-menu-item"
+              onClick={() => {
+                void handleToggleSavedList(activeMenuList.id);
+                setActiveListMenu(null);
+              }}
+              type="button"
+            >
+              {savedListMap[activeMenuList.id] ? "Unsave" : "Save"}
+            </button>
+            <button
+              className="public-profile-browser-list-menu-item"
+              onClick={() => {
+                void handleShareList(activeMenuList);
+                setActiveListMenu(null);
+              }}
+              type="button"
+            >
+              Share
+            </button>
+            <button
+              className="public-profile-browser-list-menu-item"
+              onClick={() => {
+                router.push(`/lists/${activeMenuList.id_hash}`);
+                setActiveListMenu(null);
+              }}
+              type="button"
+            >
+              Open
+            </button>
+          </div>,
+          document.body
+        )
+      : null;
 
   useEffect(() => {
     if (!favoritePromptCompany) {
@@ -335,6 +398,50 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
     const timeout = window.setTimeout(() => setActionError(""), 3600);
     return () => window.clearTimeout(timeout);
   }, [actionError]);
+
+  useEffect(() => {
+    if (!actionFeedback) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setActionFeedback(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [actionFeedback]);
+
+  useEffect(() => {
+    if (!activeListMenu) {
+      return undefined;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (!listMenuRef.current?.contains(target)) {
+        setActiveListMenu(null);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setActiveListMenu(null);
+      }
+    }
+
+    function handleViewportChange() {
+      setActiveListMenu(null);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [activeListMenu]);
 
   useEffect(() => {
     let isActive = true;
@@ -453,6 +560,60 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
     }
   }
 
+  async function handleShareList(list: PublicProfile["public_lists"][number]) {
+    const url = new URL(`/lists/${list.id_hash}`, window.location.origin).toString();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: list.title,
+          text: `Check out ${list.title} on FOUND.`,
+          url,
+        });
+        setActionFeedback("Shared");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setActionFeedback("Link copied");
+        return;
+      }
+
+      throw new Error("Clipboard unavailable");
+    } catch (shareError) {
+      if (shareError instanceof DOMException && shareError.name === "AbortError") {
+        return;
+      }
+
+      setActionError("Unable to share right now");
+    }
+  }
+
+  function toggleListMenu(
+    list: PublicProfile["public_lists"][number],
+    trigger: HTMLButtonElement
+  ) {
+    if (activeListMenu?.listId === list.id) {
+      setActiveListMenu(null);
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = 10.5 * 16;
+    const left = Math.min(
+      Math.max(16, rect.right - menuWidth),
+      Math.max(16, window.innerWidth - menuWidth - 16)
+    );
+    const top = Math.min(rect.bottom + 10, window.innerHeight - 180);
+
+    setActiveListMenu({
+      listId: list.id,
+      top,
+      left,
+    });
+  }
+
   async function handleToggleFavorite(company: { id: number; slug: string }, trigger: HTMLButtonElement) {
     if (!isAuthenticated || !canUseSaveTools) {
       router.push("/login");
@@ -568,26 +729,14 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
                     </span>
                   </button>
                   <button
-                    aria-label={
-                      pendingListIds.has(list.id)
-                        ? "Saving list"
-                        : savedListMap[list.id]
-                          ? "Unsave list"
-                          : isAuthenticated && canUseSaveTools
-                            ? "Save list"
-                            : "Log in to save list"
-                    }
-                    aria-pressed={Boolean(savedListMap[list.id])}
-                    className={
-                      savedListMap[list.id]
-                        ? "public-profile-browser-chip-action public-profile-browser-chip-action-save is-saved"
-                        : "public-profile-browser-chip-action public-profile-browser-chip-action-save"
-                    }
-                    disabled={pendingListIds.has(list.id) || isSaveStateLoading}
-                    onClick={() => void handleToggleSavedList(list.id)}
+                    aria-expanded={activeListMenu?.listId === list.id}
+                    aria-haspopup="menu"
+                    aria-label={`More actions for ${list.title}`}
+                    className="public-profile-browser-chip-action public-profile-browser-chip-action-menu"
+                    onClick={(event) => toggleListMenu(list, event.currentTarget)}
                     type="button"
                   >
-                    <BookmarkIcon filled={Boolean(savedListMap[list.id])} />
+                    <span aria-hidden="true">...</span>
                   </button>
                 </div>
               ))
@@ -745,8 +894,10 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
         </article>
       </section>
       {errorToast}
+      {feedbackToast}
       {favoritePrompt}
       {listPromptModal}
+      {listActionsMenu}
     </section>
   );
 }

@@ -28,14 +28,43 @@
   --font-display: var(--font-poppins), "Trebuchet MS", sans-serif;
   --font-body: var(--font-poppins), "Trebuchet MS", sans-serif;
   --found-green: #6cab4c;
+  --scrollbar-track: rgba(223, 133, 127, 0.18);
+  --scrollbar-track-strong: rgba(223, 133, 127, 0.28);
+  --scrollbar-thumb-solid: #bb74a0;
+  --scrollbar-thumb-hover-solid: #a95f92;
+  --scrollbar-thumb-gradient: linear-gradient(180deg, #df857f 0%, #bb74a0 100%);
+  --scrollbar-thumb-hover-gradient: linear-gradient(180deg, #d97870 0%, #a95f92 100%);
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
+  scrollbar-width: thin;
 }
 
 html {
   color-scheme: light;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-gradient);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover-gradient);
 }
 
 body {
@@ -2791,7 +2820,7 @@ body.contact-page-body {
     padding-right: 0.35rem;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 248, 239, 0.74) rgba(255, 248, 239, 0.14);
+    scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
   }
 
   .dashboard-panel-scroll-shell .dashboard-panel-scroll-region::-webkit-scrollbar {
@@ -2799,12 +2828,12 @@ body.contact-page-body {
   }
 
   .dashboard-panel-scroll-shell .dashboard-panel-scroll-region::-webkit-scrollbar-track {
-    background: rgba(255, 248, 239, 0.14);
+    background: var(--scrollbar-track);
     border-radius: 999px;
   }
 
   .dashboard-panel-scroll-shell .dashboard-panel-scroll-region::-webkit-scrollbar-thumb {
-    background: rgba(255, 248, 239, 0.74);
+    background: var(--scrollbar-thumb-gradient);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
@@ -4240,7 +4269,7 @@ body.contact-page-body {
     padding-right: 0.35rem;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 248, 239, 0.74) rgba(255, 248, 239, 0.14);
+    scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
   }
 
   .public-profile-browser-list-rail::-webkit-scrollbar,
@@ -4250,13 +4279,13 @@ body.contact-page-body {
 
   .public-profile-browser-list-rail::-webkit-scrollbar-track,
   .public-profile-browser-company-rail::-webkit-scrollbar-track {
-    background: rgba(255, 248, 239, 0.14);
+    background: var(--scrollbar-track);
     border-radius: 999px;
   }
 
   .public-profile-browser-list-rail::-webkit-scrollbar-thumb,
   .public-profile-browser-company-rail::-webkit-scrollbar-thumb {
-    background: rgba(255, 248, 239, 0.74);
+    background: var(--scrollbar-thumb-gradient);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
@@ -4346,22 +4375,57 @@ body.contact-page-body {
   border: 1px solid rgba(255, 248, 239, 0.34);
 }
 
-.public-profile-browser-list-rail .public-profile-browser-chip-action-save {
+.public-profile-browser-list-rail .public-profile-browser-chip-action-menu {
   position: absolute;
   top: 50%;
   right: 0.8rem;
   transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
 }
 
-.public-profile-browser-chip-action-save:hover,
-.public-profile-browser-chip-action-save:focus-visible {
+.public-profile-browser-chip-action-menu {
+  border: 1px solid rgba(255, 248, 239, 0.26);
+}
+
+.public-profile-browser-chip-action-menu:hover,
+.public-profile-browser-chip-action-menu:focus-visible,
+.public-profile-browser-chip-action-menu[aria-expanded="true"] {
   background: rgba(255, 248, 239, 0.3);
-  transform: translateY(calc(-50% - 1px));
 }
 
-.public-profile-browser-chip-action-save.is-saved {
-  background: rgba(255, 248, 239, 0.38);
-  border-color: rgba(255, 248, 239, 0.46);
+.public-profile-browser-list-menu {
+  position: fixed;
+  z-index: 160;
+  display: grid;
+  gap: 0.3rem;
+  width: min(10.5rem, calc(100vw - 2rem));
+  padding: 0.45rem;
+  border: 1px solid rgba(255, 248, 239, 0.26);
+  border-radius: 20px;
+  background: #f7e2c6;
+  box-shadow: 0 18px 40px rgba(70, 35, 14, 0.18);
+}
+
+.public-profile-browser-list-menu-item {
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: #ad5e05;
+  padding: 0.72rem 0.8rem;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.public-profile-browser-list-menu-item:hover,
+.public-profile-browser-list-menu-item:focus-visible {
+  background: rgba(223, 133, 127, 0.22);
+  outline: none;
 }
 
 .public-profile-browser-chip-action-favorite {
@@ -4410,7 +4474,7 @@ body.contact-page-body {
     padding-right: 4rem;
   }
 
-  .public-profile-browser-list-rail .public-profile-browser-chip-action-save {
+  .public-profile-browser-list-rail .public-profile-browser-chip-action-menu {
     right: 0.65rem;
   }
 
@@ -6230,7 +6294,7 @@ body.contact-page-body {
   padding-right: 0.6rem;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: #bb74a0 rgba(250, 238, 232, 0.88);
+  scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
 }
 
 .directory-panel-filters .directory-form {
@@ -6266,7 +6330,7 @@ body.contact-page-body {
   scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: #bb74a0 rgba(250, 238, 232, 0.88);
+  scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
 }
 
 .directory-form::-webkit-scrollbar,
@@ -6276,21 +6340,21 @@ body.contact-page-body {
 
 .directory-form::-webkit-scrollbar-track,
 .directory-company-list::-webkit-scrollbar-track {
-  background: rgba(250, 238, 232, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(187, 116, 160, 0.16);
+  background: var(--scrollbar-track);
+  box-shadow: inset 0 0 0 1px var(--scrollbar-track-strong);
   border-radius: 999px;
 }
 
 .directory-form::-webkit-scrollbar-thumb,
 .directory-company-list::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #df857f 0%, #bb74a0 100%);
-  border: 3px solid rgba(250, 238, 232, 0.88);
+  background: var(--scrollbar-thumb-gradient);
+  border: 3px solid transparent;
   border-radius: 999px;
 }
 
 .directory-form::-webkit-scrollbar-thumb:hover,
 .directory-company-list::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #d97870 0%, #a95f92 100%);
+  background: var(--scrollbar-thumb-hover-gradient);
 }
 
 .directory-pill-list {
@@ -6366,6 +6430,13 @@ body.contact-page-body {
   max-height: calc(8 * 3rem);
   overflow-y: auto;
   scrollbar-gutter: stable;
+}
+
+.directory-custom-select-menu-portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 200;
 }
 
 .directory-custom-select-option {
@@ -7182,7 +7253,7 @@ body.contact-page-body {
     overflow-y: auto;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: #bb74a0 rgba(250, 238, 232, 0.88);
+    scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
   }
 
   .directory-company-list::-webkit-scrollbar {
@@ -7190,14 +7261,14 @@ body.contact-page-body {
   }
 
   .directory-company-list::-webkit-scrollbar-track {
-    background: rgba(250, 238, 232, 0.88);
-    box-shadow: inset 0 0 0 1px rgba(187, 116, 160, 0.16);
+    background: var(--scrollbar-track);
+    box-shadow: inset 0 0 0 1px var(--scrollbar-track-strong);
     border-radius: 999px;
   }
 
   .directory-company-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #df857f 0%, #bb74a0 100%);
-    border: 3px solid rgba(250, 238, 232, 0.88);
+    background: var(--scrollbar-thumb-gradient);
+    border: 3px solid transparent;
     border-radius: 999px;
   }
 }
