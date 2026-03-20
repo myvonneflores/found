@@ -176,6 +176,24 @@ class TestImportCompaniesCommand:
         company = Company.objects.get(name="Borough Alias Co")
         assert company.city == "New York"
 
+    def test_maps_puerto_rico_municipalities_to_puerto_rico(self):
+        csv_path = write_csv(
+            [
+                {
+                    "name": "Island Alias Co",
+                    "city": "San Juan",
+                    "state": "PR",
+                    "country": "Puerto Rico",
+                    "business_category": "Retail",
+                }
+            ]
+        )
+
+        call_command("import_companies", csv_path)
+
+        company = Company.objects.get(name="Island Alias Co")
+        assert company.city == "Puerto Rico"
+
     def test_merges_and_removes_editorial_product_categories(self):
         csv_path = write_csv(
             [

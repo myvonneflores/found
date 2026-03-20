@@ -135,6 +135,40 @@ class TestCompanyListApi:
         assert response.data["count"] == 1
         assert response.data["results"][0]["name"] == "Borough Alias Co"
 
+    def test_filters_by_puerto_rico_include_municipality_aliases(self, api_client, two_companies):
+        Company.objects.create(
+            name="Island Alias Co",
+            city="San Juan",
+            state="PR",
+            country="Puerto Rico",
+        )
+
+        response = api_client.get(reverse("companies:company-list"), {"city": "Puerto Rico"})
+
+        assert response.status_code == 200
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "Island Alias Co"
+
+    def test_company_apis_serialize_canonical_puerto_rico_city(self, api_client, two_companies):
+        company = Company.objects.create(
+            name="Island Display Co",
+            city="Vieques",
+            state="PR",
+            country="Puerto Rico",
+        )
+
+        list_response = api_client.get(reverse("companies:company-list"))
+        detail_response = api_client.get(
+            reverse("companies:company-detail", kwargs={"slug": company.slug})
+        )
+
+        assert list_response.status_code == 200
+        listed_company = next(item for item in list_response.data["results"] if item["slug"] == company.slug)
+        assert listed_company["city"] == "Puerto Rico"
+
+        assert detail_response.status_code == 200
+        assert detail_response.data["city"] == "Puerto Rico"
+
     def test_filters_by_business_category(self, api_client, two_companies):
         response = api_client.get(
             reverse("companies:company-list"),
@@ -297,11 +331,12 @@ class TestTaxonomyAndCityApis:
         Company.objects.create(name="Metro Alias Co", city="Gresham")
         Company.objects.create(name="Borough Alias Co", city="Brooklyn")
         Company.objects.create(name="Neighborhood Alias Co", city="West Hollywood")
+        Company.objects.create(name="Island Alias Co", city="Carolina")
 
         response = api_client.get(reverse("companies:city-option-list"))
 
         assert response.status_code == 200
-        assert response.data == ["Los Angeles", "New York", "Portland", "Seattle"]
+        assert response.data == ["Los Angeles", "New York", "Portland", "Puerto Rico", "Seattle"]
 
 
 @pytest.mark.django_db
