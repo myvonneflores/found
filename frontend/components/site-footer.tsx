@@ -48,7 +48,10 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="site-footer-shell">
         <div className="site-footer-topline">
-          <div className="site-footer-mark">FOUND</div>
+          <div className="site-footer-mark">
+            <img alt="" aria-hidden="true" className="site-footer-mark-image" height="84" src="/found-footer-mark.png" width="68" />
+            <span>F O U N D</span>
+          </div>
           <nav aria-label="Footer" className="site-footer-nav">
             <Link href="/">Home</Link>
             <Link href="/about">About</Link>

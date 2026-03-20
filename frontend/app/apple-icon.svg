@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-labelledby="title desc">
+  <title id="title">Found apple touch icon</title>
+  <desc id="desc">A magnifying glass with an F in the lens on a green rounded square.</desc>
+  <rect width="180" height="180" rx="42" fill="#6CAB4C" />
+  <circle cx="80" cy="74" r="44.5" fill="#ED846E" stroke="#5C7D55" stroke-width="8" />
+  <circle cx="80" cy="74" r="34.5" fill="#F3EFAF" stroke="#5C7D55" stroke-width="6.2" />
+  <path
+    d="M67.8 48.6C64.469 48.6 61.769 51.3 61.769 54.631V90.669C61.769 94 64.469 96.7 67.8 96.7C71.131 96.7 73.831 94 73.831 90.669V77.031H92.644C95.975 77.031 98.675 74.331 98.675 71C98.675 67.669 95.975 64.969 92.644 64.969H73.831V60.675H94.85C98.181 60.675 100.881 57.975 100.881 54.644C100.881 51.313 98.181 48.613 94.85 48.613L67.8 48.6Z"
+    fill="#5C7D55"
+  />
+  <rect
+    x="109"
+    y="109"
+    width="13"
+    height="13"
+    rx="2"
+    fill="#ED846E"
+    stroke="#5C7D55"
+    stroke-width="4.8"
+    transform="rotate(45 109 109)"
+  />
+  <rect
+    x="114"
+    y="114"
+    width="42"
+    height="24"
+    rx="12"
+    fill="#9AC5E9"
+    stroke="#5C7D55"
+    stroke-width="6.5"
+    transform="rotate(45 114 114)"
+  />
+</svg>
