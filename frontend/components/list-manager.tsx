@@ -21,6 +21,10 @@ export function ListManager({
 }) {
   return (
     <div className="list-manager">
+      <button className="button button-secondary list-manager-create-button" onClick={onCreateList} type="button">
+        create new list
+      </button>
+
       {lists.length > 0 ? (
         <div
           aria-label="Your lists"
@@ -65,10 +69,6 @@ export function ListManager({
       ) : (
         <p className="lede">{emptyMessage}</p>
       )}
-
-      <button className="button button-secondary list-manager-create-button" onClick={onCreateList} type="button">
-        create new list
-      </button>
     </div>
   );
 }

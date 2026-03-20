@@ -2510,6 +2510,15 @@ body.contact-page-body {
   color: #fff8ef;
 }
 
+.dashboard-panel-scroll-shell {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashboard-panel-scroll-region {
+  min-height: 0;
+}
+
 .dashboard-banner .home-hero-title,
 .dashboard-banner .lede,
 .dashboard-panel > .lede,
@@ -2756,6 +2765,37 @@ body.contact-page-body {
   overflow-y: auto;
   padding-right: 0.35rem;
   scrollbar-gutter: stable;
+}
+
+@media (min-width: 981px) {
+  .dashboard-panel-scroll-shell {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .dashboard-panel-scroll-shell .dashboard-panel-scroll-region {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 248, 239, 0.74) rgba(255, 248, 239, 0.14);
+  }
+
+  .dashboard-panel-scroll-shell .dashboard-panel-scroll-region::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  .dashboard-panel-scroll-shell .dashboard-panel-scroll-region::-webkit-scrollbar-track {
+    background: rgba(255, 248, 239, 0.14);
+    border-radius: 999px;
+  }
+
+  .dashboard-panel-scroll-shell .dashboard-panel-scroll-region::-webkit-scrollbar-thumb {
+    background: rgba(255, 248, 239, 0.74);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 }
 
 .dashboard-panel-share,
@@ -3063,13 +3103,20 @@ body.contact-page-body {
   transition: transform 120ms ease, background-color 120ms ease;
 }
 
+.detail-save-heart {
+  border: 1px solid #d64545;
+  background: rgba(255, 248, 239, 0.18);
+  color: #d64545;
+}
+
 .detail-save-action:hover {
   transform: translateY(-1px);
 }
 
 .detail-save-heart.is-active {
-  background: rgba(247, 232, 220, 0.92);
-  color: #d06f79;
+  background: #d64545;
+  border-color: #d64545;
+  color: #fff8ef;
 }
 
 .detail-header-action {
@@ -3215,7 +3262,7 @@ body.contact-page-body {
   color: #b86d45;
   box-shadow: 0 24px 60px rgba(44, 20, 17, 0.26);
   max-height: calc(100vh - 3rem);
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .detail-confirm-modal {
@@ -3393,6 +3440,14 @@ body.contact-page-body {
 
 .detail-save-modal .detail-list-form {
   gap: 0.9rem;
+}
+
+.detail-save-modal .directory-custom-select {
+  z-index: 120;
+}
+
+.detail-save-modal .directory-custom-select-menu {
+  z-index: 130;
 }
 
 .detail-save-modal .detail-list-form .button {
@@ -4080,11 +4135,11 @@ body.contact-page-body {
   width: 100%;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .public-profile-browser-panel {
-  min-height: clamp(30rem, 62vh, 42rem);
+  min-height: clamp(32.5rem, 65vh, 44.5rem);
 }
 
 .public-profile-browser-list-copy {
@@ -4115,10 +4170,61 @@ body.contact-page-body {
   align-content: start;
 }
 
+.public-profile-browser-save-note {
+  margin: 0;
+}
+
+@media (min-width: 981px) {
+  .public-profile-browser-panel {
+    height: clamp(32.5rem, 65vh, 44.5rem);
+    overflow: hidden;
+  }
+
+  .public-profile-browser-panel.dashboard-panel-favorites,
+  .public-profile-browser-panel.dashboard-panel-lists {
+    align-content: stretch;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .public-profile-browser-list-rail,
+  .public-profile-browser-company-rail {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 248, 239, 0.74) rgba(255, 248, 239, 0.14);
+  }
+
+  .public-profile-browser-list-rail::-webkit-scrollbar,
+  .public-profile-browser-company-rail::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  .public-profile-browser-list-rail::-webkit-scrollbar-track,
+  .public-profile-browser-company-rail::-webkit-scrollbar-track {
+    background: rgba(255, 248, 239, 0.14);
+    border-radius: 999px;
+  }
+
+  .public-profile-browser-list-rail::-webkit-scrollbar-thumb,
+  .public-profile-browser-company-rail::-webkit-scrollbar-thumb {
+    background: rgba(255, 248, 239, 0.74);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
 .public-profile-browser-chip {
   display: grid;
   gap: 0.12rem;
+  flex: 1 1 auto;
   width: 100%;
+  min-width: 0;
   padding: 0.85rem 1rem;
   border: 1px solid rgba(255, 248, 239, 0.18);
   border-radius: 24px;
@@ -4127,6 +4233,21 @@ body.contact-page-body {
   text-align: left;
   cursor: pointer;
   transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.public-profile-browser-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+}
+
+.public-profile-browser-list-rail .public-profile-browser-chip-row {
+  position: relative;
+}
+
+.public-profile-browser-list-rail .public-profile-browser-chip {
+  padding-right: 4.4rem;
 }
 
 .public-profile-browser-chip:hover,
@@ -4138,6 +4259,82 @@ body.contact-page-body {
 
 .public-profile-browser-chip.is-active {
   background: rgba(255, 248, 239, 0.36);
+}
+
+.public-profile-browser-chip-action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(255, 248, 239, 0.18);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease,
+    opacity 140ms ease;
+}
+
+.public-profile-browser-chip-action svg {
+  width: 1.18rem;
+  height: 1.18rem;
+}
+
+.public-profile-browser-chip-action:hover,
+.public-profile-browser-chip-action:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.public-profile-browser-chip-action:disabled {
+  cursor: default;
+  opacity: 0.68;
+  transform: none;
+}
+
+.public-profile-browser-chip-action-save {
+  border: 1px solid rgba(255, 248, 239, 0.34);
+}
+
+.public-profile-browser-list-rail .public-profile-browser-chip-action-save {
+  position: absolute;
+  top: 50%;
+  right: 0.8rem;
+  transform: translateY(-50%);
+}
+
+.public-profile-browser-chip-action-save:hover,
+.public-profile-browser-chip-action-save:focus-visible {
+  background: rgba(255, 248, 239, 0.3);
+  transform: translateY(calc(-50% - 1px));
+}
+
+.public-profile-browser-chip-action-save.is-saved {
+  background: rgba(255, 248, 239, 0.38);
+  border-color: rgba(255, 248, 239, 0.46);
+}
+
+.public-profile-browser-chip-action-favorite {
+  border: 1px solid #dc4747;
+  background: rgba(255, 248, 239, 0.9);
+  color: #dc4747;
+}
+
+.public-profile-browser-chip-action-favorite:hover,
+.public-profile-browser-chip-action-favorite:focus-visible {
+  background: rgba(255, 248, 239, 0.98);
+}
+
+.public-profile-browser-chip-action-favorite.is-favorited {
+  background: #dc4747;
+  border-color: #dc4747;
+  color: #fff7f1;
 }
 
 .public-profile-browser-chip-name,
@@ -4158,6 +4355,25 @@ body.contact-page-body {
   font-size: 0.92rem;
   font-weight: 600;
   opacity: 0.92;
+}
+
+@media (max-width: 640px) {
+  .public-profile-browser-chip-row {
+    gap: 0.55rem;
+  }
+
+  .public-profile-browser-list-rail .public-profile-browser-chip {
+    padding-right: 4rem;
+  }
+
+  .public-profile-browser-list-rail .public-profile-browser-chip-action-save {
+    right: 0.65rem;
+  }
+
+  .public-profile-browser-chip-action {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
 }
 
 .public-profile-browser-detail {
@@ -4196,6 +4412,28 @@ body.contact-page-body {
   line-height: 0.98;
   text-decoration: none;
   white-space: normal;
+}
+
+.public-profile-browser-detail .directory-detail-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  width: auto;
+  max-width: 100%;
+  padding-right: 0;
+}
+
+.public-profile-browser-detail .directory-detail-title h2 {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.public-profile-browser-detail .directory-detail-title .directory-detail-favorite {
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 0;
 }
 
 .public-profile-browser-detail .directory-detail-layout {
@@ -5835,11 +6073,18 @@ body.contact-page-body {
 }
 
 .directory-grid.is-resizing,
+.directory-grid.is-initializing,
 .directory-grid.is-resizing .directory-panel,
+.directory-grid.is-initializing .directory-panel,
 .directory-grid.is-resizing .directory-detail-body,
+.directory-grid.is-initializing .directory-detail-body,
 .directory-grid.is-resizing .directory-detail-layout,
+.directory-grid.is-initializing .directory-detail-layout,
 .directory-grid.is-resizing .directory-detail-media,
-.directory-grid.is-resizing .directory-detail-map {
+.directory-grid.is-initializing .directory-detail-media,
+.directory-grid.is-resizing .directory-detail-map,
+.directory-grid.is-initializing .directory-detail-map,
+.directory-grid.is-initializing .directory-panel-surface {
   transition: none !important;
 }
 
@@ -6239,9 +6484,9 @@ body.contact-page-body {
   min-width: 2.5rem;
   min-height: 2.5rem;
   border-radius: 50%;
-  border: 1px solid rgba(250, 238, 232, 0.8);
+  border: 1px solid #d64545;
   background: rgba(255, 255, 255, 0.08);
-  color: #df857f;
+  color: #d64545;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6257,9 +6502,9 @@ body.contact-page-body {
   height: 2.5rem;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(250, 238, 232, 0.8);
+  border: 1px solid #d64545;
   background: rgba(255, 255, 255, 0.08);
-  color: #df857f;
+  color: #d64545;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6271,14 +6516,14 @@ body.contact-page-body {
 }
 
 .directory-company-favorite.is-active {
-  background: #df857f;
-  color: #fff7f1;
-  border-color: #df857f;
+  background: #d64545;
+  color: #fff8ef;
+  border-color: #d64545;
 }
 
 .directory-company-row.is-active .directory-company-favorite:not(.is-active) {
-  color: #fff7f1;
-  border-color: rgba(255, 247, 241, 0.92);
+  color: #d64545;
+  border-color: #d64545;
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -6476,6 +6721,25 @@ body.contact-page-body {
 
 .directory-search-detail-header + .directory-detail-layout .directory-detail-copy {
   margin-top: 0.35rem;
+}
+
+@media (max-width: 1420px) and (min-width: 761px) {
+  .directory-search-detail-head {
+    gap: 0.8rem;
+  }
+
+  .directory-search-detail-copy {
+    flex: 1 1 15rem;
+    min-width: 0;
+  }
+
+  .directory-search-detail-head .directory-detail-socials-inline {
+    flex: 0 1 9.5rem;
+    width: auto;
+    max-width: 9.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
 .directory-detail-media {
@@ -6705,7 +6969,14 @@ body.contact-page-body {
   color: inherit;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1280px) and (min-width: 1001px) {
+  .directory-grid {
+    grid-template-columns: minmax(14rem, 0.82fr) minmax(14rem, 0.82fr) minmax(20rem, 1.35fr);
+    gap: 0.875rem;
+  }
+}
+
+@media (max-width: 1000px) {
   .directory-grid {
     display: flex;
     flex-wrap: wrap;
@@ -7380,7 +7651,18 @@ body.contact-page-body {
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-cascade-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -7389,12 +7671,111 @@ body.contact-page-body {
 }
 
 .page-transition-wrapper > .page-shell {
-  animation: page-enter 280ms ease-out both;
+  animation: page-enter 220ms ease-out both;
+}
+
+.page-transition-wrapper > .page-shell > *,
+.page-transition-wrapper > .page-shell > .directory-shell > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .home-section > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *,
+.page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > * {
+  opacity: 0;
+  animation: page-cascade-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+.page-transition-wrapper > .page-shell > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-section > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *:nth-child(1),
+.page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.page-transition-wrapper > .page-shell > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-section > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *:nth-child(2),
+.page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > *:nth-child(2) {
+  animation-delay: 100ms;
+}
+
+.page-transition-wrapper > .page-shell > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-section > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *:nth-child(3),
+.page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > *:nth-child(3) {
+  animation-delay: 160ms;
+}
+
+.page-transition-wrapper > .page-shell > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-section > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *:nth-child(4),
+.page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > *:nth-child(4) {
+  animation-delay: 220ms;
+}
+
+.page-transition-wrapper > .page-shell > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .home-section > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *:nth-child(5),
+.page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > *:nth-child(5) {
+  animation-delay: 280ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-transition-wrapper > .page-shell {
+  .page-transition-wrapper > .page-shell,
+  .page-transition-wrapper > .page-shell > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .directory-grid > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .dashboard-stage > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .public-list-stage > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .contact-stage > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .auth-stage > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .home-hero-grid > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .home-section > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .about-page-card > *,
+  .page-transition-wrapper > .page-shell > .directory-shell > .legal-page-card > * {
     animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

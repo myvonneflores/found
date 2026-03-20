@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BodyClass } from "@/components/body-class";
+import { RememberedDirectoryLink } from "@/components/remembered-directory-link";
 import { SiteHeader } from "@/components/site-header";
 import { listCompanies } from "@/lib/api";
 import { CompanyListItem } from "@/types/company";
@@ -218,17 +219,15 @@ export default async function HomePage() {
               <div className="home-hero-text">
                 <h1 className="home-hero-title">Find the good stuff nearby</h1>
                 <p className="home-hero-lede">
-                  Discover locally owned businesses based on what matters to you, then save favorites, create lists,
-                  and share the spots you want more people to know about.
+                  Discover locally owned businesses based on what matters to you, then save favorites, create lists
+                  you can text, email, or link anywhere your community finds you.
                 </p>
               </div>
               <div className="home-hero-actions">
                 <Link className="about-cta-link" href="/signup">
                   Create Account
                 </Link>
-                <Link className="about-cta-link" href="/companies">
-                  Start Finding
-                </Link>
+                <RememberedDirectoryLink className="about-cta-link">Start Finding</RememberedDirectoryLink>
               </div>
             </div>
           </article>

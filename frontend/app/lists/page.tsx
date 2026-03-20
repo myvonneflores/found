@@ -345,7 +345,8 @@ export default function PublicListsPage() {
                   const savedMatch = savedLists.find((savedList) => savedList.list.id === list.id);
                   const isOwner = Boolean(user && user.public_slug === list.owner.public_slug);
                   const isPending = pendingListIds.has(list.id);
-                  const previewCompanies = list.preview_companies.slice(0, 3);
+                  const previewCompanyLimit = list.item_count > 3 ? 2 : 3;
+                  const previewCompanies = list.preview_companies.slice(0, previewCompanyLimit);
                   const additionalCompanyCount = Math.max(0, list.item_count - previewCompanies.length);
                   const cardColorClass = cardColorMap.get(list.id) ?? LIST_CARD_PALETTE[0];
 

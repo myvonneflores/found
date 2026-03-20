@@ -1,13 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { AddCompanyToList } from "@/components/add-company-to-list";
+import { useAuth } from "@/components/auth-provider";
 import { CompanySocialLinks } from "@/components/company-social-links";
-import { getCompany } from "@/lib/api";
 import { UserBadge } from "@/components/user-badge";
+import {
+  createFavorite,
+  createSavedCuratedList,
+  deleteFavorite,
+  deleteSavedCuratedList,
+  getCompany,
+  listFavorites,
+  listSavedCuratedLists,
+} from "@/lib/api";
 import type { CompanyDetail } from "@/types/company";
-import type { CuratedListItem } from "@/types/community";
+import type { CuratedListItem, Favorite, SavedCuratedList } from "@/types/community";
 import type { PublicProfile } from "@/types/profile";
 
 function locationLabel(company: {
@@ -28,12 +40,91 @@ function displayLabel(value: string) {
   return labels[value] ?? value;
 }
 
+function normalizeFavorites(value: Favorite[] | unknown): Favorite[] {
+  if (Array.isArray(value)) {
+    return value as Favorite[];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "results" in value &&
+    Array.isArray((value as { results?: unknown }).results)
+  ) {
+    return (value as { results: Favorite[] }).results;
+  }
+
+  return [];
+}
+
+function normalizeSavedLists(value: SavedCuratedList[] | unknown): SavedCuratedList[] {
+  if (Array.isArray(value)) {
+    return value as SavedCuratedList[];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "results" in value &&
+    Array.isArray((value as { results?: unknown }).results)
+  ) {
+    return (value as { results: SavedCuratedList[] }).results;
+  }
+
+  return [];
+}
+
+function isTokenError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("token") || normalized.includes("request failed: 401");
+}
+
+function BookmarkIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg aria-hidden="true" fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24">
+      <path
+        d="M7.5 4.5h9a1.5 1.5 0 0 1 1.5 1.5v13.2l-6-3.9-6 3.9V6a1.5 1.5 0 0 1 1.5-1.5Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg aria-hidden="true" fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24">
+      <path
+        d="M12 20.4 4.95 13.9A4.7 4.7 0 0 1 3.5 10.4c0-2.63 2-4.65 4.54-4.65 1.54 0 2.91.75 3.96 2.02 1.05-1.27 2.42-2.02 3.96-2.02 2.54 0 4.54 2.02 4.54 4.65 0 1.32-.52 2.57-1.45 3.5L12 20.4Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
 export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
+  const router = useRouter();
+  const { getValidAccessToken, isAuthenticated, isReady, signOut, user } = useAuth();
   const [selectedListId, setSelectedListId] = useState<number | null>(profile.public_lists[0]?.id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(profile.public_lists[0]?.items[0]?.id ?? null);
   const [selectedCompany, setSelectedCompany] = useState<CompanyDetail | null>(null);
   const [companyLoading, setCompanyLoading] = useState(false);
   const [companyError, setCompanyError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [savedListMap, setSavedListMap] = useState<Record<number, number>>({});
+  const [favoriteMap, setFavoriteMap] = useState<Record<number, number>>({});
+  const [pendingListIds, setPendingListIds] = useState<Set<number>>(new Set());
+  const [pendingFavoriteIds, setPendingFavoriteIds] = useState<Set<number>>(new Set());
+  const [isSaveStateLoading, setIsSaveStateLoading] = useState(true);
+  const [favoritePromptCompany, setFavoritePromptCompany] = useState<{ id: number; slug: string } | null>(null);
+  const [favoritePromptPosition, setFavoritePromptPosition] = useState({ top: 96, left: 16 });
+  const [listPromptCompanyId, setListPromptCompanyId] = useState<number | null>(null);
+  const favoritePromptAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const canUseSaveTools = Boolean(user?.account_type === "personal" || user?.account_type === "business");
 
   const selectedList = useMemo(
     () => profile.public_lists.find((list) => list.id === selectedListId) ?? profile.public_lists[0] ?? null,
@@ -130,6 +221,290 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
   ) : (
     profile.display_name
   );
+  const favoritePrompt =
+    favoritePromptCompany && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="detail-save-popover detail-save-popover-floating"
+            role="status"
+            style={{
+              left: `${favoritePromptPosition.left}px`,
+              top: `${favoritePromptPosition.top}px`,
+            }}
+          >
+            <p>Added to favorites! Wanna add it to a list too?</p>
+            <div className="detail-save-popover-actions">
+              <button
+                className="button button-primary"
+                onClick={() => {
+                  setListPromptCompanyId(favoritePromptCompany.id);
+                  setFavoritePromptCompany(null);
+                }}
+                type="button"
+              >
+                yes please
+              </button>
+              <button className="button button-secondary" onClick={() => setFavoritePromptCompany(null)} type="button">
+                maybe later
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+  const listPromptModal =
+    listPromptCompanyId && typeof document !== "undefined"
+      ? createPortal(
+          <div className="detail-save-modal-backdrop" onClick={() => setListPromptCompanyId(null)} role="presentation">
+            <div
+              aria-modal="true"
+              className="detail-save-modal"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+            >
+              <div className="detail-save-modal-header">
+                <div>
+                  <strong>Add to a list</strong>
+                  <p>Pick an existing list or create a new one.</p>
+                </div>
+                <button
+                  aria-label="Close add to list dialog"
+                  className="detail-save-close"
+                  onClick={() => setListPromptCompanyId(null)}
+                  type="button"
+                >
+                  x
+                </button>
+              </div>
+
+              <AddCompanyToList companyId={listPromptCompanyId} onAdded={() => setListPromptCompanyId(null)} />
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+  const errorToast =
+    actionError && typeof document !== "undefined"
+      ? createPortal(
+          <div className="detail-save-toast detail-save-toast-error" role="alert">
+            <div className="detail-save-toast-copy">
+              <p>{actionError}</p>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
+  useEffect(() => {
+    if (!favoritePromptCompany) {
+      return undefined;
+    }
+
+    function updateFavoritePromptPosition() {
+      const trigger = favoritePromptAnchorRef.current;
+      if (!trigger) {
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const promptWidth = Math.min(336, window.innerWidth - 32);
+      const left = Math.min(
+        Math.max(16, rect.right - promptWidth),
+        Math.max(16, window.innerWidth - promptWidth - 16)
+      );
+      const top = Math.min(rect.bottom + 12, window.innerHeight - 180);
+
+      setFavoritePromptPosition({ top, left });
+    }
+
+    updateFavoritePromptPosition();
+    window.addEventListener("resize", updateFavoritePromptPosition);
+    window.addEventListener("scroll", updateFavoritePromptPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateFavoritePromptPosition);
+      window.removeEventListener("scroll", updateFavoritePromptPosition, true);
+    };
+  }, [favoritePromptCompany]);
+
+  useEffect(() => {
+    if (!actionError) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setActionError(""), 3600);
+    return () => window.clearTimeout(timeout);
+  }, [actionError]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadSaveState() {
+      if (!isReady) {
+        return;
+      }
+
+      if (!isAuthenticated || !canUseSaveTools) {
+        if (isActive) {
+          setSavedListMap({});
+          setFavoriteMap({});
+          setIsSaveStateLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const token = await getValidAccessToken();
+        if (!token) {
+          if (isActive) {
+            setSavedListMap({});
+            setFavoriteMap({});
+            setIsSaveStateLoading(false);
+          }
+          return;
+        }
+
+        const [savedLists, favorites] = await Promise.all([
+          listSavedCuratedLists(token),
+          listFavorites(token),
+        ]);
+
+        if (!isActive) {
+          return;
+        }
+
+        const nextSavedListMap = normalizeSavedLists(savedLists).reduce<Record<number, number>>((accumulator, savedList) => {
+          accumulator[savedList.list.id] = savedList.id;
+          return accumulator;
+        }, {});
+        const nextFavoriteMap = normalizeFavorites(favorites).reduce<Record<number, number>>((accumulator, favorite) => {
+          accumulator[favorite.company.id] = favorite.id;
+          return accumulator;
+        }, {});
+
+        setSavedListMap(nextSavedListMap);
+        setFavoriteMap(nextFavoriteMap);
+      } catch (loadError) {
+        if (loadError instanceof Error && isTokenError(loadError.message)) {
+          signOut();
+        } else if (isActive) {
+          setActionError(loadError instanceof Error ? loadError.message : "Unable to load save options.");
+        }
+      } finally {
+        if (isActive) {
+          setIsSaveStateLoading(false);
+        }
+      }
+    }
+
+    void loadSaveState();
+
+    return () => {
+      isActive = false;
+    };
+  }, [canUseSaveTools, getValidAccessToken, isAuthenticated, isReady, signOut]);
+
+  async function handleToggleSavedList(listId: number) {
+    if (!isAuthenticated || !canUseSaveTools) {
+      router.push("/login");
+      return;
+    }
+
+    setPendingListIds((current) => {
+      const next = new Set(current);
+      next.add(listId);
+      return next;
+    });
+    setActionError("");
+
+    try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        signOut();
+        router.push("/login");
+        return;
+      }
+
+      const savedListId = savedListMap[listId];
+      if (savedListId) {
+        await deleteSavedCuratedList(token, savedListId);
+        setSavedListMap((current) => {
+          const next = { ...current };
+          delete next[listId];
+          return next;
+        });
+      } else {
+        const savedList = await createSavedCuratedList(token, listId);
+        setSavedListMap((current) => ({ ...current, [listId]: savedList.id }));
+      }
+    } catch (saveError) {
+      if (saveError instanceof Error && isTokenError(saveError.message)) {
+        signOut();
+        router.push("/login");
+      } else {
+        setActionError(saveError instanceof Error ? saveError.message : "Unable to update this saved list.");
+      }
+    } finally {
+      setPendingListIds((current) => {
+        const next = new Set(current);
+        next.delete(listId);
+        return next;
+      });
+    }
+  }
+
+  async function handleToggleFavorite(company: { id: number; slug: string }, trigger: HTMLButtonElement) {
+    if (!isAuthenticated || !canUseSaveTools) {
+      router.push("/login");
+      return;
+    }
+
+    favoritePromptAnchorRef.current = trigger;
+    setPendingFavoriteIds((current) => {
+      const next = new Set(current);
+      next.add(company.id);
+      return next;
+    });
+    setActionError("");
+
+    try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        signOut();
+        router.push("/login");
+        return;
+      }
+
+      const favoriteId = favoriteMap[company.id];
+      if (favoriteId) {
+        await deleteFavorite(token, favoriteId);
+        setFavoriteMap((current) => {
+          const next = { ...current };
+          delete next[company.id];
+          return next;
+        });
+        setFavoritePromptCompany((current) => (current?.id === company.id ? null : current));
+        setListPromptCompanyId((current) => (current === company.id ? null : current));
+      } else {
+        const favorite = await createFavorite(token, company.id);
+        setFavoriteMap((current) => ({ ...current, [company.id]: favorite.id }));
+        setFavoritePromptCompany(company);
+      }
+    } catch (saveError) {
+      if (saveError instanceof Error && isTokenError(saveError.message)) {
+        signOut();
+        router.push("/login");
+      } else {
+        setActionError(saveError instanceof Error ? saveError.message : "Unable to update favorite.");
+      }
+    } finally {
+      setPendingFavoriteIds((current) => {
+        const next = new Set(current);
+        next.delete(company.id);
+        return next;
+      });
+    }
+  }
 
   return (
     <section className="dashboard-stage public-profile-browser">
@@ -170,21 +545,51 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
           <div className="public-profile-browser-list-rail">
             {profile.public_lists.length ? (
               profile.public_lists.map((list) => (
-                <button
+                <div
                   className={
                     list.id === selectedList?.id
-                      ? "public-profile-browser-chip is-active"
-                      : "public-profile-browser-chip"
+                      ? "public-profile-browser-chip-row is-active"
+                      : "public-profile-browser-chip-row"
                   }
                   key={list.id}
-                  onClick={() => setSelectedListId(list.id)}
-                  type="button"
                 >
-                  <span className="public-profile-browser-chip-name">{list.title}</span>
-                  <span className="public-profile-browser-chip-meta">
-                    {list.items.length} saved {list.items.length === 1 ? "place" : "places"}
-                  </span>
-                </button>
+                  <button
+                    className={
+                      list.id === selectedList?.id
+                        ? "public-profile-browser-chip is-active"
+                        : "public-profile-browser-chip"
+                    }
+                    onClick={() => setSelectedListId(list.id)}
+                    type="button"
+                  >
+                    <span className="public-profile-browser-chip-name">{list.title}</span>
+                    <span className="public-profile-browser-chip-meta">
+                      {list.items.length} saved {list.items.length === 1 ? "place" : "places"}
+                    </span>
+                  </button>
+                  <button
+                    aria-label={
+                      pendingListIds.has(list.id)
+                        ? "Saving list"
+                        : savedListMap[list.id]
+                          ? "Unsave list"
+                          : isAuthenticated && canUseSaveTools
+                            ? "Save list"
+                            : "Log in to save list"
+                    }
+                    aria-pressed={Boolean(savedListMap[list.id])}
+                    className={
+                      savedListMap[list.id]
+                        ? "public-profile-browser-chip-action public-profile-browser-chip-action-save is-saved"
+                        : "public-profile-browser-chip-action public-profile-browser-chip-action-save"
+                    }
+                    disabled={pendingListIds.has(list.id) || isSaveStateLoading}
+                    onClick={() => void handleToggleSavedList(list.id)}
+                    type="button"
+                  >
+                    <BookmarkIcon filled={Boolean(savedListMap[list.id])} />
+                  </button>
+                </div>
               ))
             ) : (
               <p className="lede">No public lists yet.</p>
@@ -202,19 +607,27 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
                 const meta = [item.company.city, item.company.state].filter(Boolean).join(", ");
 
                 return (
-                  <button
+                  <div
                     className={
                       item.id === selectedItem?.id
-                        ? "public-profile-browser-chip is-active"
-                        : "public-profile-browser-chip"
+                        ? "public-profile-browser-chip-row is-active"
+                        : "public-profile-browser-chip-row"
                     }
                     key={item.id}
-                    onClick={() => setSelectedItemId(item.id)}
-                    type="button"
-                  >
-                    <span className="public-profile-browser-chip-name">{item.company.name}</span>
-                    {meta ? <span className="public-profile-browser-chip-meta">{meta}</span> : null}
-                  </button>
+                    >
+                      <button
+                        className={
+                          item.id === selectedItem?.id
+                            ? "public-profile-browser-chip is-active"
+                          : "public-profile-browser-chip"
+                      }
+                      onClick={() => setSelectedItemId(item.id)}
+                      type="button"
+                      >
+                        <span className="public-profile-browser-chip-name">{item.company.name}</span>
+                        {meta ? <span className="public-profile-browser-chip-meta">{meta}</span> : null}
+                      </button>
+                  </div>
                 );
               })
             ) : (
@@ -231,9 +644,29 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
             <div className="directory-detail-body">
               <div className="directory-detail-header-grid">
                 <div className="directory-detail-head">
-                  <h2>
-                    <Link href={`/companies/${selectedCompany.slug}`}>{selectedCompany.name}</Link>
-                  </h2>
+                  <div className="directory-detail-title">
+                    <h2>
+                      <Link href={`/companies/${selectedCompany.slug}`}>{selectedCompany.name}</Link>
+                    </h2>
+                    <button
+                      aria-label={
+                        pendingFavoriteIds.has(selectedCompany.id)
+                          ? "Saving favorite"
+                          : favoriteMap[selectedCompany.id]
+                            ? "Remove from favorites"
+                            : isAuthenticated && canUseSaveTools
+                              ? "Save to favorites"
+                              : "Log in to save favorite"
+                      }
+                      aria-pressed={Boolean(favoriteMap[selectedCompany.id])}
+                      className={`directory-company-favorite directory-detail-favorite${favoriteMap[selectedCompany.id] ? " is-active" : ""}`}
+                      disabled={pendingFavoriteIds.has(selectedCompany.id) || isSaveStateLoading}
+                      onClick={(event) => void handleToggleFavorite(selectedCompany, event.currentTarget)}
+                      type="button"
+                    >
+                      <HeartIcon filled={Boolean(favoriteMap[selectedCompany.id])} />
+                    </button>
+                  </div>
                 </div>
 
                 <CompanySocialLinks
@@ -311,6 +744,9 @@ export function PublicProfileBrowser({ profile }: { profile: PublicProfile }) {
           )}
         </article>
       </section>
+      {errorToast}
+      {favoritePrompt}
+      {listPromptModal}
     </section>
   );
 }

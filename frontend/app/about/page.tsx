@@ -14,8 +14,7 @@ export default function AboutPage() {
             <div className="about-hero">
               <h1 className="about-title">About Us</h1>
               <p className="about-tagline">
-                A conscious discovery engine for local, independent, value-aligned businesses without the noise of
-                paid ads, corporate business, or negative reviews
+                A better way to discover local, independent businesses—no ads, no chains, no noise.
               </p>
             </div>
           </div>
@@ -25,8 +24,8 @@ export default function AboutPage() {
             <article className="about-card">
               <p className="lede">
                 FOUND started with a simple problem: it&apos;s surprisingly hard to discover locally owned businesses
-                in a meaningful way. Search engines surface the same big box stores and chain restaurants, while the
-                independent shops, restaurants, and services that give a place its character are often harder to find.
+                in a meaningful way. Search results favor big-box stores and national chains, making independent
+                businesses harder to find.
               </p>
               <p className="lede">
                 Exclusively for locally owned businesses, FOUND was created to make those businesses easier to

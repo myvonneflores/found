@@ -13,10 +13,11 @@ import { SiteHeader } from "@/components/site-header";
 import { BrandedSelect } from "@/components/branded-select";
 import { AddCompanyToList } from "@/components/add-company-to-list";
 import { createFavorite, deleteFavorite, listFavorites } from "@/lib/api";
+import { DIRECTORY_FILTER_STORAGE_KEY } from "@/lib/directory-session";
 import { CompanyDetail, CompanyListItem, CompanySearchParams, TaxonomyItem } from "@/types/company";
 
 const MOBILE_STACK_BREAKPOINT = 760;
-const DETAIL_HEIGHT_SYNC_BREAKPOINT = 1280;
+const DETAIL_HEIGHT_SYNC_BREAKPOINT = 1000;
 const MENU_MAX_ROWS = 8;
 const MENU_ROW_HEIGHT_PX = 48;
 const MENU_VIEWPORT_PADDING_PX = 16;
@@ -68,8 +69,6 @@ function displayLabel(value: string) {
   return labels[value] ?? value;
 }
 
-const FILTER_STORAGE_KEY = "found-directory-filters";
-
 function serializeParams(params: CompanySearchParams) {
   const serialized = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -83,7 +82,7 @@ function serializeParams(params: CompanySearchParams) {
 
 function loadSavedFilters() {
   try {
-    const stored = localStorage.getItem(FILTER_STORAGE_KEY);
+    const stored = localStorage.getItem(DIRECTORY_FILTER_STORAGE_KEY);
     if (!stored) {
       return null;
     }
@@ -99,9 +98,9 @@ function saveFilters(params: CompanySearchParams) {
   }
   const serialized = serializeParams(params);
   if (serialized) {
-    localStorage.setItem(FILTER_STORAGE_KEY, serialized);
+    localStorage.setItem(DIRECTORY_FILTER_STORAGE_KEY, serialized);
   } else {
-    localStorage.removeItem(FILTER_STORAGE_KEY);
+    localStorage.removeItem(DIRECTORY_FILTER_STORAGE_KEY);
   }
 }
 
@@ -110,7 +109,7 @@ function clearSavedFilters() {
     return;
   }
 
-  localStorage.removeItem(FILTER_STORAGE_KEY);
+  localStorage.removeItem(DIRECTORY_FILTER_STORAGE_KEY);
 }
 
 function FilterSection({
@@ -345,6 +344,7 @@ export function CompanyDirectory({
   const filtersFormRef = useRef<HTMLFormElement | null>(null);
   const detailPanelRef = useRef<HTMLElement | null>(null);
   const detailSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const favoritePromptAnchorRef = useRef<HTMLButtonElement | null>(null);
   const viewportFrameRef = useRef<number | null>(null);
   const heightFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<number | null>(null);
@@ -354,6 +354,7 @@ export function CompanyDirectory({
   const [sidePanelHeight, setSidePanelHeight] = useState<string | undefined>(undefined);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
   const [isResizing, setIsResizing] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(true);
   const [mobileFindsOpen, setMobileFindsOpen] = useState(false);
   const [mobileFindOpen, setMobileFindOpen] = useState(false);
@@ -364,8 +365,11 @@ export function CompanyDirectory({
   const selectedSlug = selectedCompany?.slug ?? searchParams.selected;
   const [favoriteMap, setFavoriteMap] = useState<Record<number, number>>({});
   const [togglingFavorites, setTogglingFavorites] = useState<Set<number>>(new Set());
+  const [favoritePromptCompanyId, setFavoritePromptCompanyId] = useState<number | null>(null);
+  const [favoritePromptPosition, setFavoritePromptPosition] = useState({ top: 96, left: 16 });
   const [listPromptCompanyId, setListPromptCompanyId] = useState<number | null>(null);
   const closeListPrompt = () => setListPromptCompanyId(null);
+  const closeFavoritePrompt = () => setFavoritePromptCompanyId(null);
   const ownershipNames = selectedCompany ? names(selectedCompany.ownership_markers) : [];
   const sustainabilityNames = selectedCompany ? names(selectedCompany.sustainability_markers) : [];
   const productNames = selectedCompany ? names(selectedCompany.product_categories) : [];
@@ -379,6 +383,37 @@ export function CompanyDirectory({
   useEffect(() => {
     setSearchValue(searchParams.search ?? "");
   }, [searchParams.search]);
+  const favoritePrompt =
+    favoritePromptCompanyId && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="detail-save-popover detail-save-popover-floating"
+            role="status"
+            style={{
+              left: `${favoritePromptPosition.left}px`,
+              top: `${favoritePromptPosition.top}px`,
+            }}
+          >
+            <p>Added to favorites! Wanna add it to a list too?</p>
+            <div className="detail-save-popover-actions">
+              <button
+                className="button button-primary"
+                onClick={() => {
+                  setListPromptCompanyId(favoritePromptCompanyId);
+                  closeFavoritePrompt();
+                }}
+                type="button"
+              >
+                yes please
+              </button>
+              <button className="button button-secondary" onClick={closeFavoritePrompt} type="button">
+                maybe later
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
   const listPromptModal =
     listPromptCompanyId && typeof document !== "undefined"
       ? createPortal(
@@ -409,6 +444,39 @@ export function CompanyDirectory({
           document.body
         )
       : null;
+
+  useEffect(() => {
+    if (!favoritePromptCompanyId) {
+      return undefined;
+    }
+
+    function updateFavoritePromptPosition() {
+      const trigger = favoritePromptAnchorRef.current;
+      if (!trigger) {
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const promptWidth = Math.min(336, window.innerWidth - 32);
+      const left = Math.min(
+        Math.max(16, rect.right - promptWidth),
+        Math.max(16, window.innerWidth - promptWidth - 16)
+      );
+      const top = Math.min(rect.bottom + 12, window.innerHeight - 180);
+
+      setFavoritePromptPosition({ top, left });
+    }
+
+    updateFavoritePromptPosition();
+    window.addEventListener("resize", updateFavoritePromptPosition);
+    window.addEventListener("scroll", updateFavoritePromptPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateFavoritePromptPosition);
+      window.removeEventListener("scroll", updateFavoritePromptPosition, true);
+    };
+  }, [favoritePromptCompanyId]);
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -574,6 +642,7 @@ export function CompanyDirectory({
   async function handleFavoriteClick(event: ReactMouseEvent<HTMLButtonElement>, company: Pick<CompanyListItem, "id" | "slug">) {
     event.preventDefault();
     event.stopPropagation();
+    favoritePromptAnchorRef.current = event.currentTarget;
 
     if (!isAuthenticated) {
       const nextHref = buildDirectoryHref(searchParams, company.slug);
@@ -602,6 +671,8 @@ export function CompanyDirectory({
       const favoriteId = favoriteMap[company.id];
       if (favoriteId) {
         await deleteFavorite(token, favoriteId);
+        closeFavoritePrompt();
+        closeListPrompt();
         setFavoriteMap((current) => {
           const next = { ...current };
           delete next[company.id];
@@ -610,7 +681,7 @@ export function CompanyDirectory({
       } else {
         const favorite = await createFavorite(token, company.id);
         setFavoriteMap((current) => ({ ...current, [company.id]: favorite.id }));
-        setListPromptCompanyId(company.id);
+        setFavoritePromptCompanyId(company.id);
       }
     } catch {
       // swallow errors
@@ -624,16 +695,7 @@ export function CompanyDirectory({
   }
 
   useEffect(() => {
-    const updateViewportWidth = () => {
-      setIsResizing(true);
-      if (resizeTimeoutRef.current !== null) {
-        window.clearTimeout(resizeTimeoutRef.current);
-      }
-      resizeTimeoutRef.current = window.setTimeout(() => {
-        setIsResizing(false);
-        resizeTimeoutRef.current = null;
-      }, 140);
-
+    const syncViewportWidth = () => {
       if (viewportFrameRef.current !== null) {
         cancelAnimationFrame(viewportFrameRef.current);
       }
@@ -644,10 +706,23 @@ export function CompanyDirectory({
       });
     };
 
-    updateViewportWidth();
-    window.addEventListener("resize", updateViewportWidth);
+    const handleResize = () => {
+      setIsResizing(true);
+      if (resizeTimeoutRef.current !== null) {
+        window.clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = window.setTimeout(() => {
+        setIsResizing(false);
+        resizeTimeoutRef.current = null;
+      }, 140);
+
+      syncViewportWidth();
+    };
+
+    syncViewportWidth();
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener("resize", updateViewportWidth);
+      window.removeEventListener("resize", handleResize);
       if (viewportFrameRef.current !== null) {
         cancelAnimationFrame(viewportFrameRef.current);
       }
@@ -656,6 +731,24 @@ export function CompanyDirectory({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (viewportWidth === undefined) {
+      return;
+    }
+
+    setLayoutReady(false);
+
+    let firstFrame = window.requestAnimationFrame(() => {
+      firstFrame = window.requestAnimationFrame(() => {
+        setLayoutReady(true);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+    };
+  }, [viewportWidth, selectedSlug]);
 
   useEffect(() => {
     if (!isMobileStack) {
@@ -787,7 +880,13 @@ export function CompanyDirectory({
         <SiteHeader brandHref={brandHref} resetKey={headerResetKey} />
 
         <div
-          className={isResizing ? "directory-grid is-resizing" : "directory-grid"}
+          className={
+            isResizing
+              ? "directory-grid is-resizing"
+              : !layoutReady
+                ? "directory-grid is-initializing"
+                : "directory-grid"
+          }
           ref={gridRef}
         >
           <aside className="directory-panel directory-panel-filters" ref={filtersPanelRef}>
@@ -1068,6 +1167,7 @@ export function CompanyDirectory({
           </section>
         </div>
       </div>
+      {favoritePrompt}
       {listPromptModal}
     </section>
   );
