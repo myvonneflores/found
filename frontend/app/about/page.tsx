@@ -63,7 +63,8 @@ export default function AboutPage() {
               </p>
               <p className="lede">
                 Personal Accounts save favorite businesses, build lists, and share their curation or keep it just for
-                themselves.
+                themselves. If a favorite business is not already featured on FOUND, they can add it from their
+                account to help grow the directory.
               </p>
               <p className="lede">
                 Business Accounts build lists of favorites to share with their community and keep their profile up to

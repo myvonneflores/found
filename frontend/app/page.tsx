@@ -219,7 +219,7 @@ export default async function HomePage() {
               <div className="home-hero-text">
                 <h1 className="home-hero-title">Find the good stuff nearby</h1>
                 <p className="home-hero-lede">
-                  Discover locally owned businesses based on what matters to you, then save favorites, create lists
+                  Discover locally owned businesses based on what matters to you, then save favorites, and create lists
                   you can text, email, or link anywhere your community finds you.
                 </p>
               </div>

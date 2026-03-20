@@ -350,6 +350,8 @@ export function CompanyDirectory({
   const resizeTimeoutRef = useRef<number | null>(null);
   const sidePanelHeightRef = useRef<string | undefined>(undefined);
   const previousSelectedSlugRef = useRef<string | undefined>(searchParams.selected);
+  const draftSearchParamsRef = useRef<CompanySearchParams>(searchParams);
+  const [draftSearchParams, setDraftSearchParams] = useState<CompanySearchParams>(searchParams);
   const [searchValue, setSearchValue] = useState(searchParams.search ?? "");
   const [sidePanelHeight, setSidePanelHeight] = useState<string | undefined>(undefined);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
@@ -358,10 +360,10 @@ export function CompanyDirectory({
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(true);
   const [mobileFindsOpen, setMobileFindsOpen] = useState(false);
   const [mobileFindOpen, setMobileFindOpen] = useState(false);
-  const selectedOwnership = selectedValues(searchParams.ownership_markers);
-  const selectedSustainability = selectedValues(searchParams.sustainability_markers);
-  const selectedCity = searchParams.city ?? "";
-  const selectedBusinessCategory = searchParams.business_category ?? "";
+  const selectedOwnership = selectedValues(draftSearchParams.ownership_markers);
+  const selectedSustainability = selectedValues(draftSearchParams.sustainability_markers);
+  const selectedCity = draftSearchParams.city ?? "";
+  const selectedBusinessCategory = draftSearchParams.business_category ?? "";
   const selectedSlug = selectedCompany?.slug ?? searchParams.selected;
   const [favoriteMap, setFavoriteMap] = useState<Record<number, number>>({});
   const [togglingFavorites, setTogglingFavorites] = useState<Set<number>>(new Set());
@@ -380,6 +382,11 @@ export function CompanyDirectory({
   const hasCompactDetailList = detailListItems.length > 0 && detailListItems.length <= 2;
   const isMobileStack = viewportWidth !== undefined && viewportWidth <= MOBILE_STACK_BREAKPOINT;
   const headerResetKey = JSON.stringify(searchParams);
+  useEffect(() => {
+    draftSearchParamsRef.current = searchParams;
+    setDraftSearchParams(searchParams);
+  }, [searchParams]);
+
   useEffect(() => {
     setSearchValue(searchParams.search ?? "");
   }, [searchParams.search]);
@@ -553,16 +560,16 @@ export function CompanyDirectory({
     { label: "GF Friendly", value: "__gf__" },
   ];
   const selectedFocus = new Set(selectedSustainability);
-  if (searchParams.is_vegan_friendly === "true") {
+  if (draftSearchParams.is_vegan_friendly === "true") {
     selectedFocus.add("__vegan__");
   }
-  if (searchParams.is_gf_friendly === "true") {
+  if (draftSearchParams.is_gf_friendly === "true") {
     selectedFocus.add("__gf__");
   }
 
   function updateFilters(updates: Partial<CompanySearchParams>) {
     const nextSearchParams = {
-      ...searchParams,
+      ...draftSearchParamsRef.current,
       ...updates,
     };
     const nextParams = new URLSearchParams();
@@ -575,6 +582,8 @@ export function CompanyDirectory({
     });
 
     const query = nextParams.toString();
+    draftSearchParamsRef.current = nextSearchParams;
+    setDraftSearchParams(nextSearchParams);
     saveFilters(nextSearchParams);
     router.push(query ? `${pathname}?${query}` : pathname);
   }
@@ -593,6 +602,8 @@ export function CompanyDirectory({
       nextSearchParams[key as keyof CompanySearchParams] = normalized;
     }
 
+    draftSearchParamsRef.current = nextSearchParams;
+    setDraftSearchParams(nextSearchParams);
     saveFilters(nextSearchParams);
 
     const query = params.toString();
@@ -601,6 +612,8 @@ export function CompanyDirectory({
 
   function handleResetFilters() {
     clearSavedFilters();
+    draftSearchParamsRef.current = {};
+    setDraftSearchParams({});
     setSearchValue("");
     router.push(pathname);
   }
@@ -619,8 +632,8 @@ export function CompanyDirectory({
 
   function toggleFocusValue(value: string) {
     const nextSustainability = new Set(selectedSustainability);
-    let nextVegan = searchParams.is_vegan_friendly === "true";
-    let nextGf = searchParams.is_gf_friendly === "true";
+    let nextVegan = draftSearchParams.is_vegan_friendly === "true";
+    let nextGf = draftSearchParams.is_gf_friendly === "true";
 
     if (value === "__vegan__") {
       nextVegan = !nextVegan;
