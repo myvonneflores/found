@@ -3739,6 +3739,7 @@ body.contact-page-body {
   color: #b3749f;
   padding: 1rem 1.15rem;
   font: inherit;
+  font-size: 1rem;
 }
 
 .public-list-directory-hero-search input::placeholder {

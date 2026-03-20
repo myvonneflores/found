@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
@@ -131,10 +131,12 @@ export default function PublicListsPage() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSavedLoading, setIsSavedLoading] = useState(true);
   const [pendingListIds, setPendingListIds] = useState<Set<number>>(new Set());
   const [gridColumns, setGridColumns] = useState(3);
   const deferredQuery = useDeferredValue(query.trim());
+  const hasLoadedListsRef = useRef(false);
 
   useEffect(() => {
     function syncGridColumns() {
@@ -155,7 +157,11 @@ export default function PublicListsPage() {
     let isActive = true;
 
     async function loadLists() {
-      setIsLoading(true);
+      if (hasLoadedListsRef.current) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError("");
 
       try {
@@ -169,7 +175,9 @@ export default function PublicListsPage() {
         }
       } finally {
         if (isActive) {
+          hasLoadedListsRef.current = true;
           setIsLoading(false);
+          setIsRefreshing(false);
         }
       }
     }
@@ -305,6 +313,7 @@ export default function PublicListsPage() {
                   value={query}
                 />
               </label>
+              {isRefreshing ? <p className="visually-hidden" role="status">Updating public lists...</p> : null}
             </form>
           </article>
 
@@ -320,7 +329,7 @@ export default function PublicListsPage() {
             </article>
           ) : null}
 
-          <section className="public-list-directory-grid">
+          <section aria-busy={isLoading || isRefreshing} className="public-list-directory-grid">
             {isLoading ? (
               <>
                 <p className="visually-hidden" role="status">Loading public lists...</p>
@@ -333,7 +342,7 @@ export default function PublicListsPage() {
                 ))}
               </>
             ) : null}
-            {!isLoading && !error && lists.length === 0 ? (
+            {!isLoading && !isRefreshing && !error && lists.length === 0 ? (
               <article className="panel public-list-directory-card public-list-directory-empty">
                 <h2>No matching lists yet</h2>
                 <p className="lede">Try a different title, curator, or company search.</p>
