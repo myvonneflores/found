@@ -9,6 +9,7 @@ import { CompanySocialLinks, hasCompanySocialLinks } from "@/components/company-
 import { formatHoursRange, WEEKDAYS, WEEKDAY_LABELS } from "@/lib/business-hours";
 import { detailDescription } from "@/lib/company-copy";
 import { getCompany, getPublicCuratedList } from "@/lib/api";
+import { getAbsoluteSiteUrl } from "@/lib/site-url";
 import { SiteHeader } from "@/components/site-header";
 import type { BusinessHours, Weekday } from "@/types/company";
 
@@ -45,11 +46,6 @@ function displayLabel(value: string) {
   return labels[value] ?? value;
 }
 
-function absoluteSiteUrl(path: string) {
-  const base = process.env.SITE_URL ?? "http://localhost:3000";
-  return new URL(path, base).toString();
-}
-
 function hasListedHours(businessHours: BusinessHours | null) {
   return Boolean(businessHours && WEEKDAYS.some((day) => businessHours.open_by_week[day].length > 0));
 }
@@ -83,7 +79,7 @@ export async function generateMetadata({
       openGraph: {
         title: company.name,
         description,
-        url: absoluteSiteUrl(`/companies/${company.slug}`),
+        url: getAbsoluteSiteUrl(`/companies/${company.slug}`),
         type: "article",
       },
     };
@@ -145,7 +141,7 @@ export default async function CompanyDetailPage({
       "@type": "Organization",
       name: company.name,
       description,
-      url: company.website || absoluteSiteUrl(`/companies/${company.slug}`),
+      url: company.website || getAbsoluteSiteUrl(`/companies/${company.slug}`),
       address: {
         "@type": "PostalAddress",
         streetAddress: company.address,
