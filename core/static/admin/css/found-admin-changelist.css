@@ -1,0 +1,506 @@
+.change-list #content-main {
+  background: transparent;
+  box-shadow: none;
+}
+
+.found-admin-change-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 0 2.5rem 0 auto;
+  min-width: max-content;
+  align-self: center;
+  z-index: 35;
+}
+
+.change-list #changelist {
+  display: block;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.change-list #changelist .changelist-form-container {
+  display: grid;
+  gap: 0.9rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.change-list #changelist .changelist-form-container > * {
+  min-width: 0;
+}
+
+.change-list #changelist-form {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.change-list .found-admin-search-shell,
+.change-list .actions,
+.change-list #changelist-form .results,
+.change-list #changelist .paginator,
+.change-list #changelist-filter {
+  border: 1px solid rgba(161, 87, 7, 0.1);
+  box-shadow: 0 10px 24px rgba(48, 71, 25, 0.05);
+}
+
+.found-admin-search-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 22px;
+  background: rgba(247, 231, 211, 0.94);
+  overflow: hidden;
+}
+
+.change-list #toolbar {
+  flex: 0 1 38rem;
+  min-width: 0;
+  max-width: 38rem;
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.change-list #toolbar form {
+  display: block;
+  width: 100%;
+}
+
+.change-list #toolbar form > div {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.change-list #toolbar form label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.change-list #toolbar #searchbar {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 2.4rem;
+  min-width: 12rem;
+  width: auto;
+  max-width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 14px;
+  font-size: 0.95rem;
+}
+
+.change-list #toolbar form input[type="submit"] {
+  flex: 0 0 auto;
+  padding: 0.62rem 0.95rem;
+  border-radius: 14px;
+  box-shadow: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-left: 0;
+}
+
+.change-list #toolbar form .small {
+  grid-column: 2 / -1;
+}
+
+.change-list .actions {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0;
+  background: rgba(247, 231, 211, 0.94);
+}
+
+.change-list #changelist-form .results {
+  border-top: 0;
+  border-radius: 0;
+  background: rgba(255, 248, 239, 0.94);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.change-list #result_list {
+  width: 100% !important;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.change-list #result_list th,
+.change-list #result_list td {
+  overflow-wrap: anywhere;
+}
+
+.change-list #result_list th:first-child,
+.change-list #result_list td:first-child {
+  width: 3.25rem;
+}
+
+.model-company.change-list #changelist-form .results {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.model-company.change-list #result_list {
+  min-width: 112rem;
+  table-layout: auto;
+}
+
+.model-company.change-list #result_list th,
+.model-company.change-list #result_list td {
+  overflow-wrap: normal;
+  word-break: normal;
+  vertical-align: top;
+}
+
+.model-company.change-list #result_list thead th {
+  white-space: normal;
+}
+
+.model-company.change-list #result_list .column-name,
+.model-company.change-list #result_list .field-name {
+  min-width: 16rem;
+}
+
+.model-company.change-list #result_list .column-listing_origin,
+.model-company.change-list #result_list .field-listing_origin {
+  min-width: 9rem;
+  white-space: nowrap;
+}
+
+.model-company.change-list #result_list .column-submitted_by,
+.model-company.change-list #result_list .field-submitted_by {
+  min-width: 10rem;
+}
+
+.model-company.change-list #result_list .column-business_category,
+.model-company.change-list #result_list .field-business_category {
+  min-width: 11rem;
+}
+
+.model-company.change-list #result_list .column-city,
+.model-company.change-list #result_list .field-city {
+  min-width: 10rem;
+}
+
+.model-company.change-list #result_list .column-state,
+.model-company.change-list #result_list .field-state {
+  min-width: 5.5rem;
+  white-space: nowrap;
+}
+
+.model-company.change-list #result_list .column-country,
+.model-company.change-list #result_list .field-country {
+  min-width: 9rem;
+}
+
+.model-company.change-list #result_list .column-has_description,
+.model-company.change-list #result_list .field-has_description,
+.model-company.change-list #result_list .column-has_website,
+.model-company.change-list #result_list .field-has_website,
+.model-company.change-list #result_list .column-needs_editorial_review,
+.model-company.change-list #result_list .field-needs_editorial_review,
+.model-company.change-list #result_list .column-is_vegan_friendly,
+.model-company.change-list #result_list .field-is_vegan_friendly,
+.model-company.change-list #result_list .column-is_gf_friendly,
+.model-company.change-list #result_list .field-is_gf_friendly {
+  min-width: 7.5rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.model-businessclaim.change-list #result_list {
+  min-width: 104rem;
+  table-layout: auto;
+}
+
+.model-businessclaim.change-list #result_list th,
+.model-businessclaim.change-list #result_list td {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.model-businessclaim.change-list #result_list th.column-business_name,
+.model-businessclaim.change-list #result_list td.field-business_name {
+  width: 13rem;
+}
+
+.model-businessclaim.change-list #result_list th.column-intent,
+.model-businessclaim.change-list #result_list td.field-intent {
+  width: 14rem;
+}
+
+.model-businessclaim.change-list #result_list th.column-user,
+.model-businessclaim.change-list #result_list td.field-user {
+  width: 15rem;
+  white-space: nowrap;
+}
+
+.model-businessclaim.change-list #result_list th.column-company,
+.model-businessclaim.change-list #result_list td.field-company {
+  width: 12rem;
+  white-space: nowrap;
+}
+
+.model-businessclaim.change-list #result_list th.column-status,
+.model-businessclaim.change-list #result_list td.field-status {
+  width: 9rem;
+  white-space: nowrap;
+}
+
+.model-businessclaim.change-list #result_list th.column-submitted_at,
+.model-businessclaim.change-list #result_list td.field-submitted_at,
+.model-businessclaim.change-list #result_list th.column-reviewed_at,
+.model-businessclaim.change-list #result_list td.field-reviewed_at {
+  width: 14rem;
+  white-space: nowrap;
+}
+
+.model-businessclaim.change-list #result_list th.column-reviewed_by,
+.model-businessclaim.change-list #result_list td.field-reviewed_by {
+  width: 14rem;
+  white-space: nowrap;
+}
+
+.change-list #changelist table thead th {
+  background: #efe6be;
+}
+
+.change-list #changelist table thead th.sorted .text {
+  padding-right: 0;
+}
+
+.change-list #changelist table thead th.sorted .sortoptions,
+.change-list #changelist table thead th.sorted a.sortremove {
+  display: none;
+}
+
+.change-list #changelist table thead th .text,
+.change-list #changelist table thead th .text a {
+  padding: 0.9rem 0.8rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.change-list #changelist table thead th .text a {
+  display: block;
+}
+
+.change-list #changelist table tbody th,
+.change-list #changelist table tbody td {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.change-list #changelist .paginator {
+  margin: 0.8rem 0 0;
+  padding: 0.85rem 1rem;
+  border-radius: 22px;
+  background: rgba(247, 231, 211, 0.94);
+}
+
+.found-admin-filter-shell {
+  position: relative;
+  z-index: 40;
+  flex: 0 0 auto;
+}
+
+.found-admin-filter-shell summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.6rem;
+  padding: 0.72rem 1rem;
+  border-radius: 999px;
+  background: #76a7d7;
+  color: #fff8ef;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 26px rgba(48, 71, 25, 0.12);
+  font-family: "Poppins", "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.change-list .object-tools {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  position: static;
+  align-self: stretch;
+}
+
+.change-list .object-tools li {
+  float: none;
+  margin: 0;
+  height: auto;
+}
+
+.change-list .object-tools a,
+.change-list .object-tools .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.72rem 1rem;
+  border-radius: 999px;
+  background: #76a7d7;
+  color: #fff8ef;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 26px rgba(48, 71, 25, 0.12);
+  font-family: "Poppins", "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.found-admin-filter-shell summary {
+  min-width: 0;
+}
+
+.found-admin-filter-shell summary::-webkit-details-marker {
+  display: none;
+}
+
+.found-admin-filter-shell summary::before {
+  content: "+";
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.found-admin-filter-shell[open] summary::before {
+  content: "-";
+}
+
+.found-admin-filter-shell:not([open]) #changelist-filter {
+  display: none;
+}
+
+.change-list #changelist-filter {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  width: min(18rem, calc(100vw - 3rem));
+  max-height: min(70vh, 36rem);
+  margin: 0;
+  border-radius: 26px;
+  overflow: hidden;
+  background: rgba(239, 230, 190, 0.96);
+  overflow-y: auto;
+}
+
+.change-list #changelist-filter h2 {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+}
+
+.change-list #changelist-filter h3,
+.change-list #changelist-filter details summary {
+  margin: 1rem 0 0.45rem;
+  padding: 0 1rem;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #a15707;
+}
+
+.change-list #changelist-filter ul {
+  margin: 0;
+  padding: 0 1rem 1rem;
+}
+
+.change-list #changelist-filter li {
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.change-list #changelist-filter li.selected {
+  margin-left: -0.55rem;
+  padding-left: 0.55rem;
+  border-left-width: 3px;
+}
+
+.change-list #changelist-filter #changelist-filter-extra-actions {
+  margin-bottom: 0.75rem;
+  padding: 0 1rem 0.75rem;
+}
+
+@media (max-width: 1480px) {
+  .change-list #toolbar {
+    flex-basis: 32rem;
+    max-width: 32rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .found-admin-search-shell {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .found-admin-change-toolbar {
+    width: 100%;
+    min-width: 0;
+    margin-right: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin: 0 0 0.75rem;
+  }
+
+  .found-admin-filter-shell {
+    position: static;
+  }
+
+  .change-list #toolbar {
+    flex-basis: 100%;
+    max-width: none;
+    min-height: 0;
+  }
+
+  .change-list #changelist-filter {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-top: 0.55rem;
+  }
+
+  .change-list #toolbar form > div {
+    flex-wrap: wrap;
+  }
+
+  .change-list #toolbar #searchbar {
+    min-width: 0;
+    width: 100%;
+  }
+}
