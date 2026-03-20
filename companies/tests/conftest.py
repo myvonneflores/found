@@ -14,7 +14,7 @@ def taxonomy_set(db):
     """Taxonomy objects shared across company API tests."""
     return {
         "retail": BusinessCategoryFactory(name="Retail"),
-        "food": BusinessCategoryFactory(name="Food"),
+        "food": BusinessCategoryFactory(name="Food+Bev"),
         "clothing": ProductCategoryFactory(name="Clothing"),
         "gifts": ProductCategoryFactory(name="Gifts"),
         "woman_owned": OwnershipMarkerFactory(name="Woman Owned"),

@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from companies.business_categories import normalize_business_category_name
 from companies.cities import canonicalize_city
 from companies.models import (
     BusinessCategory,
@@ -16,6 +17,7 @@ from companies.models import (
 )
 
 BUSINESS_CATEGORY_PRIORITY = [
+    "Food+Bev",
     "Food",
     "Health/Wellness & Beauty",
     "Retail",
@@ -80,9 +82,9 @@ def normalize_business_category(value):
     unique_candidates = {candidate for candidate in candidates}
     for category in BUSINESS_CATEGORY_PRIORITY:
         if category in unique_candidates:
-            return category
+            return normalize_business_category_name(category)
 
-    return candidates[0]
+    return normalize_business_category_name(candidates[0])
 
 
 def normalize_product_categories(value):

@@ -2,6 +2,7 @@ import django_filters
 from django.db.models import Q
 from django.utils.text import smart_split
 
+from .business_categories import business_category_query_names
 from .cities import city_filter_variants
 from .models import Company
 
@@ -114,9 +115,14 @@ class CompanyFilterSet(django_filters.FilterSet):
     def filter_business_category(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.filter(
-            Q(business_category__name__iexact=value) | Q(business_categories__name__iexact=value)
-        ).distinct()
+        category_names = business_category_query_names(value)
+        if not category_names:
+            return queryset
+        category_query = Q()
+        for category_name in category_names:
+            category_query |= Q(business_category__name__iexact=category_name)
+            category_query |= Q(business_categories__name__iexact=category_name)
+        return queryset.filter(category_query).distinct()
 
     def filter_product_categories(self, queryset, name, value):
         return self.filter_all_selected_taxonomy_values(queryset, "product_categories", value)
