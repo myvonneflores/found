@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BodyClass } from "@/components/body-class";
 import { useAuth } from "@/components/auth-provider";
@@ -67,6 +67,8 @@ export default function CuratedListPage() {
   const [savedListId, setSavedListId] = useState<number | null>(null);
   const [isSavePending, setIsSavePending] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const detailSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const [matchedSidebarHeight, setMatchedSidebarHeight] = useState<number | null>(null);
 
   const idHash = typeof params?.idHash === "string" ? params.idHash : "";
 
@@ -257,6 +259,39 @@ export default function CuratedListPage() {
     };
   }, [getValidAccessToken, isAuthenticated, isOwner, isReady, list]);
 
+  useEffect(() => {
+    function syncMatchedSidebarHeight() {
+      if (window.innerWidth <= 980) {
+        setMatchedSidebarHeight(null);
+        return;
+      }
+
+      const nextHeight = detailSurfaceRef.current?.offsetHeight ?? 0;
+      setMatchedSidebarHeight(nextHeight > 0 ? nextHeight : null);
+    }
+
+    syncMatchedSidebarHeight();
+
+    const currentSurface = detailSurfaceRef.current;
+    const resizeObserver =
+      currentSurface && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            syncMatchedSidebarHeight();
+          })
+        : null;
+
+    if (currentSurface && resizeObserver) {
+      resizeObserver.observe(currentSurface);
+    }
+
+    window.addEventListener("resize", syncMatchedSidebarHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", syncMatchedSidebarHeight);
+    };
+  }, [companyError, companyLoading, list, selectedCompany]);
+
   async function handleDelete() {
     if (!list || !accessToken) {
       return;
@@ -346,7 +381,10 @@ export default function CuratedListPage() {
 
               <section className="list-browser-frame">
                 <div className="list-browser-layout">
-                  <aside className="list-browser-sidebar">
+                  <aside
+                    className="list-browser-sidebar"
+                    style={matchedSidebarHeight ? { height: `${matchedSidebarHeight}px` } : undefined}
+                  >
                     <div className="list-browser-sidebar-copy">
                       <h1>{list.title}</h1>
                       {list.description ? <p>{list.description}</p> : null}
@@ -379,7 +417,7 @@ export default function CuratedListPage() {
                   </aside>
 
                   <section className="list-browser-detail-panel">
-                    <div className="directory-panel-surface list-browser-detail-surface">
+                    <div className="directory-panel-surface list-browser-detail-surface" ref={detailSurfaceRef}>
                       {selectedCompany ? (
                         <div className="directory-detail-body">
                           <div className="directory-detail-header-grid">
