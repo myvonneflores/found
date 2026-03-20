@@ -15,6 +15,8 @@ import type { BusinessHours, Weekday } from "@/types/company";
 
 export const dynamic = "force-dynamic";
 
+const FOOD_BUSINESS_CATEGORIES = new Set(["Food", "Food+Bev"]);
+
 function normalizeParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
     return value.filter(Boolean).join(",");
@@ -103,7 +105,9 @@ export default async function CompanyDetailPage({
 
   try {
     const company = await getCompany(slug);
-    const isFoodCompany = company.business_category?.name === "Food";
+    const isFoodCompany = company.business_category
+      ? FOOD_BUSINESS_CATEGORIES.has(company.business_category.name)
+      : false;
     const location = [company.city, company.state].filter(Boolean).join(", ");
     const mapQuery = [company.address, company.city, company.state, company.zip_code, company.country]
       .filter(Boolean)

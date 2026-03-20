@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from companies.business_categories import is_food_and_beverage_category_name
 from companies.models import Company
 
 
@@ -10,7 +11,7 @@ def join_parts(parts):
 
 def category_phrase(company):
     if company.business_category:
-        if company.business_category.name == "Food":
+        if is_food_and_beverage_category_name(company.business_category.name):
             return "independent food business"
         if company.business_category.name == "Health/Wellness & Beauty":
             return "independent wellness and beauty business"

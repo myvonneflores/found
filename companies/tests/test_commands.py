@@ -79,7 +79,7 @@ class TestImportCompaniesCommand:
         company = Company.objects.get(name="Blossoming Lotus Cafe")
         assert company.website == "https://blpdx.com"
         assert company.instagram_handle == "blossominglotus"
-        assert company.business_category.name == "Food"
+        assert company.business_category.name == "Food+Bev"
         assert company.is_vegan_friendly is True
         assert company.is_gf_friendly is True
         assert sorted(company.ownership_markers.values_list("name", flat=True)) == [
@@ -91,6 +91,7 @@ class TestImportCompaniesCommand:
         assert company.number_of_employees is None
         assert company.product_categories.count() == 2
         assert company.sustainability_markers.count() == 2
+        assert list(company.business_categories.values_list("name", flat=True)) == ["Food+Bev"]
 
     def test_normalizes_categories_and_backfills_us_country(self):
         csv_path = write_csv(
@@ -275,6 +276,19 @@ class TestImportCompaniesCommand:
         call_command("import_companies", csv_path, "--prune-unused-taxonomies")
 
         assert not BusinessCategory.objects.filter(pk=stale.pk).exists()
+
+    def test_merge_business_categories_command(self):
+        source = BusinessCategory.objects.create(name="Food")
+        target = BusinessCategory.objects.create(name="Food+Bev")
+        company = Company.objects.create(name="Merge Me", business_category=source)
+        company.business_categories.set([source])
+
+        call_command("merge_business_categories", "Food", "Food+Bev")
+
+        company.refresh_from_db()
+        assert company.business_category == target
+        assert list(company.business_categories.values_list("name", flat=True)) == ["Food+Bev"]
+        assert not BusinessCategory.objects.filter(name="Food").exists()
 
 
 @pytest.mark.django_db

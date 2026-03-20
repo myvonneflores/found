@@ -138,6 +138,15 @@ class TestCompanyListApi:
     def test_filters_by_business_category(self, api_client, two_companies):
         response = api_client.get(
             reverse("companies:company-list"),
+            {"business_category": "Food+Bev"},
+        )
+
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["name"] == "North Star Market"
+
+    def test_filters_by_legacy_business_category_alias(self, api_client, two_companies):
+        response = api_client.get(
+            reverse("companies:company-list"),
             {"business_category": "Food"},
         )
 
