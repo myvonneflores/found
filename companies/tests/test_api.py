@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from companies.models import Company, CuisineType, OwnershipMarker, ProductCategory, SustainabilityMarker
+from companies.models import BusinessCategory, Company, CuisineType, OwnershipMarker, ProductCategory, SustainabilityMarker
 from community.models import CuratedList, CuratedListItem
 from users.models import BusinessClaim
 
@@ -186,6 +186,16 @@ class TestCompanyListApi:
 
         assert response.data["count"] == 1
         assert response.data["results"][0]["name"] == "North Star Market"
+
+    def test_business_category_list_collapses_legacy_food_alias(self, api_client):
+        BusinessCategory.objects.create(name="Food")
+        canonical = BusinessCategory.objects.create(name="Food+Bev")
+
+        response = api_client.get(reverse("companies:business-category-list"))
+
+        assert response.status_code == 200
+        assert [item["name"] for item in response.data] == ["Food+Bev"]
+        assert response.data[0]["id"] == canonical.id
 
     def test_filters_by_multi_value_taxonomy(self, api_client, two_companies):
         two_companies[0].product_categories.add(ProductCategory.objects.get(name="Clothing"))

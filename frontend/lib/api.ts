@@ -17,6 +17,11 @@ import {
 import { PersonalProfile, PublicProfile } from "@/types/profile";
 import { Recommendation } from "@/types/recommendation";
 import {
+  normalizeBusinessCategoryItems,
+  normalizeBusinessCategoryName,
+  normalizeBusinessCategoryNames,
+} from "@/lib/business-categories";
+import {
   CompanyDetail,
   CompanyCreatePayload,
   CompanyListItem,
@@ -29,6 +34,27 @@ import {
 const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
 const INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL ?? PUBLIC_API_BASE_URL;
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+function normalizeCompanyListItem(company: CompanyListItem): CompanyListItem {
+  return {
+    ...company,
+    business_category: normalizeBusinessCategoryName(company.business_category),
+    business_categories: normalizeBusinessCategoryNames(company.business_categories),
+  };
+}
+
+function normalizeCompanyDetail(company: CompanyDetail): CompanyDetail {
+  return {
+    ...company,
+    business_category: company.business_category
+      ? {
+          ...company.business_category,
+          name: normalizeBusinessCategoryName(company.business_category.name) ?? company.business_category.name,
+        }
+      : null,
+    business_categories: normalizeBusinessCategoryItems(company.business_categories),
+  };
+}
 
 function buildUrl(path: string, searchParams?: Record<string, string | undefined>) {
   const baseUrl = typeof window === "undefined" ? INTERNAL_API_BASE_URL : PUBLIC_API_BASE_URL;
@@ -201,13 +227,16 @@ export function listCompanies(searchParams: CompanySearchParams, options?: ListC
   return fetchJson<PaginatedResponse<CompanyListItem>>("companies/", {
     ...searchParams,
     page_size: String(options?.pageSize ?? 200),
-  });
+  }).then((response) => ({
+    ...response,
+    results: response.results.map(normalizeCompanyListItem),
+  }));
 }
 
 export function getCompany(slug: string) {
   return fetchJson<CompanyDetail>(`companies/${slug}/`, undefined, {
     cache: "no-store",
-  });
+  }).then(normalizeCompanyDetail);
 }
 
 export function getManagedBusinessProfile(token: string) {
@@ -255,7 +284,7 @@ export function createCommunityListing(token: string, payload: CompanyCreatePayl
 }
 
 export function listBusinessCategories() {
-  return fetchJson<TaxonomyItem[]>("business-categories/");
+  return fetchJson<TaxonomyItem[]>("business-categories/").then(normalizeBusinessCategoryItems);
 }
 
 export function listProductCategories() {

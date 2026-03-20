@@ -8,6 +8,7 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "re
 
 import { CompanySocialLinks } from "@/components/company-social-links";
 import { detailDescription, listDescription } from "@/lib/company-copy";
+import { normalizeBusinessCategoryItems, normalizeBusinessCategoryName } from "@/lib/business-categories";
 import { useAuth } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { BrandedSelect } from "@/components/branded-select";
@@ -49,6 +50,16 @@ function buildCompanyProfileHref(searchParams: CompanySearchParams, slug: string
   });
   const query = params.toString();
   return query ? `/companies/${slug}?${query}` : `/companies/${slug}`;
+}
+
+function resetPageScroll() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 }
 
 function locationLabel(company: { city: string; state: string; country: string }) {
@@ -363,7 +374,7 @@ export function CompanyDirectory({
   const selectedOwnership = selectedValues(draftSearchParams.ownership_markers);
   const selectedSustainability = selectedValues(draftSearchParams.sustainability_markers);
   const selectedCity = draftSearchParams.city ?? "";
-  const selectedBusinessCategory = draftSearchParams.business_category ?? "";
+  const selectedBusinessCategory = normalizeBusinessCategoryName(draftSearchParams.business_category) ?? "";
   const selectedSlug = selectedCompany?.slug ?? searchParams.selected;
   const [favoriteMap, setFavoriteMap] = useState<Record<number, number>>({});
   const [togglingFavorites, setTogglingFavorites] = useState<Set<number>>(new Set());
@@ -566,6 +577,10 @@ export function CompanyDirectory({
   if (draftSearchParams.is_gf_friendly === "true") {
     selectedFocus.add("__gf__");
   }
+  const displayedBusinessCategories = useMemo(
+    () => normalizeBusinessCategoryItems(businessCategories),
+    [businessCategories]
+  );
 
   function updateFilters(updates: Partial<CompanySearchParams>) {
     const nextSearchParams = {
@@ -947,7 +962,7 @@ export function CompanyDirectory({
                     onSelect={(value) => updateFilters({ business_category: value || undefined })}
                     options={[
                       { label: "All", value: "" },
-                      ...businessCategories.map((category) => ({
+                      ...displayedBusinessCategories.map((category) => ({
                         label: category.name,
                         value: category.name,
                       })),
@@ -1081,7 +1096,13 @@ export function CompanyDirectory({
                       <div className="directory-search-detail-copy">
                         <div className="directory-detail-title">
                           <h2>
-                            <Link href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}>{selectedCompany.name}</Link>
+                            <Link
+                              href={buildCompanyProfileHref(searchParams, selectedCompany.slug)}
+                              onClick={resetPageScroll}
+                              scroll
+                            >
+                              {selectedCompany.name}
+                            </Link>
                           </h2>
                           <button
                             className={`directory-company-favorite directory-detail-favorite${favoriteMap[selectedCompany.id] ? " is-active" : ""}`}
