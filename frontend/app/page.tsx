@@ -238,7 +238,6 @@ export default async function HomePage() {
           <article className="home-section-card">
             <div className="home-section-heading">
               <h2>Featured finds</h2>
-              <p>Start with a few places that show the kind of discovery FOUND is built for.</p>
             </div>
             <div className="home-featured-grid">
               {featuredCompanies.map((company) => (
