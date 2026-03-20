@@ -23,7 +23,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Found Directory",
     description: "Discover independent companies across retail, food, and wellness.",
+    siteName: "Found Directory",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Found Directory",
+    description: "Discover independent companies across retail, food, and wellness.",
   },
 };
 

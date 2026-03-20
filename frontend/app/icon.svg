@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Found favicon</title>
+  <desc id="desc">A magnifying glass with an F in the lens on a green rounded square.</desc>
+  <rect width="64" height="64" rx="16" fill="#6CAB4C" />
+  <circle cx="28" cy="26" r="15.8" fill="#ED846E" stroke="#5C7D55" stroke-width="2.8" />
+  <circle cx="28" cy="26" r="12.2" fill="#F3EFAF" stroke="#5C7D55" stroke-width="2.3" />
+  <path
+    d="M23.6 17.45C22.417 17.45 21.458 18.408 21.458 19.592V32.408C21.458 33.592 22.417 34.55 23.6 34.55C24.783 34.55 25.742 33.592 25.742 32.408V27.542H32.425C33.608 27.542 34.567 26.583 34.567 25.4C34.567 24.217 33.608 23.258 32.425 23.258H25.742V21.733H33.208C34.392 21.733 35.35 20.775 35.35 19.592C35.35 18.408 34.392 17.45 33.208 17.45H23.6Z"
+    fill="#5C7D55"
+  />
+  <rect
+    x="39.2"
+    y="38.5"
+    width="4.6"
+    height="4.6"
+    rx="0.7"
+    fill="#ED846E"
+    stroke="#5C7D55"
+    stroke-width="1.7"
+    transform="rotate(45 39.2 38.5)"
+  />
+  <rect
+    x="40.8"
+    y="40.5"
+    width="14.5"
+    height="8.8"
+    rx="4.4"
+    fill="#9AC5E9"
+    stroke="#5C7D55"
+    stroke-width="2.3"
+    transform="rotate(45 40.8 40.5)"
+  />
+</svg>
