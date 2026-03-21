@@ -36,15 +36,15 @@ export default function CompanyDetailLoading() {
         </article>
       </section>
 
-      <section className="detail-grid">
-        <article className="detail-card">
+      <section className="detail-grid detail-secondary-grid">
+        <article className="detail-card detail-secondary-card">
           <span className="field-label skeleton skeleton-text" style={{ width: "140px" }} />
           <div className="filter-chip-row">
             <span className="skeleton skeleton-badge" />
             <span className="skeleton skeleton-badge" />
           </div>
         </article>
-        <article className="detail-card">
+        <article className="detail-card detail-secondary-card">
           <span className="field-label skeleton skeleton-text" style={{ width: "160px" }} />
           <div className="filter-chip-row">
             <span className="skeleton skeleton-badge" />

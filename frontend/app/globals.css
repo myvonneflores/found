@@ -1066,6 +1066,11 @@ select {
   gap: 1rem;
 }
 
+.detail-public-recommendations-section {
+  display: grid;
+  gap: 0.8rem;
+}
+
 .detail-page-shell .detail-recommendation-pill {
   background: rgba(255, 248, 239, 0.32);
   border-color: rgba(123, 77, 151, 0.16);
@@ -1085,25 +1090,41 @@ select {
 
 .detail-other-locations-card {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.detail-secondary-grid {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.detail-secondary-card {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.detail-secondary-chip-row {
+  gap: 0.7rem;
   align-content: start;
 }
 
 .detail-other-locations-list {
-  display: grid;
-  gap: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
 }
 
 .detail-other-location-link {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.9rem;
+  display: inline-flex;
   align-items: center;
-  padding: 0.95rem 1rem;
-  border-radius: 24px;
+  max-width: 100%;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
   border: 1px solid rgba(255, 248, 239, 0.18);
-  background: rgba(255, 248, 239, 0.28);
-  color: #b3749f;
+  background: #f7e8dc;
+  color: #b86d45;
   text-decoration: none;
   transition:
     transform 160ms ease,
@@ -1113,54 +1134,68 @@ select {
 
 .detail-other-location-link:hover,
 .detail-other-location-link:focus-visible {
-  background: rgba(255, 248, 239, 0.44);
+  background: #fff3ea;
   border-color: rgba(255, 248, 239, 0.32);
   transform: translateY(-1px);
   outline: none;
 }
 
 .detail-other-location-copy {
-  display: grid;
-  gap: 0.25rem;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
   min-width: 0;
 }
 
 .detail-other-location-copy strong,
-.detail-other-location-copy span,
-.detail-other-location-arrow {
+.detail-other-location-copy span {
   color: inherit;
 }
 
 .detail-other-location-copy strong {
-  font-family: var(--font-display);
-  font-size: 1.02rem;
-  line-height: 1.1;
+  font-size: 0.95rem;
+  line-height: 1.2;
 }
 
-.detail-other-location-copy span {
+.detail-other-location-meta {
   min-width: 0;
-  font-size: 0.95rem;
-  line-height: 1.35;
+  font-size: 0.9rem;
+  line-height: 1.2;
   white-space: normal;
   word-break: break-word;
 }
 
-.detail-other-location-copy span:last-child {
-  opacity: 0.88;
-}
+@media (min-width: 981px) {
+  .detail-secondary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "locations serving"
+      "locations love";
+    gap: 1rem;
+  }
 
-.detail-other-location-arrow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(255, 248, 239, 0.42);
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  .detail-other-locations-card {
+    grid-area: locations;
+    align-self: stretch;
+  }
+
+  .detail-serving-card {
+    grid-area: serving;
+  }
+
+  .detail-more-love-card {
+    grid-area: love;
+  }
+
+  .detail-secondary-grid.detail-secondary-grid-no-locations {
+    grid-template-areas: none;
+  }
+
+  .detail-secondary-grid.detail-secondary-grid-no-locations .detail-serving-card,
+  .detail-secondary-grid.detail-secondary-grid-no-locations .detail-more-love-card {
+    grid-area: auto;
+  }
 }
 
 .detail-recommendations-empty {
@@ -1615,12 +1650,15 @@ body.contact-page-body {
   width: 1.15rem;
   height: 1.15rem;
   margin-right: 0.8rem;
+  padding: 0;
   border: 2px solid #b36507;
   border-radius: 8px;
   background: #fff7eb;
+  box-sizing: border-box;
   appearance: none;
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
   transition: background 120ms ease, border-color 120ms ease;
 }
 
@@ -1652,6 +1690,10 @@ body.contact-page-body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.contact-field-checkbox label {
+  cursor: pointer;
 }
 
 .toggle-switch {
@@ -2248,7 +2290,7 @@ body.contact-page-body {
   box-shadow: 0 0 0 2px var(--found-green);
 }
 
-.company-owner-editor-form input,
+.company-owner-editor-form input:not([type="checkbox"]):not([type="radio"]),
 .company-owner-editor-form select,
 .company-owner-editor-form textarea {
   width: 100%;
@@ -2267,13 +2309,13 @@ body.contact-page-body {
   min-height: 10rem;
 }
 
-.company-owner-editor-form input::placeholder,
+.company-owner-editor-form input:not([type="checkbox"]):not([type="radio"])::placeholder,
 .company-owner-editor-form textarea::placeholder {
   color: #9c5c13;
   opacity: 1;
 }
 
-.company-owner-editor-form input:focus,
+.company-owner-editor-form input:not([type="checkbox"]):not([type="radio"]):focus,
 .company-owner-editor-form select:focus,
 .company-owner-editor-form textarea:focus {
   outline: 0;
@@ -2334,7 +2376,7 @@ body.contact-page-body {
   align-items: start;
 }
 
-.company-owner-bulk-toggle {
+.company-owner-toggle-card {
   padding: 0.9rem 1rem;
   border: 1px solid rgba(179, 101, 7, 0.14);
   border-radius: 22px;
@@ -2458,6 +2500,20 @@ body.contact-page-body {
 .company-owner-editor-form .directory-form-actions {
   justify-content: flex-start;
   padding-top: 0.15rem;
+}
+
+.company-owner-editor-form .contact-submit {
+  background: var(--found-green);
+  color: #fdf7ec;
+}
+
+.company-owner-editor-form .contact-submit:hover:not(:disabled) {
+  background: #5d9841;
+}
+
+.company-owner-editor-form .contact-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(108, 171, 76, 0.28);
 }
 
 .auth-checkbox {

@@ -9,7 +9,7 @@ import { CompanySocialLinks, hasCompanySocialLinks } from "@/components/company-
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { formatHoursRange, WEEKDAYS, WEEKDAY_LABELS } from "@/lib/business-hours";
 import { detailDescription } from "@/lib/company-copy";
-import { getCompany } from "@/lib/api";
+import { getCompany, getPublicCuratedList } from "@/lib/api";
 import { getAbsoluteSiteUrl } from "@/lib/site-url";
 import { SiteHeader } from "@/components/site-header";
 import type { BusinessHours, Weekday } from "@/types/company";
@@ -107,6 +107,7 @@ export default async function CompanyDetailPage({
 
   try {
     const company = await getCompany(slug);
+    const hasOtherLocations = company.other_locations.length > 0;
     const isFoodCompany = company.business_category
       ? FOOD_BUSINESS_CATEGORIES.has(company.business_category.name)
       : false;
@@ -126,9 +127,11 @@ export default async function CompanyDetailPage({
     });
     const businessHours = company.business_hours;
     const claimedProfile = company.claimed_profile;
+    const publicLists = claimedProfile?.public_lists ?? [];
+    const singlePublicList = publicLists.length === 1 ? await getPublicCuratedList(publicLists[0].id_hash) : null;
+    const recommendationListItems = singlePublicList?.items ?? [];
     const publicRecommendations = company.public_recommendations;
-    const hasRecommendationContent =
-      publicRecommendations.length > 0 || (claimedProfile?.public_list_count ?? 0) > 0;
+    const hasRecommendationContent = publicRecommendations.length > 0 || publicLists.length > 0;
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Organization",
@@ -248,9 +251,11 @@ export default async function CompanyDetailPage({
           </article>
         </section>
 
-        <section className="detail-grid">
-          {company.other_locations.length ? (
-            <article className="detail-card detail-other-locations-card">
+        <section
+          className={`detail-grid detail-secondary-grid${hasOtherLocations ? "" : " detail-secondary-grid-no-locations"}`}
+        >
+          {hasOtherLocations ? (
+            <article className="detail-card detail-secondary-card detail-other-locations-card">
               <span className="field-label">Other locations</span>
               <div className="detail-other-locations-list">
                 {company.other_locations.map((locationItem) => (
@@ -261,20 +266,25 @@ export default async function CompanyDetailPage({
                   >
                     <span className="detail-other-location-copy">
                       <strong>{locationItem.name}</strong>
-                      <span>{locationItem.address || "Address coming soon"}</span>
-                      <span>{[locationItem.city, locationItem.state].filter(Boolean).join(", ") || "Location details coming soon"}</span>
+                      <span className="detail-other-location-meta">
+                        {[
+                          locationItem.address,
+                          [locationItem.city, locationItem.state].filter(Boolean).join(", "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Location details coming soon"}
+                      </span>
                     </span>
-                    <span aria-hidden="true" className="detail-other-location-arrow">View</span>
                   </Link>
                 ))}
               </div>
             </article>
           ) : null}
-          <article className="detail-card">
+          <article className="detail-card detail-secondary-card detail-serving-card">
             <span className="field-label">
               {isFoodCompany ? "What they're serving" : "What's in store"}
             </span>
-            <div className="filter-chip-row">
+            <div className="filter-chip-row detail-secondary-chip-row">
               {(isFoodCompany ? company.cuisine_types : company.product_categories).length ? (
                 (isFoodCompany ? company.cuisine_types : company.product_categories).map((item) => (
                   <span className="badge" key={item.id}>
@@ -286,9 +296,9 @@ export default async function CompanyDetailPage({
               )}
             </div>
           </article>
-          <article className="detail-card">
+          <article className="detail-card detail-secondary-card detail-more-love-card">
             <span className="field-label">More to Love</span>
-            <div className="filter-chip-row">
+            <div className="filter-chip-row detail-secondary-chip-row">
               {company.sustainability_markers.length ? (
                 company.sustainability_markers.map((item) => (
                   <span className="badge" key={item.id}>
@@ -307,31 +317,81 @@ export default async function CompanyDetailPage({
             <div className="detail-claimed-header">
               <div className="detail-claimed-copy">
                 <h2>Recommendations</h2>
-                {claimedProfile?.public_slug ? (
-                  <p className="muted">
-                    Shared public lists live on{" "}
-                    <Link href={`/profiles/${claimedProfile.public_slug}`}>{claimedProfile.display_name}&apos;s profile</Link>.
-                  </p>
-                ) : null}
               </div>
             </div>
 
-            {publicRecommendations.length ? (
-              <div className="recommendation-list">
-                {publicRecommendations.map((recommendation) => (
-                  <article className="recommendation-card" key={recommendation.id}>
-                    <div className="recommendation-card-top">
-                      <div>
-                        <strong>{recommendation.title}</strong>
-                      </div>
-                    </div>
-                    <p>{recommendation.body}</p>
-                  </article>
+            {publicLists.length > 1 ? (
+              <div className="detail-recommendations-pill-grid">
+                {publicLists.map((list) => (
+                  <Link
+                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill"
+                    href={`/lists/${list.id_hash}`}
+                    key={list.id}
+                  >
+                    <span className="dashboard-chip-label">
+                      <strong>{list.title}</strong>
+                      <span>{list.item_count} saved {list.item_count === 1 ? "place" : "places"}</span>
+                    </span>
+                  </Link>
                 ))}
               </div>
             ) : null}
 
-            {publicRecommendations.length === 0 ? (
+            {publicLists.length === 1 && recommendationListItems.length > 0 ? (
+              <div className="detail-recommendations-pill-grid">
+                {recommendationListItems.map((item) => (
+                  <Link
+                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill"
+                    href={`/companies/${item.company.slug}`}
+                    key={item.id}
+                  >
+                    <span className="dashboard-chip-label">
+                      <strong>{item.company.name}</strong>
+                      <span>{[item.company.city, item.company.state].filter(Boolean).join(", ") || "Coming soon"}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+
+            {publicLists.length === 1 && recommendationListItems.length === 0 ? (
+              <div className="detail-recommendations-pill-grid">
+                {publicLists.map((list) => (
+                  <Link
+                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill"
+                    href={`/lists/${list.id_hash}`}
+                    key={list.id}
+                  >
+                    <span className="dashboard-chip-label">
+                      <strong>{list.title}</strong>
+                      <span>{list.item_count} saved {list.item_count === 1 ? "place" : "places"}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+
+            {publicRecommendations.length ? (
+              <div className="detail-public-recommendations-section">
+                {publicLists.length > 0 ? (
+                  <span className="field-label">Location Recommendations</span>
+                ) : null}
+                <div className="recommendation-list">
+                  {publicRecommendations.map((recommendation) => (
+                    <article className="recommendation-card" key={recommendation.id}>
+                      <div className="recommendation-card-top">
+                        <div>
+                          <strong>{recommendation.title}</strong>
+                        </div>
+                      </div>
+                      <p>{recommendation.body}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {publicRecommendations.length === 0 && publicLists.length === 0 ? (
               <div className="detail-recommendations-empty">
                 <span className="muted">No public recommendations for this location yet.</span>
               </div>

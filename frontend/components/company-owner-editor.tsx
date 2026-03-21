@@ -489,7 +489,7 @@ export function CompanyOwnerEditor({
 
         {isEditMode ? (
           <form className="company-owner-editor-form" onSubmit={handleSubmit}>
-            <label className="contact-field contact-field-checkbox">
+            <label className="contact-field contact-field-checkbox company-owner-toggle-card">
               <span className="toggle-switch">
                 <input
                   type="checkbox"
@@ -507,12 +507,15 @@ export function CompanyOwnerEditor({
             </label>
 
             {hasMultipleLocations ? (
-              <label className="contact-field contact-field-checkbox company-owner-bulk-toggle">
-                <input
-                  checked={applySharedEditsToAll}
-                  onChange={(event) => setApplySharedEditsToAll(event.target.checked)}
-                  type="checkbox"
-                />
+              <label className="contact-field contact-field-checkbox company-owner-toggle-card">
+                <span className="toggle-switch">
+                  <input
+                    checked={applySharedEditsToAll}
+                    onChange={(event) => setApplySharedEditsToAll(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span className="toggle-slider" aria-hidden="true" />
+                </span>
                 <div>
                   <strong>Apply shared edits to all locations</strong>
                   <span className="contact-field-note">
