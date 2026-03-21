@@ -370,6 +370,21 @@ class BaseCompanyWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
 
+        if self.instance is None and self.context.get("require_complete_location", False):
+            location_errors = {}
+            required_location_fields = {
+                "city": "Add the city for this location.",
+                "state": "Add the state for this location.",
+                "zip_code": "Add the ZIP code for this location.",
+            }
+            for field_name, message in required_location_fields.items():
+                raw_value = attrs.get(field_name, "")
+                if not isinstance(raw_value, str) or not raw_value.strip():
+                    location_errors[field_name] = message
+
+            if location_errors:
+                raise serializers.ValidationError(location_errors)
+
         if "business_categories" in attrs:
             attrs["business_category"] = attrs["business_categories"][0] if attrs["business_categories"] else None
         elif "business_category" in attrs and attrs["business_category"] is not None:

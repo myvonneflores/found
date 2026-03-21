@@ -2337,6 +2337,38 @@ body.contact-page-body {
   max-width: 40rem;
 }
 
+.detail-page-shell .detail-card.business-company-locations-card {
+  width: 100%;
+  max-width: 100%;
+  justify-self: stretch;
+  background: #b78cc6;
+  color: #fff8ff;
+  border-color: rgba(255, 248, 255, 0.22);
+}
+
+.business-company-locations-card .field-label,
+.business-company-locations-card span,
+.business-company-locations-card strong {
+  color: inherit;
+}
+
+.business-company-locations-card .detail-recommendation-pill {
+  background: rgba(255, 248, 255, 0.18);
+  border-color: rgba(255, 248, 255, 0.24);
+  color: #fff8ff;
+}
+
+.business-company-locations-card .detail-recommendation-pill:hover,
+.business-company-locations-card .detail-recommendation-pill:focus-visible {
+  background: rgba(255, 248, 255, 0.28);
+  border-color: rgba(255, 248, 255, 0.34);
+}
+
+.business-company-locations-card .detail-recommendation-pill .dashboard-chip-label span,
+.business-company-locations-card .detail-recommendation-pill .dashboard-chip-label strong {
+  color: inherit;
+}
+
 .company-owner-creation-card {
   padding: clamp(1.45rem, 2.6vw, 2rem);
 }
@@ -2457,6 +2489,16 @@ body.contact-page-body {
   grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   gap: 0.75rem;
   align-items: end;
+}
+
+.business-hours-interval-row > * {
+  min-width: 0;
+}
+
+.business-hours-interval-row .contact-field,
+.business-hours-interval-row input {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .business-hours-action,

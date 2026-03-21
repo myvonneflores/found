@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import models, transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
@@ -50,6 +50,17 @@ SHARED_LOCATION_UPDATE_FIELDS = {
     "is_gf_friendly",
     "is_published",
 }
+
+
+def _serialize_shared_update_value(value):
+    if isinstance(value, models.Model):
+        return value.pk
+    if isinstance(value, (list, tuple)):
+        return [
+            item.pk if isinstance(item, models.Model) else item
+            for item in value
+        ]
+    return value
 
 
 class CompanyListView(generics.ListAPIView):
@@ -196,6 +207,7 @@ class ManagedBusinessLocationListCreateView(ManagedBusinessAccessMixin, generics
     def get_serializer_context(self):
         context = super().get_serializer_context()
         if self.request.method == "POST":
+            context["require_complete_location"] = True
             primary_company = self._get_primary_managed_company(required=False)
             if primary_company is not None:
                 context["preferred_company_group"] = self._ensure_company_group(primary_company)
@@ -274,7 +286,7 @@ class ManagedBusinessLocationDetailView(ManagedBusinessAccessMixin, generics.Ret
 
     def _apply_shared_updates_to_other_locations(self, *, source_instance, validated_data):
         shared_payload = {
-            key: value
+            key: _serialize_shared_update_value(value)
             for key, value in validated_data.items()
             if key in SHARED_LOCATION_UPDATE_FIELDS
         }

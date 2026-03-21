@@ -134,7 +134,7 @@ export default function BusinessCompanyPage() {
           </article>
 
           {managedLocations.length ? (
-            <article className="detail-card">
+            <article className="detail-card business-company-locations-card">
               <span className="field-label">Managed locations</span>
               <div className="detail-recommendations-pill-grid">
                 {managedLocations.map((location) => (
@@ -144,8 +144,9 @@ export default function BusinessCompanyPage() {
                     key={location.slug}
                   >
                     <span className="dashboard-chip-label">
-                      <strong>{location.name}</strong>
-                      <span>{[location.address, location.city, location.state].filter(Boolean).join(", ") || "Location details coming soon"}</span>
+                      <span>
+                        {[location.address, location.city, location.state].filter(Boolean).join(", ") || "Location details coming soon"}
+                      </span>
                     </span>
                   </Link>
                 ))}
