@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 
 export function ConfirmDialog({
+  cancelLabel = "cancel",
   confirmLabel = "confirm",
   isOpen,
   isPending = false,
@@ -11,6 +12,7 @@ export function ConfirmDialog({
   onConfirm,
   title,
 }: {
+  cancelLabel?: string;
   confirmLabel?: string;
   isOpen: boolean;
   isPending?: boolean;
@@ -35,9 +37,6 @@ export function ConfirmDialog({
       >
         <div className="detail-save-modal-header detail-confirm-modal-header">
           <div className="detail-confirm-modal-copy">
-            <span aria-hidden="true" className="detail-confirm-modal-kicker">
-              Warning
-            </span>
             <span aria-hidden="true" className="detail-confirm-modal-icon">
               !
             </span>
@@ -53,7 +52,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             type="button"
           >
-            cancel
+            {cancelLabel}
           </button>
           <button
             className="button button-primary detail-save-modal-button detail-confirm-modal-danger"

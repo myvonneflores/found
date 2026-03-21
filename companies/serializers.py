@@ -368,6 +368,10 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
         attrs = super().validate(attrs)
 
         if self.instance is not None:
+            if "name" in attrs and attrs["name"].strip() != self.instance.name.strip():
+                raise serializers.ValidationError(
+                    {"name": "Business name changes require support. Please contact FOUND support."}
+                )
             return attrs
 
         assessment = assess_new_company_listing(

@@ -2397,6 +2397,15 @@ body.contact-page-body {
   line-height: 1.5;
 }
 
+.auth-field-status {
+  min-height: 3rem;
+}
+
+.auth-field-status > .auth-inline-note,
+.auth-field-status > .contact-form-note {
+  margin-top: 0.55rem;
+}
+
 .business-claim-intent-note {
   min-height: 0;
   color: #c97262;

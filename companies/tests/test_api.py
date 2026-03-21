@@ -549,6 +549,33 @@ class TestManagedBusinessProfileApi:
         assert company.business_hours_raw == ""
         assert company.business_hours_last_verified_at is not None
 
+    def test_managed_company_name_change_requires_support(self, api_client, two_companies):
+        company = two_companies[0]
+        user = User.objects.create_user(
+            email="locked-name@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            business_name=company.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-current"),
+            {"name": "Some Other Business"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert response.data["name"] == ["Business name changes require support. Please contact FOUND support."]
+        company.refresh_from_db()
+        assert company.name != "Some Other Business"
+
     def test_pending_business_user_cannot_manage_company(self, api_client, two_companies):
         company = two_companies[0]
         user = User.objects.create_user(
