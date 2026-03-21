@@ -33,9 +33,27 @@ const EMPTY_TAXONOMIES: TaxonomyState = {
   ownershipMarkers: [],
   sustainabilityMarkers: [],
 };
+const TAXONOMY_REQUEST_TIMEOUT_MS = 8000;
 
 function toggleId(current: number[], nextId: number) {
   return current.includes(nextId) ? current.filter((value) => value !== nextId) : [...current, nextId];
+}
+
+function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = TAXONOMY_REQUEST_TIMEOUT_MS) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(`${label} timed out.`)), timeoutMs);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (reason: unknown) => {
+        window.clearTimeout(timer);
+        reject(reason);
+      }
+    );
+  });
 }
 
 export function CompanyProfileCreationForm({
@@ -50,6 +68,7 @@ export function CompanyProfileCreationForm({
   const [isLoadingTaxonomies, setIsLoadingTaxonomies] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [taxonomyWarning, setTaxonomyWarning] = useState("");
   const [taxonomies, setTaxonomies] = useState<TaxonomyState>(EMPTY_TAXONOMIES);
   const [profile, setProfile] = useState<CompanyCreatePayload>({
     name: latestClaim?.business_name || (mode === "owner" ? user?.display_name || "" : ""),
@@ -79,31 +98,44 @@ export function CompanyProfileCreationForm({
 
     async function loadTaxonomies() {
       try {
-        const [
-          businessCategories,
-          productCategories,
-          cuisineTypes,
-          ownershipMarkers,
-          sustainabilityMarkers,
-        ] = await Promise.all([
-          listBusinessCategories(),
-          listProductCategories(),
-          listCuisineTypes(),
-          listOwnershipMarkers(),
-          listSustainabilityMarkers(),
+        const results = await Promise.allSettled([
+          withTimeout(listBusinessCategories(), "Business categories"),
+          withTimeout(listProductCategories(), "Product categories"),
+          withTimeout(listCuisineTypes(), "Cuisine types"),
+          withTimeout(listOwnershipMarkers(), "Ownership details"),
+          withTimeout(listSustainabilityMarkers(), "More to love"),
         ]);
 
         if (!isMounted) {
           return;
         }
 
+        const [
+          businessCategoriesResult,
+          productCategoriesResult,
+          cuisineTypesResult,
+          ownershipMarkersResult,
+          sustainabilityMarkersResult,
+        ] = results;
+
         setTaxonomies({
-          businessCategories,
-          productCategories,
-          cuisineTypes,
-          ownershipMarkers,
-          sustainabilityMarkers,
+          businessCategories:
+            businessCategoriesResult.status === "fulfilled" ? businessCategoriesResult.value : [],
+          productCategories:
+            productCategoriesResult.status === "fulfilled" ? productCategoriesResult.value : [],
+          cuisineTypes:
+            cuisineTypesResult.status === "fulfilled" ? cuisineTypesResult.value : [],
+          ownershipMarkers:
+            ownershipMarkersResult.status === "fulfilled" ? ownershipMarkersResult.value : [],
+          sustainabilityMarkers:
+            sustainabilityMarkersResult.status === "fulfilled" ? sustainabilityMarkersResult.value : [],
         });
+
+        if (results.some((result) => result.status === "rejected")) {
+          setTaxonomyWarning("Some dropdown options are taking longer than expected. You can keep filling out the basics and save once the options finish loading.");
+        } else {
+          setTaxonomyWarning("");
+        }
       } catch (loadError) {
         if (isMounted) {
           setError(loadError instanceof Error ? loadError.message : "Unable to load company profile options.");
@@ -121,6 +153,21 @@ export function CompanyProfileCreationForm({
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!latestClaim) {
+      return;
+    }
+
+    setProfile((current) => ({
+      ...current,
+      name: current.name || latestClaim.business_name || (mode === "owner" ? user?.display_name || "" : ""),
+      website: current.website || latestClaim.website || "",
+      instagram_handle: current.instagram_handle || latestClaim.instagram_handle || "",
+      facebook_page: current.facebook_page || latestClaim.facebook_page || "",
+      linkedin_page: current.linkedin_page || latestClaim.linkedin_page || "",
+    }));
+  }, [latestClaim, mode, user?.display_name]);
 
   const hasAnyTaxonomies = useMemo(
     () =>
@@ -410,6 +457,7 @@ export function CompanyProfileCreationForm({
         {!isLoadingTaxonomies && !hasAnyTaxonomies ? (
           <p className="contact-form-note">Some categories are still loading. You can save the basics first.</p>
         ) : null}
+        {taxonomyWarning ? <p className="contact-form-note">{taxonomyWarning}</p> : null}
         {error ? <p className="contact-form-note is-error">{error}</p> : null}
 
         <div className="directory-form-actions">

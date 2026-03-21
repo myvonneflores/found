@@ -8,7 +8,7 @@ import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { CompanyProfileCreationForm } from "@/components/company-profile-creation-form";
 import { SiteHeader } from "@/components/site-header";
-import { getManagedBusinessProfile, listBusinessClaims } from "@/lib/api";
+import { listBusinessClaims } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
 
 function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
@@ -28,22 +28,11 @@ function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
   return [];
 }
 
-function isMissingManagedProfileError(message: string) {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("404") ||
-    normalized.includes("not found") ||
-    normalized.includes("no company") ||
-    normalized.includes("verified business profile to manage yet")
-  );
-}
-
 export default function BusinessCompanyPage() {
   const router = useRouter();
   const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
   const [latestClaim, setLatestClaim] = useState<BusinessClaim | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [claimWarning, setClaimWarning] = useState("");
 
   useEffect(() => {
     if (!isReady) {
@@ -87,41 +76,16 @@ export default function BusinessCompanyPage() {
           router.replace(`/companies/${verifiedClaim.company_slug}?edit=1`);
           return;
         }
-
-        try {
-          const managedProfile = await getManagedBusinessProfile(accessToken!);
-          if (!isMounted) {
-            return;
-          }
-          router.replace(`/companies/${managedProfile.slug}?edit=1`);
-          return;
-        } catch (managedError) {
-          if (!isMounted) {
-            return;
-          }
-
-          if (!isMissingManagedProfileError(managedError instanceof Error ? managedError.message : "")) {
-            setError(
-              managedError instanceof Error
-                ? managedError.message
-                : "Unable to open your business profile right now."
-            );
-          }
-        }
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
-        setError(
+        setClaimWarning(
           loadError instanceof Error
-            ? loadError.message
-            : "Unable to load your business claim right now."
+            ? `${loadError.message} You can still start building your business page below.`
+            : "Unable to load your business claim right now. You can still start building your business page below."
         );
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
       }
     }
 
@@ -151,22 +115,13 @@ export default function BusinessCompanyPage() {
             </p>
           </article>
 
-          {isLoading ? (
+          {claimWarning ? (
             <article className="detail-card">
-              <div className="skeleton skeleton-title" style={{ width: "50%" }} />
-              <div className="skeleton skeleton-input" />
-              <div className="skeleton skeleton-input" />
-              <div className="skeleton skeleton-input" />
+              <p className="contact-form-note">{claimWarning}</p>
             </article>
           ) : null}
 
-          {!isLoading && error ? (
-            <article className="detail-card">
-              <p className="contact-form-note is-error">{error}</p>
-            </article>
-          ) : null}
-
-          {!isLoading && !error ? <CompanyProfileCreationForm latestClaim={latestClaim} /> : null}
+          <CompanyProfileCreationForm latestClaim={latestClaim} />
         </section>
       </div>
     </main>

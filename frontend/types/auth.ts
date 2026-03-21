@@ -84,7 +84,7 @@ export interface BusinessClaim {
   resubmission_count: number;
   submitted_at: string;
   reviewed_at: string | null;
-  history: BusinessClaimHistoryEvent[];
+  history?: BusinessClaimHistoryEvent[];
 }
 
 export interface BusinessClaimPayload {

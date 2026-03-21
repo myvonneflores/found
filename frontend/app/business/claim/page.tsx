@@ -9,7 +9,7 @@ import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
 import {
   createBusinessClaim,
-  listBusinessClaims,
+  getBusinessClaim,
   listCompanies,
   updateBusinessClaim,
 } from "@/lib/api";
@@ -36,23 +36,6 @@ function normalizeWebsite(value: string) {
     return trimmed;
   }
   return `https://${trimmed}`;
-}
-
-function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
-  if (Array.isArray(value)) {
-    return value as BusinessClaim[];
-  }
-
-  if (
-    value &&
-    typeof value === "object" &&
-    "results" in value &&
-    Array.isArray((value as { results?: unknown }).results)
-  ) {
-    return (value as { results: BusinessClaim[] }).results;
-  }
-
-  return [];
 }
 
 function BusinessClaimPageContent() {
@@ -169,12 +152,7 @@ function BusinessClaimPageContent() {
 
       setIsLoadingClaim(true);
       try {
-        const claims = normalizeClaims(await listBusinessClaims(accessToken));
-        const claim = claims.find((item) => item.id === claimId) ?? null;
-        if (!claim) {
-          setError("We couldn't find that claim.");
-          return;
-        }
+        const claim = await getBusinessClaim(accessToken, claimId);
 
         setEditingClaim(claim);
         setIntent(claim.intent);

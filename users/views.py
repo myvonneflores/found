@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import BusinessClaim, PersonalProfile
 from .serializers import (
     BusinessClaimSerializer,
+    BusinessClaimSummarySerializer,
     BusinessClaimUpdateSerializer,
     CustomTokenObtainPairSerializer,
     PersonalProfileSerializer,
@@ -52,12 +53,14 @@ class BusinessClaimListCreateView(generics.ListCreateAPIView):
         return (
             BusinessClaim.objects.filter(user=self.request.user)
             .select_related("company", "reviewed_by")
-            .prefetch_related("history__actor")
             .annotate(current_activity_at=Coalesce("resubmitted_at", "submitted_at"))
             .order_by("-current_activity_at", "-pk")
         )
 
-    serializer_class = BusinessClaimSerializer
+    def get_serializer_class(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return BusinessClaimSummarySerializer
+        return BusinessClaimSerializer
 
 
 class BusinessClaimDetailView(generics.RetrieveUpdateAPIView):

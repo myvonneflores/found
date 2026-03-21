@@ -125,7 +125,7 @@ PUBLIC_LIST_PREVIEW_FIELDS = {
 SAVED_LIST_FIELDS = {"id", "created_at", "list"}
 
 USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed", "badges"}
-BUSINESS_CLAIM_FIELDS = {
+BUSINESS_CLAIM_LIST_FIELDS = {
     "id",
     "company",
     "company_name",
@@ -152,6 +152,9 @@ BUSINESS_CLAIM_FIELDS = {
     "resubmission_count",
     "submitted_at",
     "reviewed_at",
+}
+BUSINESS_CLAIM_DETAIL_FIELDS = {
+    *BUSINESS_CLAIM_LIST_FIELDS,
     "history",
 }
 BUSINESS_CLAIM_HISTORY_FIELDS = {
@@ -345,34 +348,63 @@ def test_taxonomy_item_fields(api_client):
     assert isinstance(item["name"], str)
 
 
-# @pytest.mark.django_db
-# def test_business_claim_fields(api_client):
-#     user = User.objects.create_user(
-#         email="owner@example.com",
-#         password="supersecure123",
-#         account_type=User.AccountType.BUSINESS,
-#     )
-#     company = CompanyFactory(name="Shape Claim Co")
-#     claim = BusinessClaim.objects.create(
-#         user=user,
-#         company=company,
-#         intent=BusinessClaim.ClaimIntent.EXISTING,
-#         business_name=company.name,
-#         submitter_first_name="Owner",
-#         submitter_last_name="One",
-#         business_email="owner@shapeclaim.co",
-#         role_title="Founder",
-#     )
-#     claim.append_history_event("submitted", actor=user)
-#     api_client.force_authenticate(user=user)
+@pytest.mark.django_db
+def test_business_claim_list_fields(api_client):
+    user = User.objects.create_user(
+        email="owner@example.com",
+        password="supersecure123",
+        account_type=User.AccountType.BUSINESS,
+    )
+    company = CompanyFactory(name="Shape Claim Co")
+    claim = BusinessClaim.objects.create(
+        user=user,
+        company=company,
+        intent=BusinessClaim.ClaimIntent.EXISTING,
+        business_name=company.name,
+        submitter_first_name="Owner",
+        submitter_last_name="One",
+        business_email="owner@shapeclaim.co",
+        role_title="Founder",
+    )
+    claim.append_history_event("submitted", actor=user)
+    api_client.force_authenticate(user=user)
 
-#     response = api_client.get(reverse("users:business-claim-list"))
+    response = api_client.get(reverse("users:business-claim-list"))
 
-#     assert response.status_code == 200
-#     item = response.json()["results"][0]
-#     assert set(item.keys()) == BUSINESS_CLAIM_FIELDS
-#     assert isinstance(item["history"], list)
-#     assert set(item["history"][0].keys()) == BUSINESS_CLAIM_HISTORY_FIELDS
+    assert response.status_code == 200
+    item = response.json()["results"][0]
+    assert set(item.keys()) == BUSINESS_CLAIM_LIST_FIELDS
+    assert "history" not in item
+
+
+@pytest.mark.django_db
+def test_business_claim_detail_fields(api_client):
+    user = User.objects.create_user(
+        email="owner-detail@example.com",
+        password="supersecure123",
+        account_type=User.AccountType.BUSINESS,
+    )
+    company = CompanyFactory(name="Shape Claim Detail Co")
+    claim = BusinessClaim.objects.create(
+        user=user,
+        company=company,
+        intent=BusinessClaim.ClaimIntent.EXISTING,
+        business_name=company.name,
+        submitter_first_name="Owner",
+        submitter_last_name="Detail",
+        business_email="owner@shapeclaimdetail.co",
+        role_title="Founder",
+    )
+    claim.append_history_event("submitted", actor=user)
+    api_client.force_authenticate(user=user)
+
+    response = api_client.get(reverse("users:business-claim-detail", kwargs={"pk": claim.pk}))
+
+    assert response.status_code == 200
+    item = response.json()
+    assert set(item.keys()) == BUSINESS_CLAIM_DETAIL_FIELDS
+    assert isinstance(item["history"], list)
+    assert set(item["history"][0].keys()) == BUSINESS_CLAIM_HISTORY_FIELDS
 
 
 # ---------------------------------------------------------------------------

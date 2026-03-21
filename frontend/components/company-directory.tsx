@@ -199,6 +199,7 @@ function BrandedMultiSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuPosition, setMenuPosition] = useState<
     { top: number; left: number; width: number; maxHeight: number } | null
   >(null);
@@ -238,7 +239,8 @@ function BrandedMultiSelect({
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false);
       }
     }
@@ -275,6 +277,40 @@ function BrandedMultiSelect({
     };
   }, [isOpen, updateMenuPosition]);
 
+  const menu = isOpen ? (
+    <div
+      className="directory-custom-select-menu directory-custom-select-menu-portal"
+      ref={menuRef}
+      style={
+        menuPosition
+          ? {
+              top: `${menuPosition.top}px`,
+              left: `${menuPosition.left}px`,
+              width: `${menuPosition.width}px`,
+              maxHeight: menuPosition.maxHeight,
+            }
+          : undefined
+      }
+    >
+      {options.map((option) => {
+        const isActive = selected.has(option.value);
+        return (
+          <button
+            className={isActive ? "directory-custom-select-option is-active" : "directory-custom-select-option"}
+            key={option.value}
+            onClick={() => onToggle(option.value)}
+            type="button"
+          >
+            <span>{option.label}</span>
+            <span className="directory-multiselect-check" aria-hidden="true">
+              {isActive ? "✓" : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
+
   return (
     <div className={`directory-custom-select directory-custom-multiselect${isOpen ? " is-open" : ""}`} ref={containerRef}>
       <button
@@ -288,39 +324,7 @@ function BrandedMultiSelect({
           v
         </span>
       </button>
-      {isOpen ? (
-        <div
-          className="directory-custom-select-menu"
-          style={
-            menuPosition
-              ? {
-                  position: "fixed",
-                  top: menuPosition.top,
-                  left: menuPosition.left,
-                  width: menuPosition.width,
-                  maxHeight: menuPosition.maxHeight,
-                }
-              : undefined
-          }
-        >
-          {options.map((option) => {
-            const isActive = selected.has(option.value);
-            return (
-              <button
-                className={isActive ? "directory-custom-select-option is-active" : "directory-custom-select-option"}
-                key={option.value}
-                onClick={() => onToggle(option.value)}
-                type="button"
-              >
-                <span>{option.label}</span>
-                <span className="directory-multiselect-check" aria-hidden="true">
-                  {isActive ? "✓" : ""}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      {menuPosition && typeof document !== "undefined" ? createPortal(menu, document.body) : null}
     </div>
   );
 }
