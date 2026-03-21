@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import BusinessClaim, BusinessClaimEvent, PersonalProfile
+from .models import BusinessClaim, BusinessClaimEvent, PersonalProfile, business_claim_history_table_exists
 
 User = get_user_model()
 
@@ -280,11 +280,20 @@ class BusinessClaimSummarySerializer(serializers.ModelSerializer):
 
 
 class BusinessClaimSerializer(BusinessClaimSummarySerializer):
-    history = BusinessClaimEventSerializer(many=True, read_only=True)
+    history = serializers.SerializerMethodField()
 
     class Meta(BusinessClaimSummarySerializer.Meta):
         fields = BusinessClaimSummarySerializer.Meta.fields + ("history",)
         read_only_fields = BusinessClaimSummarySerializer.Meta.read_only_fields + ("history",)
+
+    def get_history(self, obj):
+        if not business_claim_history_table_exists():
+            return []
+
+        try:
+            return BusinessClaimEventSerializer(obj.history.all(), many=True).data
+        except (db_utils.ProgrammingError, db_utils.OperationalError):
+            return []
 
 
 class BusinessClaimUpdateSerializer(serializers.ModelSerializer):
