@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import BusinessClaim, BusinessClaimEvent, PersonalProfile
+from .models import BusinessClaim, BusinessClaimEvent, PersonalProfile, business_claim_history_table_exists
 
 User = get_user_model()
 
@@ -190,13 +190,12 @@ class BusinessClaimEventSerializer(serializers.ModelSerializer):
         return obj.get_event_type_display()
 
 
-class BusinessClaimSerializer(serializers.ModelSerializer):
+class BusinessClaimSummarySerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     company_slug = serializers.CharField(source="company.slug", read_only=True)
     website = serializers.CharField(required=False, allow_blank=True)
     decision_reason_label = serializers.SerializerMethodField()
     review_checklist_labels = serializers.SerializerMethodField()
-    history = BusinessClaimEventSerializer(many=True, read_only=True)
 
     class Meta:
         model = BusinessClaim
@@ -227,7 +226,6 @@ class BusinessClaimSerializer(serializers.ModelSerializer):
             "resubmission_count",
             "submitted_at",
             "reviewed_at",
-            "history",
         )
         read_only_fields = (
             "id",
@@ -241,7 +239,6 @@ class BusinessClaimSerializer(serializers.ModelSerializer):
             "resubmission_count",
             "submitted_at",
             "reviewed_at",
-            "history",
         )
 
     def validate_website(self, value):
@@ -280,6 +277,23 @@ class BusinessClaimSerializer(serializers.ModelSerializer):
 
     def get_review_checklist_labels(self, obj):
         return obj.review_checklist_labels
+
+
+class BusinessClaimSerializer(BusinessClaimSummarySerializer):
+    history = serializers.SerializerMethodField()
+
+    class Meta(BusinessClaimSummarySerializer.Meta):
+        fields = BusinessClaimSummarySerializer.Meta.fields + ("history",)
+        read_only_fields = BusinessClaimSummarySerializer.Meta.read_only_fields + ("history",)
+
+    def get_history(self, obj):
+        if not business_claim_history_table_exists():
+            return []
+
+        try:
+            return BusinessClaimEventSerializer(obj.history.all(), many=True).data
+        except (db_utils.ProgrammingError, db_utils.OperationalError):
+            return []
 
 
 class BusinessClaimUpdateSerializer(serializers.ModelSerializer):

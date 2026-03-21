@@ -348,6 +348,14 @@ export function listBusinessClaims(token: string) {
   }).then(unwrapListResponse);
 }
 
+export function getBusinessClaim(token: string, claimId: number) {
+  return requestJson<BusinessClaim>(`users/business-claims/${claimId}/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export function createBusinessClaim(token: string, payload: BusinessClaimPayload) {
   return requestJson<BusinessClaim>("users/business-claims/", {
     method: "POST",

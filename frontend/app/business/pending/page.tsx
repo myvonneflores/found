@@ -11,7 +11,7 @@ import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
 import { SiteHeader } from "@/components/site-header";
-import { listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
+import { getBusinessClaim, listBusinessClaims, listCuratedLists, listFavorites } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
 import type { CuratedList, Favorite } from "@/types/community";
 
@@ -95,6 +95,7 @@ export default function BusinessPendingPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
+  const [latestClaimDetail, setLatestClaimDetail] = useState<BusinessClaim | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
@@ -104,7 +105,7 @@ export default function BusinessPendingPage() {
 
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
-  const latestClaim = claims[0] ?? null;
+  const latestClaim = latestClaimDetail ?? claims[0] ?? null;
   const latestHistory = latestClaim?.history ?? [];
 
   const claimStatusContent = latestClaim ? (
@@ -258,6 +259,7 @@ export default function BusinessPendingPage() {
     async function loadData() {
       if (!accessToken || !user || user.account_type !== "business") {
         setIsLoading(false);
+        setLatestClaimDetail(null);
         return;
       }
 
@@ -267,15 +269,24 @@ export default function BusinessPendingPage() {
           listCuratedLists(accessToken),
           listBusinessClaims(accessToken),
         ]);
+        const normalizedClaims = normalizeClaims(nextClaims);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
-        setClaims(normalizeClaims(nextClaims));
+        setClaims(normalizedClaims);
+        setLatestClaimDetail(null);
+
+        const nextLatestClaim = normalizedClaims[0] ?? null;
+        if (nextLatestClaim) {
+          const detailedClaim = await getBusinessClaim(accessToken, nextLatestClaim.id);
+          setLatestClaimDetail(detailedClaim);
+        }
       } catch (loadError) {
         if (loadError instanceof Error && isTokenError(loadError.message)) {
           signOut();
           router.replace("/login");
           return;
         }
+        setLatestClaimDetail(null);
         setError(loadError instanceof Error ? loadError.message : "Unable to load your business dashboard.");
       } finally {
         setIsLoading(false);

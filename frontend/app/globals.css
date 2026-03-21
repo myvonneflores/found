@@ -2731,6 +2731,11 @@ body.contact-page-body {
   text-transform: uppercase;
 }
 
+.dashboard-logout-button.dashboard-business-claim-link {
+  background: #d9c5ee;
+  color: #7b4d97;
+}
+
 .dashboard-business-claim-strip:hover,
 .dashboard-business-claim-strip:focus-within {
   background: #bb74a0;
@@ -2745,8 +2750,8 @@ body.contact-page-body {
 
 .dashboard-business-claim-link:hover,
 .dashboard-business-claim-link:focus-visible {
-  background: transparent;
-  color: inherit;
+  background: #bb74a0;
+  color: #fff3ef;
   outline: none;
 }
 

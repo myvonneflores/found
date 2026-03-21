@@ -17,6 +17,7 @@ type SelectedCompany = {
   slug: string;
 };
 const CLAIM_SIGNUP_STORAGE_KEY = "found-signup-claim-company";
+const SIGNUP_DRAFT_STORAGE_KEY = "found-signup-draft";
 
 const accountOptions: Array<{ value: AccountType; title: string }> = [
   {
@@ -43,6 +44,7 @@ const businessIntentOptions: Array<{ value: BusinessIntent; title: string }> = [
 export default function SignupPage() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("personal");
   const [businessIntent, setBusinessIntent] = useState<BusinessIntent>("existing");
   const [form, setForm] = useState({
@@ -64,6 +66,75 @@ export default function SignupPage() {
   const [companyResults, setCompanyResults] = useState<SelectedCompany[]>([]);
   const [isSearchingCompanies, setIsSearchingCompanies] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<SelectedCompany | null>(null);
+
+  useEffect(() => {
+    try {
+      const rawDraft = window.sessionStorage.getItem(SIGNUP_DRAFT_STORAGE_KEY);
+      if (!rawDraft) {
+        setHasLoadedDraft(true);
+        return;
+      }
+
+      const draft = JSON.parse(rawDraft) as {
+        accountType?: AccountType;
+        businessIntent?: BusinessIntent;
+        form?: typeof form;
+        agreedToTerms?: boolean;
+        certifiedLocalOwnership?: boolean;
+        companySearch?: string;
+        selectedCompany?: SelectedCompany | null;
+      };
+
+      if (draft.accountType === "personal" || draft.accountType === "business") {
+        setAccountType(draft.accountType);
+      }
+      if (draft.businessIntent === "existing" || draft.businessIntent === "new") {
+        setBusinessIntent(draft.businessIntent);
+      }
+      if (draft.form) {
+        setForm((current) => ({
+          ...current,
+          ...draft.form,
+        }));
+      }
+      setAgreedToTerms(Boolean(draft.agreedToTerms));
+      setCertifiedLocalOwnership(Boolean(draft.certifiedLocalOwnership));
+      setCompanySearch(draft.companySearch ?? "");
+      setSelectedCompany(draft.selectedCompany ?? null);
+    } catch {
+      window.sessionStorage.removeItem(SIGNUP_DRAFT_STORAGE_KEY);
+    } finally {
+      setHasLoadedDraft(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedDraft) {
+      return;
+    }
+
+    window.sessionStorage.setItem(
+      SIGNUP_DRAFT_STORAGE_KEY,
+      JSON.stringify({
+        accountType,
+        businessIntent,
+        form,
+        agreedToTerms,
+        certifiedLocalOwnership,
+        companySearch,
+        selectedCompany,
+      })
+    );
+  }, [
+    accountType,
+    agreedToTerms,
+    businessIntent,
+    certifiedLocalOwnership,
+    companySearch,
+    form,
+    hasLoadedDraft,
+    selectedCompany,
+  ]);
 
   useEffect(() => {
     async function searchCompanies() {
@@ -151,6 +222,7 @@ export default function SignupPage() {
       });
 
       signIn(session);
+      window.sessionStorage.removeItem(SIGNUP_DRAFT_STORAGE_KEY);
       if (accountType === "business" && businessIntent === "existing" && selectedCompany) {
         window.sessionStorage.setItem(CLAIM_SIGNUP_STORAGE_KEY, JSON.stringify(selectedCompany));
       } else {

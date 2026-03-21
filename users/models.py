@@ -1,10 +1,21 @@
 from django.contrib.auth.models import AbstractUser
+from django.db import connection
 from django.db import models
 from django.db import utils as db_utils
 from django.db.models.functions import Coalesce
 from django.utils.text import slugify
 
 from .managers import UserManager
+
+
+BUSINESS_CLAIM_HISTORY_TABLE = "users_businessclaimevent"
+
+
+def business_claim_history_table_exists():
+    try:
+        return BUSINESS_CLAIM_HISTORY_TABLE in connection.introspection.table_names()
+    except (db_utils.ProgrammingError, db_utils.OperationalError):
+        return False
 
 
 class User(AbstractUser):
@@ -184,6 +195,9 @@ class BusinessClaim(models.Model):
         return [labels[item] for item in self.review_checklist if item in labels]
 
     def append_history_event(self, event_type, *, actor=None, metadata=None):
+        if not business_claim_history_table_exists():
+            return None
+
         try:
             return self.history.create(
                 event_type=event_type,

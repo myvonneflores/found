@@ -6,9 +6,10 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import BusinessClaim, PersonalProfile
+from .models import BusinessClaim, PersonalProfile, business_claim_history_table_exists
 from .serializers import (
     BusinessClaimSerializer,
+    BusinessClaimSummarySerializer,
     BusinessClaimUpdateSerializer,
     CustomTokenObtainPairSerializer,
     PersonalProfileSerializer,
@@ -52,12 +53,14 @@ class BusinessClaimListCreateView(generics.ListCreateAPIView):
         return (
             BusinessClaim.objects.filter(user=self.request.user)
             .select_related("company", "reviewed_by")
-            .prefetch_related("history__actor")
             .annotate(current_activity_at=Coalesce("resubmitted_at", "submitted_at"))
             .order_by("-current_activity_at", "-pk")
         )
 
-    serializer_class = BusinessClaimSerializer
+    def get_serializer_class(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return BusinessClaimSummarySerializer
+        return BusinessClaimSerializer
 
 
 class BusinessClaimDetailView(generics.RetrieveUpdateAPIView):
@@ -66,11 +69,13 @@ class BusinessClaimDetailView(generics.RetrieveUpdateAPIView):
     def get_queryset(self):
         if self.request.user.account_type != User.AccountType.BUSINESS:
             raise PermissionDenied("Only business users can access business claims.")
-        return (
+        queryset = (
             BusinessClaim.objects.filter(user=self.request.user)
             .select_related("company", "reviewed_by")
-            .prefetch_related("history__actor")
         )
+        if business_claim_history_table_exists():
+            queryset = queryset.prefetch_related("history__actor")
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:

@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type TaxonomySelectOption = {
@@ -25,6 +26,7 @@ export function TaxonomyMultiSelect({
   portal?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuPosition, setMenuPosition] = useState<
     { top: number; left: number; width: number; maxHeight: number } | null
   >(null);
@@ -66,7 +68,8 @@ export function TaxonomyMultiSelect({
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false);
       }
     }
@@ -105,6 +108,44 @@ export function TaxonomyMultiSelect({
   }, [isOpen, updateMenuPosition]);
 
   const shouldUsePortal = portal ?? true;
+  const menu = isOpen ? (
+    <div
+      className={`directory-custom-select-menu${shouldUsePortal ? " directory-custom-select-menu-portal" : ""}`}
+      ref={menuRef}
+      style={
+        menuPosition
+          ? {
+              ...(shouldUsePortal
+                ? {
+                    top: `${menuPosition.top}px`,
+                    left: `${menuPosition.left}px`,
+                    width: `${menuPosition.width}px`,
+                  }
+                : {}),
+              maxHeight: menuPosition.maxHeight,
+            }
+          : undefined
+      }
+    >
+      {options.map((option) => {
+        const isActive = selectedSet.has(option.value);
+
+        return (
+          <button
+            className={isActive ? "directory-custom-select-option is-active" : "directory-custom-select-option"}
+            key={option.value}
+            onClick={() => onToggle(option.value)}
+            type="button"
+          >
+            <span>{option.label}</span>
+            <span aria-hidden="true" className="directory-multiselect-check">
+              {isActive ? "✓" : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
 
   return (
     <div className={`directory-custom-select directory-custom-multiselect${isOpen ? " is-open" : ""}`} ref={containerRef}>
@@ -119,44 +160,8 @@ export function TaxonomyMultiSelect({
           v
         </span>
       </button>
-      {isOpen ? (
-        <div
-          className="directory-custom-select-menu"
-          style={
-            menuPosition
-              ? {
-                  ...(shouldUsePortal
-                    ? {
-                        position: "fixed" as const,
-                        top: menuPosition.top,
-                        left: menuPosition.left,
-                        width: menuPosition.width,
-                      }
-                    : {}),
-                  maxHeight: menuPosition.maxHeight,
-                }
-              : undefined
-          }
-        >
-          {options.map((option) => {
-            const isActive = selectedSet.has(option.value);
-
-            return (
-              <button
-                className={isActive ? "directory-custom-select-option is-active" : "directory-custom-select-option"}
-                key={option.value}
-                onClick={() => onToggle(option.value)}
-                type="button"
-              >
-                <span>{option.label}</span>
-                <span aria-hidden="true" className="directory-multiselect-check">
-                  {isActive ? "✓" : ""}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      {!shouldUsePortal ? menu : null}
+      {shouldUsePortal && menuPosition && typeof document !== "undefined" ? createPortal(menu, document.body) : null}
     </div>
   );
 }
