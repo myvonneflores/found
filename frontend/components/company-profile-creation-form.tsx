@@ -346,17 +346,17 @@ export function CompanyProfileCreationForm({
           <div className="auth-form-grid company-owner-location-grid">
             <label className="contact-field">
               <span className="contact-field-label">City</span>
-              <input onChange={(event) => updateField("city", event.target.value)} value={profile.city} />
+              <input onChange={(event) => updateField("city", event.target.value)} required value={profile.city} />
             </label>
 
             <label className="contact-field">
               <span className="contact-field-label">State</span>
-              <input onChange={(event) => updateField("state", event.target.value)} value={profile.state} />
+              <input onChange={(event) => updateField("state", event.target.value)} required value={profile.state} />
             </label>
 
             <label className="contact-field">
               <span className="contact-field-label">ZIP</span>
-              <input onChange={(event) => updateField("zip_code", event.target.value)} value={profile.zip_code} />
+              <input onChange={(event) => updateField("zip_code", event.target.value)} required value={profile.zip_code} />
             </label>
           </div>
         </div>

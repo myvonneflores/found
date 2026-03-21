@@ -128,6 +128,7 @@ class TestCompanyListApi:
                 "address": "500 SE Division St",
                 "city": primary.city,
                 "state": primary.state,
+                "zip_code": "97202",
             },
             format="json",
         )
@@ -988,6 +989,69 @@ class TestManagedBusinessProfileApi:
         assert first.address == "3817 N Overlook Blvd"
         assert second.address == "4229 SE 5th Ave"
 
+    def test_location_patch_can_apply_shared_taxonomy_and_visibility_updates(self, api_client, taxonomy_set):
+        user = User.objects.create_user(
+            email="bulk-location-taxonomy-owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        first = Company.objects.create(
+            name="Cali's",
+            website="https://calis.example.com",
+            description="Original first description",
+            address="3817 N Overlook Blvd",
+            city="Portland",
+            state="OR",
+            zip_code="97227",
+            is_published=True,
+        )
+        second = Company.objects.create(
+            name="Cali's",
+            website="https://calis.example.com",
+            description="Original second description",
+            address="4229 SE 5th Ave",
+            city="Portland",
+            state="OR",
+            zip_code="97202",
+            is_published=True,
+        )
+        first.ownership_markers.set([taxonomy_set["woman_owned"]])
+        second.ownership_markers.set([taxonomy_set["bipoc_owned"]])
+        BusinessClaim.objects.create(
+            user=user,
+            company=first,
+            business_name=first.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=second,
+            business_name=second.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-location-detail", kwargs={"slug": first.slug}),
+            {
+                "description": "Shared profile copy",
+                "ownership_markers": [taxonomy_set["woman_owned"].id],
+                "is_published": False,
+                "apply_shared_fields_to_all": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        first.refresh_from_db()
+        second.refresh_from_db()
+        assert first.is_published is False
+        assert second.is_published is False
+        assert list(first.ownership_markers.values_list("id", flat=True)) == [taxonomy_set["woman_owned"].id]
+        assert list(second.ownership_markers.values_list("id", flat=True)) == [taxonomy_set["woman_owned"].id]
+
     def test_verified_business_user_can_create_additional_location_with_shared_website(self, api_client):
         user = User.objects.create_user(
             email="shared-website-owner@example.com",
@@ -1018,6 +1082,7 @@ class TestManagedBusinessProfileApi:
                 "address": "80 SE Clinton St",
                 "city": "Portland",
                 "state": "OR",
+                "zip_code": "97214",
             },
             format="json",
         )
@@ -1032,6 +1097,47 @@ class TestManagedBusinessProfileApi:
             company=created,
             status=BusinessClaim.VerificationStatus.VERIFIED,
         ).exists()
+
+    def test_additional_location_requires_city_state_and_zip(self, api_client):
+        user = User.objects.create_user(
+            email="location-required-fields@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        original = Company.objects.create(
+            name="Seven Sisters",
+            website="https://sevensisters.com",
+            address="11 N Alberta St",
+            city="Portland",
+            state="OR",
+            zip_code="97217",
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=original,
+            business_name=original.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-manage-location-list"),
+            {
+                "name": "Seven Sisters",
+                "website": "https://www.sevensisters.com",
+                "address": "80 SE Clinton St",
+                "city": "",
+                "state": "",
+                "zip_code": "",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert response.data["city"] == ["Add the city for this location."]
+        assert response.data["state"] == ["Add the state for this location."]
+        assert response.data["zip_code"] == ["Add the ZIP code for this location."]
 
     def test_shared_website_location_requires_address(self, api_client):
         user = User.objects.create_user(
