@@ -128,6 +128,7 @@ class TestCompanyListApi:
                 "address": "500 SE Division St",
                 "city": primary.city,
                 "state": primary.state,
+                "zip_code": "97202",
             },
             format="json",
         )
