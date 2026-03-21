@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useDeferredValue, useEffect, useState } from "react";
+import { FormEvent, useDeferredValue, useEffect, useId, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
@@ -63,6 +63,7 @@ function looksLikeWebsite(value: string) {
 export default function SignupPage() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const termsCheckboxId = useId();
   const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("personal");
   const [businessIntent, setBusinessIntent] = useState<BusinessIntent>("existing");
@@ -726,21 +727,21 @@ export default function SignupPage() {
                 </label>
               ) : null}
 
-              <label className="contact-field contact-field-checkbox">
+              <div className="contact-field contact-field-checkbox">
                 <input
+                  id={termsCheckboxId}
                   checked={agreedToTerms}
                   onChange={(event) => setAgreedToTerms(event.target.checked)}
                   required
                   type="checkbox"
                 />
-                <span>
-                  I agree to the{" "}
+                <div>
+                  <label htmlFor={termsCheckboxId}>I agree to the Terms & Conditions.</label>
                   <Link className="contact-link" href="/terms-and-conditions" target="_blank" rel="noreferrer">
-                    Terms & Conditions
+                    Read the Terms & Conditions
                   </Link>
-                  .
-                </span>
-              </label>
+                </div>
+              </div>
 
               {error ? (
                 <p className="contact-form-note is-error" role="alert">
