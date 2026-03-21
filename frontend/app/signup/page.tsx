@@ -20,6 +20,8 @@ type SelectedCompany = {
 };
 const CLAIM_SIGNUP_STORAGE_KEY = "found-signup-claim-company";
 const SIGNUP_DRAFT_STORAGE_KEY = "found-signup-draft";
+const DOMAIN_LOOKUP_DEBOUNCE_MS = 350;
+const DOMAIN_LOOKUP_PENDING_UI_DELAY_MS = 180;
 
 const accountOptions: Array<{ value: AccountType; title: string }> = [
   {
@@ -50,6 +52,11 @@ function formatCompanyLocation(company: Pick<SelectedCompany, "city" | "state">)
 function formatCompanyLabel(company: SelectedCompany) {
   const location = formatCompanyLocation(company);
   return location ? `${company.name} (${location})` : company.name;
+}
+
+function looksLikeWebsite(value: string) {
+  const normalized = value.trim().replace(/^https?:\/\//i, "").split("/")[0]?.toLowerCase() ?? "";
+  return normalized.includes(".") && !normalized.startsWith(".") && !normalized.endsWith(".");
 }
 
 export default function SignupPage() {
@@ -84,6 +91,7 @@ export default function SignupPage() {
   const deferredBusinessWebsite = useDeferredValue(form.businessWebsite);
   const [matchedCompany, setMatchedCompany] = useState<SelectedCompany | null>(null);
   const [isCheckingBusinessWebsite, setIsCheckingBusinessWebsite] = useState(false);
+  const [showBusinessWebsitePending, setShowBusinessWebsitePending] = useState(false);
 
   useEffect(() => {
     try {
@@ -221,42 +229,70 @@ export default function SignupPage() {
   }, [accountType, deferredDisplayName]);
 
   useEffect(() => {
-    async function loadDomainMatch() {
-      if (accountType !== "business" || businessIntent !== "new") {
-        setMatchedCompany(null);
-        setIsCheckingBusinessWebsite(false);
-        return;
-      }
-
-      const website = deferredBusinessWebsite.trim();
-      if (!website) {
-        setMatchedCompany(null);
-        setIsCheckingBusinessWebsite(false);
-        return;
-      }
-
-      setIsCheckingBusinessWebsite(true);
-      try {
-        const response = await getCompanyDomainMatch(website);
-        setMatchedCompany(
-          response.matched && response.company
-            ? {
-                id: response.company.id,
-                name: response.company.name,
-                slug: response.company.slug,
-                city: response.company.city,
-                state: response.company.state,
-              }
-            : null
-        );
-      } catch {
-        setMatchedCompany(null);
-      } finally {
-        setIsCheckingBusinessWebsite(false);
-      }
+    if (accountType !== "business" || businessIntent !== "new") {
+      setMatchedCompany(null);
+      setIsCheckingBusinessWebsite(false);
+      setShowBusinessWebsitePending(false);
+      return;
     }
 
-    void loadDomainMatch();
+    const website = deferredBusinessWebsite.trim();
+    if (!website || !looksLikeWebsite(website)) {
+      setMatchedCompany(null);
+      setIsCheckingBusinessWebsite(false);
+      setShowBusinessWebsitePending(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const timeout = window.setTimeout(() => {
+      async function runLookup() {
+        const pendingUiTimeout = window.setTimeout(() => {
+          if (!isCancelled) {
+            setShowBusinessWebsitePending(true);
+          }
+        }, DOMAIN_LOOKUP_PENDING_UI_DELAY_MS);
+
+        setIsCheckingBusinessWebsite(true);
+        try {
+          const response = await getCompanyDomainMatch(website);
+          if (isCancelled) {
+            return;
+          }
+
+          setMatchedCompany(
+            response.matched && response.company
+              ? {
+                  id: response.company.id,
+                  name: response.company.name,
+                  slug: response.company.slug,
+                  city: response.company.city,
+                  state: response.company.state,
+                }
+              : null
+          );
+        } catch {
+          if (!isCancelled) {
+            setMatchedCompany(null);
+          }
+        } finally {
+          window.clearTimeout(pendingUiTimeout);
+          if (!isCancelled) {
+            setIsCheckingBusinessWebsite(false);
+            setShowBusinessWebsitePending(false);
+          }
+        }
+      }
+
+      void runLookup();
+    }, DOMAIN_LOOKUP_DEBOUNCE_MS);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeout);
+      setIsCheckingBusinessWebsite(false);
+      setShowBusinessWebsitePending(false);
+    };
   }, [accountType, businessIntent, deferredBusinessWebsite]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -298,7 +334,14 @@ export default function SignupPage() {
         return;
       }
 
-      const domainMatch = await getCompanyDomainMatch(businessWebsite);
+      let domainMatch: Awaited<ReturnType<typeof getCompanyDomainMatch>>;
+      try {
+        domainMatch = await getCompanyDomainMatch(businessWebsite);
+      } catch {
+        setError("We couldn't verify whether that website already has a FOUND listing. Please try again in a moment.");
+        return;
+      }
+
       if (domainMatch.matched && domainMatch.company) {
         const nextCompany = {
           id: domainMatch.company.id,
@@ -452,32 +495,6 @@ export default function SignupPage() {
                   </label>
                 ) : null}
 
-                {businessIntent === "new" ? (
-                  <label className="contact-field">
-                    <span className="contact-field-label">Business website or domain</span>
-                    <input
-                      autoCapitalize="none"
-                      name="businessWebsite"
-                      onChange={(event) => {
-                        setForm((current) => ({ ...current, businessWebsite: event.target.value }));
-                        setError("");
-                      }}
-                      placeholder="yourbusiness.com"
-                      required
-                      spellCheck={false}
-                      value={form.businessWebsite}
-                    />
-                    {isCheckingBusinessWebsite ? (
-                      <p className="auth-inline-note">Checking for an existing FOUND listing...</p>
-                    ) : null}
-                    {matchedCompany ? (
-                      <p className="contact-form-note">
-                        FOUND already has <strong>{formatCompanyLabel(matchedCompany)}</strong> for this website. Choose
-                        “Claim an existing business” instead.
-                      </p>
-                    ) : null}
-                  </label>
-                ) : null}
               </div>
             ) : null}
           </article>
@@ -547,6 +564,34 @@ export default function SignupPage() {
                   </p>
                 ) : null}
               </label>
+
+              {accountType === "business" && businessIntent === "new" ? (
+                <label className="contact-field">
+                  <span className="contact-field-label">Business website or domain</span>
+                  <input
+                    autoCapitalize="none"
+                    name="businessWebsite"
+                    onChange={(event) => {
+                      setForm((current) => ({ ...current, businessWebsite: event.target.value }));
+                      setError("");
+                    }}
+                    placeholder="yourbusiness.com"
+                    required
+                    spellCheck={false}
+                    value={form.businessWebsite}
+                  />
+                  <div className="auth-field-status" aria-live="polite">
+                    {showBusinessWebsitePending && isCheckingBusinessWebsite ? (
+                      <p className="auth-inline-note">Checking for an existing FOUND listing...</p>
+                    ) : matchedCompany ? (
+                      <p className="contact-form-note">
+                        FOUND already has <strong>{formatCompanyLabel(matchedCompany)}</strong> for this website.
+                        Choose “Claim an existing business” instead.
+                      </p>
+                    ) : null}
+                  </div>
+                </label>
+              ) : null}
 
               <label className="contact-field">
                 <span className="contact-field-label">Email</span>

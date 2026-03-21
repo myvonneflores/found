@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
 import { BusinessHoursEditor } from "@/components/business-hours-editor";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { clearAuthSession, readAuthSession, writeAuthSession } from "@/lib/auth-storage";
 import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
@@ -35,9 +36,18 @@ const EMPTY_TAXONOMIES: TaxonomyState = {
   ownershipMarkers: [],
   sustainabilityMarkers: [],
 };
+const UNSAVED_CHANGES_WARNING = "You have unsaved changes to this business profile. Leave without saving?";
+
+type PendingLeaveAction =
+  | { type: "close-editor" }
+  | { type: "navigate"; href: string };
 
 function toggleId(current: number[], nextId: number) {
   return current.includes(nextId) ? current.filter((value) => value !== nextId) : [...current, nextId];
+}
+
+function serializeManagedBusinessProfile(profile: ManagedBusinessProfile) {
+  return JSON.stringify(profile);
 }
 
 function isTokenError(message: string) {
@@ -60,6 +70,7 @@ export function CompanyOwnerEditor({
   const accountType = user?.account_type;
   const isBusinessVerified = user?.is_business_verified;
   const [profile, setProfile] = useState<ManagedBusinessProfile | null>(null);
+  const [savedProfile, setSavedProfile] = useState<ManagedBusinessProfile | null>(null);
   const [canEdit, setCanEdit] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -68,6 +79,7 @@ export function CompanyOwnerEditor({
   const [taxonomies, setTaxonomies] = useState<TaxonomyState>(EMPTY_TAXONOMIES);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<PendingLeaveAction | null>(null);
   const hasAutoOpened = useRef(false);
 
   const hasTaxonomies = useMemo(
@@ -133,6 +145,16 @@ export function CompanyOwnerEditor({
     () => selectedBusinessCategories.some((categoryId) => foodCategoryIds.has(categoryId)),
     [selectedBusinessCategories, foodCategoryIds]
   );
+  const hasUnsavedChanges = useMemo(
+    () =>
+      Boolean(
+        isEditMode &&
+          profile &&
+          savedProfile &&
+          serializeManagedBusinessProfile(profile) !== serializeManagedBusinessProfile(savedProfile)
+      ),
+    [isEditMode, profile, savedProfile]
+  );
 
   useEffect(() => {
     if (!isReady) {
@@ -148,6 +170,7 @@ export function CompanyOwnerEditor({
     ) {
       setCanEdit(false);
       setProfile(null);
+      setSavedProfile(null);
       setIsChecking(false);
       return;
     }
@@ -188,14 +211,17 @@ export function CompanyOwnerEditor({
 
         if (nextProfile.slug === company.slug) {
           setProfile(nextProfile);
+          setSavedProfile(nextProfile);
           setCanEdit(true);
         } else {
           setProfile(null);
+          setSavedProfile(null);
           setCanEdit(false);
         }
       } catch {
         if (isMounted) {
           setProfile(null);
+          setSavedProfile(null);
           setCanEdit(false);
         }
       } finally {
@@ -256,6 +282,9 @@ export function CompanyOwnerEditor({
   async function handleToggleEditMode() {
     if (!isEditMode) {
       await ensureTaxonomiesLoaded();
+    } else if (hasUnsavedChanges) {
+      setPendingLeaveAction({ type: "close-editor" });
+      return;
     }
     setIsEditMode((current) => !current);
     setError("");
@@ -288,6 +317,85 @@ export function CompanyOwnerEditor({
     return () => window.clearTimeout(timeout);
   }, [success]);
 
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    function handleDocumentClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target instanceof Element ? event.target : null;
+      const anchor = target?.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) {
+        return;
+      }
+
+      if (anchor.target && anchor.target !== "_self") {
+        return;
+      }
+
+      if (anchor.hasAttribute("download")) {
+        return;
+      }
+
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript:")) {
+        return;
+      }
+
+      try {
+        const currentUrl = new URL(window.location.href);
+        const nextUrl = new URL(anchor.href, currentUrl.href);
+        if (nextUrl.href === currentUrl.href) {
+          return;
+        }
+      } catch {
+        // If URL parsing fails, fall back to warning before leaving.
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingLeaveAction({ type: "navigate", href: anchor.href });
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [hasUnsavedChanges]);
+
+  function handleCancelLeaveAction() {
+    setPendingLeaveAction(null);
+  }
+
+  function handleConfirmLeaveAction() {
+    if (!pendingLeaveAction) {
+      return;
+    }
+
+    setProfile(savedProfile);
+    setError("");
+    setSuccess("");
+
+    if (pendingLeaveAction.type === "close-editor") {
+      setIsEditMode(false);
+      setPendingLeaveAction(null);
+      return;
+    }
+
+    window.location.assign(pendingLeaveAction.href);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -309,6 +417,7 @@ export function CompanyOwnerEditor({
       const { id: _id, ...payload } = profile;
       const nextProfile = await updateManagedBusinessProfile(token, payload);
       setProfile(nextProfile);
+      setSavedProfile(nextProfile);
       setIsEditMode(false);
       setSuccess("Business profile updated.");
       router.refresh();
@@ -373,210 +482,227 @@ export function CompanyOwnerEditor({
 
         {isEditMode ? (
           <form className="company-owner-editor-form" onSubmit={handleSubmit}>
-          <div className="auth-form-grid">
-            <label className="contact-field">
-              <span className="contact-field-label">Business name</span>
-              <input
-                onChange={(event) => updateField("name", event.target.value)}
-                value={profile.name}
-              />
-            </label>
-
-            <label className="contact-field">
-              <span className="contact-field-label">Website</span>
-              <input
-                onChange={(event) => updateField("website", event.target.value)}
-                placeholder="https://yourbusiness.com"
-                value={profile.website}
-              />
-            </label>
-          </div>
-
-          <label className="contact-field">
-            <span className="contact-field-label">Description</span>
-            <textarea
-              onChange={(event) => updateField("description", event.target.value)}
-              rows={4}
-              value={profile.description}
-            />
-          </label>
-
-          <div className="auth-form-grid">
-            <label className="contact-field">
-              <span className="contact-field-label">Address</span>
-              <input
-                onChange={(event) => updateField("address", event.target.value)}
-                value={profile.address}
-              />
-            </label>
-
-            <div className="auth-form-grid company-owner-location-grid">
-              <label className="contact-field">
-                <span className="contact-field-label">City</span>
+            <label className="contact-field contact-field-checkbox">
+              <span className="toggle-switch">
                 <input
-                  onChange={(event) => updateField("city", event.target.value)}
-                  value={profile.city}
+                  type="checkbox"
+                  checked={profile.is_published}
+                  onChange={(event) => updateField("is_published", event.target.checked)}
                 />
-              </label>
-
-              <label className="contact-field">
-                <span className="contact-field-label">State</span>
-                <input
-                  onChange={(event) => updateField("state", event.target.value)}
-                  value={profile.state}
-                />
-              </label>
-
-              <label className="contact-field">
-                <span className="contact-field-label">ZIP</span>
-                <input
-                  onChange={(event) => updateField("zip_code", event.target.value)}
-                  value={profile.zip_code}
-                />
-              </label>
-            </div>
-          </div>
-
-          <BusinessHoursEditor
-            businessHours={profile.business_hours}
-            onBusinessHoursChange={(value) => updateField("business_hours", value)}
-            onTimezoneChange={(value) => updateField("business_hours_timezone", value || null)}
-            timezone={profile.business_hours_timezone}
-          />
-
-          <div className="company-owner-taxonomy-section">
-            <span className="contact-field-label">Business categories</span>
-            <TaxonomyMultiSelect
-              onToggle={(value) => {
-                const nextCategories = toggleId(profile.business_categories, Number(value));
-                updateField("business_categories", nextCategories);
-                updateField("business_category", nextCategories[0] ?? null);
-              }}
-              options={businessCategoryOptions}
-              placeholder="Choose as many as you like"
-              selected={profile.business_categories.map(String)}
-              portal={false}
-            />
-          </div>
-
-        <div className="company-owner-taxonomy-grid">
-          <div className="company-owner-taxonomy-section">
-            <span className="contact-field-label">Product categories</span>
-            <TaxonomyMultiSelect
-              onToggle={(value) => updateField("product_categories", toggleId(profile.product_categories, Number(value)))}
-              options={productCategoryOptions}
-              placeholder="Choose product categories"
-              selected={profile.product_categories.map(String)}
-              portal={false}
-            />
-          </div>
-
-          {showsCuisineSection ? (
-            <div className="company-owner-taxonomy-section">
-              <span className="contact-field-label">Cuisine</span>
-            <TaxonomyMultiSelect
-              onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
-              options={cuisineOptions}
-              placeholder="Choose cuisine types"
-              selected={profile.cuisine_types.map(String)}
-              portal={false}
-            />
-          </div>
-          ) : null}
-        </div>
-
-          <div className="company-owner-taxonomy-grid">
-            <div className="company-owner-taxonomy-section">
-              <span className="contact-field-label">Owned by</span>
-            <TaxonomyMultiSelect
-              onToggle={(value) => updateField("ownership_markers", toggleId(profile.ownership_markers, Number(value)))}
-              options={ownershipOptions}
-              placeholder="Add any ownership details you'd like to share"
-              selected={profile.ownership_markers.map(String)}
-              portal={false}
-            />
-          </div>
-
-            <div className="company-owner-taxonomy-section">
-              <span className="contact-field-label">More to love</span>
-            <TaxonomyMultiSelect
-              onToggle={(value) => {
-                if (value === "__vegan__") {
-                  updateField("is_vegan_friendly", !profile.is_vegan_friendly);
-                  return;
-                }
-                if (value === "__gf__") {
-                  updateField("is_gf_friendly", !profile.is_gf_friendly);
-                  return;
-                }
-                updateField("sustainability_markers", toggleId(profile.sustainability_markers, Number(value)));
-              }}
-              options={moreToLoveOptions}
-              placeholder="Choose as many as you like"
-              selected={selectedMoreToLove}
-              portal={false}
-            />
-          </div>
-          </div>
-
-          <div className="auth-form-grid">
-            <label className="contact-field">
-              <span className="contact-field-label">Instagram</span>
-              <input
-                onChange={(event) => updateField("instagram_handle", event.target.value)}
-                placeholder="@yourbusiness"
-                value={profile.instagram_handle}
-              />
-            </label>
-
-            <label className="contact-field">
-              <span className="contact-field-label">Facebook</span>
-              <input
-                onChange={(event) => updateField("facebook_page", event.target.value)}
-                placeholder="https://facebook.com/yourpage"
-                value={profile.facebook_page}
-              />
-            </label>
-
-            <label className="contact-field">
-              <span className="contact-field-label">LinkedIn</span>
-              <input
-                onChange={(event) => updateField("linkedin_page", event.target.value)}
-                placeholder="https://linkedin.com/company/yourbusiness"
-                value={profile.linkedin_page}
-              />
-            </label>
-          </div>
-
-          <label className="contact-field contact-field-checkbox">
-            <span className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={profile.is_published}
-                onChange={(event) => updateField("is_published", event.target.checked)}
-              />
-              <span className="toggle-slider" aria-hidden="true" />
-            </span>
-            <div>
-              <strong>Display this business in the public SEARCH directory</strong>
-              <span className="contact-field-note">
-                Toggle off to keep your profile live but hidden from search results.
+                <span className="toggle-slider" aria-hidden="true" />
               </span>
+              <div>
+                <strong>Display this business in the public SEARCH directory</strong>
+                <span className="contact-field-note">
+                  Toggle off to keep your profile live but hidden from search results.
+                </span>
+              </div>
+            </label>
+
+            <div className="auth-form-grid">
+              <label className="contact-field">
+                <span className="contact-field-label">Business name</span>
+                <input
+                  readOnly
+                  aria-describedby="business-name-support-note"
+                  value={profile.name}
+                />
+                <span className="contact-field-note" id="business-name-support-note">
+                  Need to update your business name? Contact FOUND support.
+                </span>
+              </label>
+
+              <label className="contact-field">
+                <span className="contact-field-label">Website</span>
+                <input
+                  onChange={(event) => updateField("website", event.target.value)}
+                  placeholder="https://yourbusiness.com"
+                  value={profile.website}
+                />
+              </label>
             </div>
-          </label>
 
-          {isLoadingTaxonomies ? <p className="contact-form-note">Loading editing options...</p> : null}
+            <label className="contact-field">
+              <span className="contact-field-label">Description</span>
+              <textarea
+                onChange={(event) => updateField("description", event.target.value)}
+                rows={4}
+                value={profile.description}
+              />
+            </label>
 
-          <div className="directory-form-actions">
-            <button className="contact-submit" disabled={isSaving} type="submit">
-              {isSaving ? "Saving..." : "Save business page"}
-            </button>
-          </div>
+            <div className="auth-form-grid">
+              <label className="contact-field">
+                <span className="contact-field-label">Address</span>
+                <input
+                  onChange={(event) => updateField("address", event.target.value)}
+                  value={profile.address}
+                />
+              </label>
+
+              <div className="auth-form-grid company-owner-location-grid">
+                <label className="contact-field">
+                  <span className="contact-field-label">City</span>
+                  <input
+                    onChange={(event) => updateField("city", event.target.value)}
+                    value={profile.city}
+                  />
+                </label>
+
+                <label className="contact-field">
+                  <span className="contact-field-label">State</span>
+                  <input
+                    onChange={(event) => updateField("state", event.target.value)}
+                    value={profile.state}
+                  />
+                </label>
+
+                <label className="contact-field">
+                  <span className="contact-field-label">ZIP</span>
+                  <input
+                    onChange={(event) => updateField("zip_code", event.target.value)}
+                    value={profile.zip_code}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <BusinessHoursEditor
+              businessHours={profile.business_hours}
+              onBusinessHoursChange={(value) => updateField("business_hours", value)}
+              onTimezoneChange={(value) => updateField("business_hours_timezone", value || null)}
+              timezone={profile.business_hours_timezone}
+            />
+
+            <div className="company-owner-taxonomy-section">
+              <span className="contact-field-label">Business categories</span>
+              <TaxonomyMultiSelect
+                onToggle={(value) => {
+                  const nextCategories = toggleId(profile.business_categories, Number(value));
+                  updateField("business_categories", nextCategories);
+                  updateField("business_category", nextCategories[0] ?? null);
+                }}
+                options={businessCategoryOptions}
+                placeholder="Choose as many as you like"
+                selected={profile.business_categories.map(String)}
+                portal={false}
+              />
+            </div>
+
+            <div className="company-owner-taxonomy-grid">
+              <div className="company-owner-taxonomy-section">
+                <span className="contact-field-label">Product categories</span>
+                <TaxonomyMultiSelect
+                  onToggle={(value) =>
+                    updateField("product_categories", toggleId(profile.product_categories, Number(value)))
+                  }
+                  options={productCategoryOptions}
+                  placeholder="Choose product categories"
+                  selected={profile.product_categories.map(String)}
+                  portal={false}
+                />
+              </div>
+
+              {showsCuisineSection ? (
+                <div className="company-owner-taxonomy-section">
+                  <span className="contact-field-label">Cuisine</span>
+                  <TaxonomyMultiSelect
+                    onToggle={(value) => updateField("cuisine_types", toggleId(profile.cuisine_types, Number(value)))}
+                    options={cuisineOptions}
+                    placeholder="Choose cuisine types"
+                    selected={profile.cuisine_types.map(String)}
+                    portal={false}
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            <div className="company-owner-taxonomy-grid">
+              <div className="company-owner-taxonomy-section">
+                <span className="contact-field-label">Owned by</span>
+                <TaxonomyMultiSelect
+                  onToggle={(value) =>
+                    updateField("ownership_markers", toggleId(profile.ownership_markers, Number(value)))
+                  }
+                  options={ownershipOptions}
+                  placeholder="Add any ownership details you'd like to share"
+                  selected={profile.ownership_markers.map(String)}
+                  portal={false}
+                />
+              </div>
+
+              <div className="company-owner-taxonomy-section">
+                <span className="contact-field-label">More to love</span>
+                <TaxonomyMultiSelect
+                  onToggle={(value) => {
+                    if (value === "__vegan__") {
+                      updateField("is_vegan_friendly", !profile.is_vegan_friendly);
+                      return;
+                    }
+                    if (value === "__gf__") {
+                      updateField("is_gf_friendly", !profile.is_gf_friendly);
+                      return;
+                    }
+                    updateField("sustainability_markers", toggleId(profile.sustainability_markers, Number(value)));
+                  }}
+                  options={moreToLoveOptions}
+                  placeholder="Choose as many as you like"
+                  selected={selectedMoreToLove}
+                  portal={false}
+                />
+              </div>
+            </div>
+
+            <div className="auth-form-grid">
+              <label className="contact-field">
+                <span className="contact-field-label">Instagram</span>
+                <input
+                  onChange={(event) => updateField("instagram_handle", event.target.value)}
+                  placeholder="@yourbusiness"
+                  value={profile.instagram_handle}
+                />
+              </label>
+
+              <label className="contact-field">
+                <span className="contact-field-label">Facebook</span>
+                <input
+                  onChange={(event) => updateField("facebook_page", event.target.value)}
+                  placeholder="https://facebook.com/yourpage"
+                  value={profile.facebook_page}
+                />
+              </label>
+
+              <label className="contact-field">
+                <span className="contact-field-label">LinkedIn</span>
+                <input
+                  onChange={(event) => updateField("linkedin_page", event.target.value)}
+                  placeholder="https://linkedin.com/company/yourbusiness"
+                  value={profile.linkedin_page}
+                />
+              </label>
+            </div>
+
+            {isLoadingTaxonomies ? <p className="contact-form-note">Loading editing options...</p> : null}
+
+            <div className="directory-form-actions">
+              <button className="contact-submit" disabled={isSaving} type="submit">
+                {isSaving ? "Saving..." : "Save business page"}
+              </button>
+            </div>
           </form>
         ) : null}
       </section>
       {successToast}
       {errorToast}
+      <ConfirmDialog
+        cancelLabel="Keep editing"
+        confirmLabel="Leave without saving"
+        isOpen={Boolean(pendingLeaveAction)}
+        message={UNSAVED_CHANGES_WARNING}
+        onCancel={handleCancelLeaveAction}
+        onConfirm={handleConfirmLeaveAction}
+        title="Discard your edits?"
+      />
     </>
   );
 }
