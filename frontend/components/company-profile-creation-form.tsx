@@ -74,14 +74,14 @@ export function CompanyProfileCreationForm({
   const [taxonomies, setTaxonomies] = useState<TaxonomyState>(EMPTY_TAXONOMIES);
   const [profile, setProfile] = useState<CompanyCreatePayload>({
     name: latestClaim?.business_name || seedProfile?.name || (mode === "owner" ? user?.display_name || "" : ""),
-    description: "",
+    description: seedProfile?.description || "",
     website: latestClaim?.website || seedProfile?.website || "",
     address: "",
     city: "",
     state: "",
     zip_code: "",
-    business_hours: null,
-    business_hours_timezone: null,
+    business_hours: seedProfile?.business_hours ?? null,
+    business_hours_timezone: seedProfile?.business_hours_timezone ?? null,
     business_category: seedProfile?.business_category ?? null,
     business_categories: seedProfile?.business_categories ?? [],
     product_categories: seedProfile?.product_categories ?? [],
@@ -91,8 +91,8 @@ export function CompanyProfileCreationForm({
     instagram_handle: latestClaim?.instagram_handle || seedProfile?.instagram_handle || "",
     facebook_page: latestClaim?.facebook_page || seedProfile?.facebook_page || "",
     linkedin_page: latestClaim?.linkedin_page || seedProfile?.linkedin_page || "",
-    is_vegan_friendly: false,
-    is_gf_friendly: false,
+    is_vegan_friendly: seedProfile?.is_vegan_friendly ?? false,
+    is_gf_friendly: seedProfile?.is_gf_friendly ?? false,
   });
 
   useEffect(() => {
@@ -164,7 +164,10 @@ export function CompanyProfileCreationForm({
     setProfile((current) => ({
       ...current,
       name: current.name || latestClaim?.business_name || seedProfile?.name || (mode === "owner" ? user?.display_name || "" : ""),
+      description: current.description || seedProfile?.description || "",
       website: current.website || latestClaim?.website || seedProfile?.website || "",
+      business_hours: current.business_hours ?? seedProfile?.business_hours ?? null,
+      business_hours_timezone: current.business_hours_timezone ?? seedProfile?.business_hours_timezone ?? null,
       business_category: current.business_category ?? seedProfile?.business_category ?? null,
       business_categories: current.business_categories.length ? current.business_categories : seedProfile?.business_categories ?? [],
       product_categories: current.product_categories.length ? current.product_categories : seedProfile?.product_categories ?? [],
@@ -174,6 +177,8 @@ export function CompanyProfileCreationForm({
       instagram_handle: current.instagram_handle || latestClaim?.instagram_handle || seedProfile?.instagram_handle || "",
       facebook_page: current.facebook_page || latestClaim?.facebook_page || seedProfile?.facebook_page || "",
       linkedin_page: current.linkedin_page || latestClaim?.linkedin_page || seedProfile?.linkedin_page || "",
+      is_vegan_friendly: current.is_vegan_friendly || seedProfile?.is_vegan_friendly || false,
+      is_gf_friendly: current.is_gf_friendly || seedProfile?.is_gf_friendly || false,
     }));
   }, [latestClaim, mode, seedProfile, user?.display_name]);
 
@@ -281,9 +286,11 @@ export function CompanyProfileCreationForm({
 
       await refreshUser();
 
-      router.push(
-        mode === "community" ? `/companies/${nextProfile.slug}` : `/companies/${nextProfile.slug}?edit=1`
-      );
+      const destination =
+        mode === "community" ? `/companies/${nextProfile.slug}` : `/companies/${nextProfile.slug}?edit=1`;
+
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      router.push(destination, { scroll: true });
     } catch (saveError) {
       setError(
         saveError instanceof Error

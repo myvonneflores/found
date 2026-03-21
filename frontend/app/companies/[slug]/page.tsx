@@ -103,6 +103,7 @@ export default async function CompanyDetailPage({
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const autoEdit = normalizeParam(resolvedSearchParams.edit) === "1";
+  const autoApplySharedEdits = normalizeParam(resolvedSearchParams.applySharedEdits) === "1";
 
   try {
     const company = await getCompany(slug);
@@ -126,6 +127,8 @@ export default async function CompanyDetailPage({
     const businessHours = company.business_hours;
     const claimedProfile = company.claimed_profile;
     const publicRecommendations = company.public_recommendations;
+    const hasRecommendationContent =
+      publicRecommendations.length > 0 || (claimedProfile?.public_list_count ?? 0) > 0;
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Organization",
@@ -155,7 +158,7 @@ export default async function CompanyDetailPage({
           resetKey={JSON.stringify(resolvedSearchParams)}
         />
 
-        <CompanyOwnerEditor autoEdit={autoEdit} company={company} />
+        <CompanyOwnerEditor autoApplySharedEdits={autoApplySharedEdits} autoEdit={autoEdit} company={company} />
 
         <section className="detail-card detail-header">
           <div className="detail-header-top">
@@ -247,19 +250,21 @@ export default async function CompanyDetailPage({
 
         <section className="detail-grid">
           {company.other_locations.length ? (
-            <article className="detail-card">
+            <article className="detail-card detail-other-locations-card">
               <span className="field-label">Other locations</span>
-              <div className="detail-recommendations-pill-grid">
+              <div className="detail-other-locations-list">
                 {company.other_locations.map((locationItem) => (
                   <Link
-                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill"
+                    className="detail-other-location-link"
                     href={`/companies/${locationItem.slug}`}
                     key={locationItem.slug}
                   >
-                    <span className="dashboard-chip-label">
+                    <span className="detail-other-location-copy">
                       <strong>{locationItem.name}</strong>
-                      <span>{[locationItem.address, locationItem.city, locationItem.state].filter(Boolean).join(", ")}</span>
+                      <span>{locationItem.address || "Address coming soon"}</span>
+                      <span>{[locationItem.city, locationItem.state].filter(Boolean).join(", ") || "Location details coming soon"}</span>
                     </span>
+                    <span aria-hidden="true" className="detail-other-location-arrow">View</span>
                   </Link>
                 ))}
               </div>
@@ -297,7 +302,7 @@ export default async function CompanyDetailPage({
           </article>
         </section>
 
-        {claimedProfile || publicRecommendations.length ? (
+        {hasRecommendationContent ? (
           <section className="detail-card detail-recommendations-card">
             <div className="detail-claimed-header">
               <div className="detail-claimed-copy">

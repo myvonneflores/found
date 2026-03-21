@@ -59,9 +59,11 @@ function isTokenError(message: string) {
 }
 
 export function CompanyOwnerEditor({
+  autoApplySharedEdits = false,
   company,
   autoEdit = false,
 }: {
+  autoApplySharedEdits?: boolean;
   company: CompanyDetail;
   autoEdit?: boolean;
 }) {
@@ -79,6 +81,7 @@ export function CompanyOwnerEditor({
   const [taxonomies, setTaxonomies] = useState<TaxonomyState>(EMPTY_TAXONOMIES);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [applySharedEditsToAll, setApplySharedEditsToAll] = useState(autoApplySharedEdits);
   const [pendingLeaveAction, setPendingLeaveAction] = useState<PendingLeaveAction | null>(null);
   const hasAutoOpened = useRef(false);
 
@@ -140,6 +143,7 @@ export function CompanyOwnerEditor({
   );
 
   const selectedBusinessCategories = profile?.business_categories ?? [];
+  const hasMultipleLocations = company.other_locations.length > 0;
 
   const showsCuisineSection = useMemo(
     () => selectedBusinessCategories.some((categoryId) => foodCategoryIds.has(categoryId)),
@@ -294,13 +298,20 @@ export function CompanyOwnerEditor({
 
     async function openEditMode() {
       await ensureTaxonomiesLoaded();
+      setApplySharedEditsToAll(autoApplySharedEdits);
       setIsEditMode(true);
       setError("");
       setSuccess("");
     }
 
     void openEditMode();
-  }, [autoEdit, canEdit, hasTaxonomies, isEditMode]);
+  }, [autoApplySharedEdits, autoEdit, canEdit, hasTaxonomies, isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setApplySharedEditsToAll(autoApplySharedEdits);
+    }
+  }, [autoApplySharedEdits, isEditMode]);
 
   useEffect(() => {
     if (!success) {
@@ -409,11 +420,13 @@ export function CompanyOwnerEditor({
       }
 
       const { id: _id, ...payload } = profile;
-      const nextProfile = await updateManagedBusinessLocation(token, company.slug, payload);
+      const nextProfile = await updateManagedBusinessLocation(token, company.slug, payload, {
+        applySharedFieldsToAll: applySharedEditsToAll,
+      });
       setProfile(nextProfile);
       setSavedProfile(nextProfile);
       setIsEditMode(false);
-      setSuccess("Business profile updated.");
+      setSuccess(applySharedEditsToAll ? "Business profile updated across all locations." : "Business profile updated.");
       router.refresh();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update your business profile.");
@@ -492,6 +505,23 @@ export function CompanyOwnerEditor({
                 </span>
               </div>
             </label>
+
+            {hasMultipleLocations ? (
+              <label className="contact-field contact-field-checkbox company-owner-bulk-toggle">
+                <input
+                  checked={applySharedEditsToAll}
+                  onChange={(event) => setApplySharedEditsToAll(event.target.checked)}
+                  type="checkbox"
+                />
+                <div>
+                  <strong>Apply shared edits to all locations</strong>
+                  <span className="contact-field-note">
+                    Updates shared business details across all your locations while keeping each address, city, state,
+                    and ZIP unchanged.
+                  </span>
+                </div>
+              </label>
+            ) : null}
 
             <div className="auth-form-grid">
               <label className="contact-field">

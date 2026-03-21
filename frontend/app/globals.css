@@ -116,17 +116,17 @@ body.public-list-page-body {
 
 .auth-page-shell.dashboard-page-shell .directory-brand-strip,
 .auth-page-shell.dashboard-page-shell .directory-brand-strip-menu {
-  background: #f0dec1;
-  color: #efc18a;
+  background: #76a7d7;
+  color: #f0dec1;
 }
 
 .auth-page-shell.dashboard-page-shell .directory-brand-link {
-  color: #efc18a;
+  color: #f0dec1;
 }
 
 .auth-page-shell.dashboard-page-shell .directory-menu-trigger {
-  background: rgba(240, 222, 193, 0.88);
-  color: #efc18a;
+  background: rgba(118, 167, 215, 0.88);
+  color: #f0dec1;
 }
 
 .auth-page-shell.dashboard-page-shell .directory-menu-popover {
@@ -1081,6 +1081,86 @@ select {
 .detail-page-shell .detail-recommendation-pill .dashboard-chip-label span,
 .detail-page-shell .detail-recommendations-empty .muted {
   color: inherit;
+}
+
+.detail-other-locations-card {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+}
+
+.detail-other-locations-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.detail-other-location-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 248, 239, 0.18);
+  background: rgba(255, 248, 239, 0.28);
+  color: #b3749f;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.detail-other-location-link:hover,
+.detail-other-location-link:focus-visible {
+  background: rgba(255, 248, 239, 0.44);
+  border-color: rgba(255, 248, 239, 0.32);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.detail-other-location-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.detail-other-location-copy strong,
+.detail-other-location-copy span,
+.detail-other-location-arrow {
+  color: inherit;
+}
+
+.detail-other-location-copy strong {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  line-height: 1.1;
+}
+
+.detail-other-location-copy span {
+  min-width: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.detail-other-location-copy span:last-child {
+  opacity: 0.88;
+}
+
+.detail-other-location-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 248, 239, 0.42);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .detail-recommendations-empty {
@@ -2254,6 +2334,13 @@ body.contact-page-body {
   align-items: start;
 }
 
+.company-owner-bulk-toggle {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(179, 101, 7, 0.14);
+  border-radius: 22px;
+  background: rgba(242, 222, 199, 0.45);
+}
+
 .company-owner-location-grid {
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 0.75fr);
 }
@@ -2769,6 +2856,181 @@ body.contact-page-body {
   pointer-events: none;
 }
 
+.dashboard-business-cta-stack {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.dashboard-business-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 1rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  box-shadow: var(--shadow);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.dashboard-business-cta:hover,
+.dashboard-business-cta:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.dashboard-business-cta.dashboard-business-cta-primary {
+  background: #f0dec1;
+  border-color: rgba(201, 133, 69, 0.16);
+  color: #c98545;
+}
+
+.dashboard-business-cta.dashboard-business-cta-primary:hover,
+.dashboard-business-cta.dashboard-business-cta-primary:focus-visible {
+  background: #ebd3ac;
+  color: #c98545;
+}
+
+.dashboard-business-cta-secondary,
+.dashboard-business-cta-secondary:visited {
+  background: #bb74a0;
+  border-color: rgba(123, 77, 151, 0.18);
+  color: #ffffff;
+}
+
+.dashboard-business-cta-secondary:hover,
+.dashboard-business-cta-secondary:focus-visible,
+.dashboard-business-cta-secondary:visited:hover,
+.dashboard-business-cta-secondary:visited:focus-visible {
+  background: #a95f92;
+  color: #ffffff;
+}
+
+.dashboard-business-cta-tertiary {
+  background: rgba(255, 248, 239, 0.82);
+  border-color: rgba(187, 116, 160, 0.18);
+  color: #b3749f;
+}
+
+.dashboard-business-cta-tertiary:hover,
+.dashboard-business-cta-tertiary:focus-visible {
+  background: #fff3ef;
+}
+
+.dashboard-saved-lists-card[id] {
+  scroll-margin-top: calc(var(--header-strip-min-height) + 1.5rem);
+}
+
+.dashboard-location-picker-modal {
+  width: min(38rem, 100%);
+  gap: 1.1rem;
+}
+
+.dashboard-location-picker-copy {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dashboard-location-picker-copy p {
+  max-width: 36ch;
+}
+
+.dashboard-location-picker-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.dashboard-location-picker-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(184, 109, 69, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #b86d45;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.dashboard-location-picker-option:hover,
+.dashboard-location-picker-option:focus-visible {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(184, 109, 69, 0.28);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.dashboard-location-picker-option-all {
+  background:
+    radial-gradient(circle at top right, rgba(223, 133, 127, 0.18), transparent 32%),
+    rgba(255, 255, 255, 0.76);
+}
+
+.dashboard-location-picker-option-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.dashboard-location-picker-option-copy strong,
+.dashboard-location-picker-option-copy span,
+.dashboard-location-picker-option-arrow {
+  color: inherit;
+}
+
+.dashboard-location-picker-option-copy strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.dashboard-location-picker-option-copy span {
+  min-width: 0;
+  font-size: 0.94rem;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.dashboard-location-picker-option-copy span:last-child {
+  opacity: 0.86;
+}
+
+.dashboard-location-picker-option-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(234, 176, 99, 0.18);
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .dashboard-panel-profile-combined {
   justify-items: stretch;
   text-align: left;
@@ -2777,7 +3039,7 @@ body.contact-page-body {
 .dashboard-panel.dashboard-panel-share.dashboard-panel-profile-combined {
   justify-items: stretch;
   text-align: left;
-  padding-top: calc(var(--directory-panel-padding) - 0.45rem);
+  padding-top: var(--directory-panel-padding);
 }
 
 .dashboard-panel-share h2,
@@ -2938,8 +3200,35 @@ body.contact-page-body {
   min-width: 12rem;
   justify-content: center;
   text-align: center;
-  letter-spacing: 0.04em;
   font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.dashboard-favorites-link {
+  background: #c56f9c;
+  border-color: rgba(255, 229, 240, 0.26);
+  color: #fff7fb;
+  font-weight: 700;
+}
+
+.dashboard-favorites-link:hover,
+.dashboard-favorites-link:focus-visible {
+  background: #cf7aa6;
+  color: #fffafb;
+}
+
+.dashboard-card-top-action {
+  justify-self: center;
+  width: min(100%, 26rem);
+  min-width: 0;
+  min-height: 3.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.68rem 1.2rem;
+  font-size: 1rem;
+  line-height: 1.15;
 }
 
 .dashboard-profile-top-actions .dashboard-profile-link {
@@ -3727,11 +4016,16 @@ body.contact-page-body {
 
 .dashboard-panel .list-manager-create-button {
   justify-self: center;
-  width: 100%;
-  display: block;
+  width: min(100%, 26rem);
+  min-height: 3.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.68rem 1.2rem;
   background: #3f68c8;
   border-color: rgba(199, 220, 248, 0.22);
   color: #dbe9ff;
+  font-weight: 700;
 }
 
 .dashboard-panel .list-manager-create-button:hover,
