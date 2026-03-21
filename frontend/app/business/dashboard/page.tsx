@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
-import { BusinessProfileCard } from "@/components/business-profile-card";
+import { BusinessLocationPickerModal } from "@/components/business-location-picker-modal";
 import { CreateListModal } from "@/components/create-list-modal";
 import { FavoriteChipActions } from "@/components/favorite-chip-actions";
 import { ListManager } from "@/components/list-manager";
@@ -15,7 +15,6 @@ import { SavedListShelf } from "@/components/saved-list-shelf";
 import { SiteHeader } from "@/components/site-header";
 import {
   getPersonalProfile,
-  listBusinessClaims,
   listCuratedLists,
   listFavorites,
   listManagedBusinessLocations,
@@ -23,7 +22,6 @@ import {
   updateCuratedList,
   updatePersonalProfile,
 } from "@/lib/api";
-import type { BusinessClaim } from "@/types/auth";
 import type { ManagedBusinessLocation } from "@/types/company";
 import { CuratedList, Favorite, SavedCuratedList } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
@@ -64,23 +62,6 @@ function normalizeLists(value: CuratedList[] | unknown): CuratedList[] {
   return [];
 }
 
-function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
-  if (Array.isArray(value)) {
-    return value as BusinessClaim[];
-  }
-
-  if (
-    value &&
-    typeof value === "object" &&
-    "results" in value &&
-    Array.isArray((value as { results?: unknown }).results)
-  ) {
-    return (value as { results: BusinessClaim[] }).results;
-  }
-
-  return [];
-}
-
 function isTokenError(message: string) {
   const normalized = message.toLowerCase();
   return (
@@ -96,7 +77,6 @@ export default function BusinessDashboardPage() {
   const { accessToken, isAuthenticated, isReady, setRedirecting, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
-  const [claims, setClaims] = useState<BusinessClaim[]>([]);
   const [managedLocations, setManagedLocations] = useState<ManagedBusinessLocation[]>([]);
   const [savedLists, setSavedLists] = useState<SavedCuratedList[]>([]);
   const [profile, setProfile] = useState<PersonalProfile>({
@@ -108,6 +88,7 @@ export default function BusinessDashboardPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
+  const [isEditLocationModalOpen, setIsEditLocationModalOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSavedMessage, setProfileSavedMessage] = useState("");
   const [savedProfileIsPublic, setSavedProfileIsPublic] = useState(false);
@@ -117,7 +98,11 @@ export default function BusinessDashboardPage() {
   const safeFavorites = normalizeFavorites(favorites);
   const safeLists = normalizeLists(lists);
   const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
-  const latestClaim = claims.find((claim) => claim.status === "verified") ?? claims[0] ?? null;
+  const primaryManagedLocation = managedLocations[0] ?? null;
+  const editBusinessHref = primaryManagedLocation ? `/companies/${primaryManagedLocation.slug}?edit=1` : "/business/company";
+  const editAllLocationsHref = primaryManagedLocation
+    ? `/companies/${primaryManagedLocation.slug}?edit=1&applySharedEdits=1`
+    : "/business/company";
   const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
   const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
   const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
@@ -155,6 +140,9 @@ export default function BusinessDashboardPage() {
 
   const favoritesContent = (
     <>
+      <Link className="button button-secondary dashboard-favorites-link dashboard-card-top-action" href="/companies">
+        FIND FAVS
+      </Link>
       {isLoading ? (
         <>
           <p className="visually-hidden" role="status">Loading your business favorites...</p>
@@ -164,7 +152,7 @@ export default function BusinessDashboardPage() {
         </>
       ) : null}
       {!isLoading && safeFavorites.length === 0 ? (
-        <p className="lede">No favorites yet. Save the local businesses you want to keep close.</p>
+        <p className="lede">no favorites yet. save the local businesses you want to keep close.</p>
       ) : null}
       {!isLoading && safeFavorites.length > 0 ? (
         <div className={safeFavorites.length > DASHBOARD_SCROLL_CAP ? "dashboard-stack dashboard-scroll-region is-capped" : "dashboard-stack"}>
@@ -187,7 +175,7 @@ export default function BusinessDashboardPage() {
       ) : null}
       {!isLoading ? (
         <ListManager
-          emptyMessage="No lists yet. Use them to spotlight neighboring businesses and share your local taste."
+          emptyMessage="no lists yet. use them to spotlight neighboring businesses and share your local taste."
           enableScroll={safeLists.length > DASHBOARD_SCROLL_CAP}
           lists={safeLists}
           onCreateList={() => setIsCreateListModalOpen(true)}
@@ -200,7 +188,12 @@ export default function BusinessDashboardPage() {
 
   const shareContent = (
     <>
-      <form className="auth-form dashboard-profile-form" onSubmit={handleProfileSave}>
+      <form className="auth-form dashboard-profile-form dashboard-profile-form-with-top-actions" onSubmit={handleProfileSave}>
+        {hasPublicPresence && profileHref ? (
+          <Link className="button button-secondary dashboard-profile-link dashboard-card-top-action" href={profileHref}>
+            VIEW PROFILE
+          </Link>
+        ) : null}
         <p className="dashboard-profile-helper">
           create a profile for easy sharing. don&apos;t see your favs listed? contribute to the community by adding a
           business listing.
@@ -242,12 +235,6 @@ export default function BusinessDashboardPage() {
             {isSavingProfile ? "Saving..." : "Save"}
           </button>
         </div>
-
-        {hasPublicPresence && profileHref ? (
-          <Link className="button button-secondary dashboard-profile-link" href={profileHref}>
-            VIEW PROFILE
-          </Link>
-        ) : null}
         {profileSavedMessage ? <p className="contact-form-note is-success">{profileSavedMessage}</p> : null}
       </form>
     </>
@@ -308,7 +295,6 @@ export default function BusinessDashboardPage() {
       if (!accessToken || !user || !user.is_business_verified) {
         setFavorites([]);
         setLists([]);
-        setClaims([]);
         setManagedLocations([]);
         setSavedLists([]);
         setIsLoading(false);
@@ -318,17 +304,15 @@ export default function BusinessDashboardPage() {
       setIsLoading(true);
 
       try {
-        const [nextFavorites, nextLists, nextClaims, nextManagedLocations, nextProfile, nextSavedLists] = await Promise.all([
+        const [nextFavorites, nextLists, nextManagedLocations, nextProfile, nextSavedLists] = await Promise.all([
           listFavorites(accessToken),
           listCuratedLists(accessToken),
-          listBusinessClaims(accessToken),
           listManagedBusinessLocations(accessToken),
           getPersonalProfile(accessToken),
           listSavedCuratedLists(accessToken),
         ]);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
-        setClaims(normalizeClaims(nextClaims));
         setManagedLocations(nextManagedLocations);
         setProfile(nextProfile);
         setSavedProfileIsPublic(nextProfile.is_public);
@@ -341,7 +325,6 @@ export default function BusinessDashboardPage() {
         }
         setFavorites([]);
         setLists([]);
-        setClaims([]);
         setManagedLocations([]);
         setSavedLists([]);
         setError(loadError instanceof Error ? loadError.message : "Unable to load your community tools.");
@@ -356,6 +339,29 @@ export default function BusinessDashboardPage() {
   function handleDashboardSignOut() {
     signOut();
     router.push("/");
+  }
+
+  function handleEditBusinessClick() {
+    if (managedLocations.length > 1) {
+      setIsEditLocationModalOpen(true);
+      return;
+    }
+
+    router.push(editBusinessHref);
+  }
+
+  function handleCloseEditLocationModal() {
+    setIsEditLocationModalOpen(false);
+  }
+
+  function handleSelectEditLocation(location: ManagedBusinessLocation) {
+    setIsEditLocationModalOpen(false);
+    router.push(`/companies/${location.slug}?edit=1`);
+  }
+
+  function handleEditAllLocations() {
+    setIsEditLocationModalOpen(false);
+    router.push(editAllLocationsHref);
   }
 
   if (!isReady || !user || user.account_type !== "business" || !user.is_business_verified) {
@@ -377,39 +383,14 @@ export default function BusinessDashboardPage() {
             </p>
           </article>
 
-          <BusinessProfileCard isVerified latestClaim={latestClaim} />
-
-          <article className="panel dashboard-panel dashboard-saved-lists-card">
-            <div className="detail-claimed-header">
-              <div className="detail-claimed-copy">
-                <h2>Locations</h2>
-                <p className="muted">Manage each storefront directly from its own public company page.</p>
-              </div>
-              <Link className="button button-secondary" href="/business/company">
-                Add location
-              </Link>
-            </div>
-            {managedLocations.length ? (
-              <div className="detail-recommendations-pill-grid">
-                {managedLocations.map((location) => (
-                  <Link
-                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill dashboard-saved-list-pill-link"
-                    href={`/companies/${location.slug}?edit=1`}
-                    key={location.slug}
-                  >
-                    <span className="dashboard-chip-label">
-                      <strong>{location.name}</strong>
-                      <span>{[location.address, location.city, location.state].filter(Boolean).join(", ") || "Location details coming soon"}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="detail-recommendations-empty">
-                <span className="muted">No managed locations yet. Add your first storefront to start editing.</span>
-              </div>
-            )}
-          </article>
+          <section aria-label="Business dashboard actions" className="dashboard-business-cta-stack">
+            <button className="dashboard-business-cta dashboard-business-cta-primary" onClick={handleEditBusinessClick} type="button">
+              Edit My Business
+            </button>
+            <Link className="dashboard-business-cta dashboard-business-cta-secondary" href="/business/company">
+              Add a New Location
+            </Link>
+          </section>
 
           <div className="dashboard-column-headings">
             <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>
@@ -509,6 +490,13 @@ export default function BusinessDashboardPage() {
         onCreated={(nextList) => {
           setLists((current) => [nextList, ...normalizeLists(current)]);
         }}
+      />
+      <BusinessLocationPickerModal
+        isOpen={isEditLocationModalOpen}
+        locations={managedLocations}
+        onClose={handleCloseEditLocationModal}
+        onEditAll={handleEditAllLocations}
+        onSelectLocation={handleSelectEditLocation}
       />
     </main>
   );

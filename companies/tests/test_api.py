@@ -903,6 +903,71 @@ class TestManagedBusinessProfileApi:
         company.refresh_from_db()
         assert company.description == "Updated from the slug endpoint."
 
+    def test_location_patch_can_apply_shared_fields_to_other_managed_locations(self, api_client):
+        user = User.objects.create_user(
+            email="bulk-location-owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        first = Company.objects.create(
+            name="Cali's",
+            website="https://calis.example.com",
+            description="Original first description",
+            address="3817 N Overlook Blvd",
+            city="Portland",
+            state="OR",
+            zip_code="97227",
+            instagram_handle="@calisfirst",
+        )
+        second = Company.objects.create(
+            name="Cali's",
+            website="https://calis.example.com",
+            description="Original second description",
+            address="4229 SE 5th Ave",
+            city="Portland",
+            state="OR",
+            zip_code="97202",
+            instagram_handle="@calissecond",
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=first,
+            business_name=first.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=second,
+            business_name=second.name,
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.patch(
+            reverse("companies:company-manage-location-detail", kwargs={"slug": first.slug}),
+            {
+                "description": "Shared profile copy",
+                "instagram_handle": "@calisall",
+                "city": "Vancouver",
+                "apply_shared_fields_to_all": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        first.refresh_from_db()
+        second.refresh_from_db()
+        assert first.description == "Shared profile copy"
+        assert second.description == "Shared profile copy"
+        assert first.instagram_handle == "@calisall"
+        assert second.instagram_handle == "@calisall"
+        assert first.city == "Vancouver"
+        assert second.city == "Portland"
+        assert first.address == "3817 N Overlook Blvd"
+        assert second.address == "4229 SE 5th Ave"
+
     def test_verified_business_user_can_create_additional_location_with_shared_website(self, api_client):
         user = User.objects.create_user(
             email="shared-website-owner@example.com",

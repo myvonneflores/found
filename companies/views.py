@@ -32,6 +32,25 @@ from .serializers import (
 from .creation import normalized_hostname, resolve_company_group
 from users.models import BusinessClaim
 
+SHARED_LOCATION_UPDATE_FIELDS = {
+    "description",
+    "website",
+    "business_hours",
+    "business_hours_timezone",
+    "business_category",
+    "business_categories",
+    "product_categories",
+    "cuisine_types",
+    "ownership_markers",
+    "sustainability_markers",
+    "instagram_handle",
+    "facebook_page",
+    "linkedin_page",
+    "is_vegan_friendly",
+    "is_gf_friendly",
+    "is_published",
+}
+
 
 class CompanyListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
@@ -222,6 +241,59 @@ class ManagedBusinessLocationDetailView(ManagedBusinessAccessMixin, generics.Ret
 
     def get_queryset(self):
         return self._managed_company_queryset()
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        request_data = request.data.copy()
+        apply_shared_updates = self._coerce_apply_shared_flag(request_data.pop("apply_shared_fields_to_all", False))
+
+        serializer = self.get_serializer(instance, data=request_data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            self.perform_update(serializer)
+
+            if apply_shared_updates:
+                self._apply_shared_updates_to_other_locations(
+                    source_instance=serializer.instance,
+                    validated_data=serializer.validated_data,
+                )
+
+        if getattr(serializer.instance, "_prefetched_objects_cache", None):
+            serializer.instance._prefetched_objects_cache = {}
+
+        return Response(self.get_serializer(serializer.instance).data)
+
+    def _coerce_apply_shared_flag(self, value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        return bool(value)
+
+    def _apply_shared_updates_to_other_locations(self, *, source_instance, validated_data):
+        shared_payload = {
+            key: value
+            for key, value in validated_data.items()
+            if key in SHARED_LOCATION_UPDATE_FIELDS
+        }
+
+        if not shared_payload:
+            return
+
+        sibling_locations = self._managed_company_queryset().exclude(pk=source_instance.pk)
+        serializer_context = self.get_serializer_context()
+
+        for sibling in sibling_locations:
+            sibling_serializer = self.get_serializer(
+                sibling,
+                data=shared_payload,
+                partial=True,
+                context=serializer_context,
+            )
+            sibling_serializer.is_valid(raise_exception=True)
+            sibling_serializer.save()
 
 
 class CommunityCompanyCreateView(generics.CreateAPIView):

@@ -294,14 +294,18 @@ export function updateManagedBusinessProfile(
 export function updateManagedBusinessLocation(
   token: string,
   slug: string,
-  payload: Omit<ManagedBusinessProfile, "id">
+  payload: Omit<ManagedBusinessProfile, "id">,
+  options?: { applySharedFieldsToAll?: boolean }
 ) {
   return requestJson<ManagedBusinessProfile>(`companies/manage/locations/${slug}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      ...(options?.applySharedFieldsToAll ? { apply_shared_fields_to_all: true } : {}),
+    }),
   });
 }
 

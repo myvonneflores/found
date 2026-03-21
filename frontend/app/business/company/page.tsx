@@ -36,7 +36,7 @@ export default function BusinessCompanyPage() {
   const [latestClaim, setLatestClaim] = useState<BusinessClaim | null>(null);
   const [managedLocations, setManagedLocations] = useState<ManagedBusinessLocation[]>([]);
   const [seedProfile, setSeedProfile] = useState<Partial<CompanyCreatePayload> | null>(null);
-  const [claimWarning, setClaimWarning] = useState("");
+  const hasExistingBusinessProfile = managedLocations.length > 0 || seedProfile !== null;
 
   useEffect(() => {
     if (!isReady) {
@@ -64,47 +64,43 @@ export default function BusinessCompanyPage() {
     let isMounted = true;
 
     async function loadBusinessRoute() {
-      try {
-        const [claimResponse, locations, primaryProfile] = await Promise.all([
-          listBusinessClaims(accessToken!),
-          listManagedBusinessLocations(accessToken!),
-          getManagedBusinessProfile(accessToken!).catch(() => null),
-        ]);
-        const claims = normalizeClaims(claimResponse);
-        const nextLatestClaim = claims[0] ?? null;
+      const [claimResult, locationsResult, primaryProfileResult] = await Promise.allSettled([
+        listBusinessClaims(accessToken!),
+        listManagedBusinessLocations(accessToken!),
+        getManagedBusinessProfile(accessToken!),
+      ]);
 
-        if (!isMounted) {
-          return;
-        }
+      if (!isMounted) {
+        return;
+      }
 
-        setLatestClaim(nextLatestClaim);
-        setManagedLocations(locations);
+      setLatestClaim(
+        claimResult.status === "fulfilled" ? normalizeClaims(claimResult.value)[0] ?? null : null
+      );
+      setManagedLocations(locationsResult.status === "fulfilled" ? locationsResult.value : []);
 
-        if (primaryProfile) {
-          setSeedProfile({
-            name: primaryProfile.name,
-            website: primaryProfile.website,
-            business_category: primaryProfile.business_category,
-            business_categories: primaryProfile.business_categories,
-            product_categories: primaryProfile.product_categories,
-            cuisine_types: primaryProfile.cuisine_types,
-            ownership_markers: primaryProfile.ownership_markers,
-            sustainability_markers: primaryProfile.sustainability_markers,
-            instagram_handle: primaryProfile.instagram_handle,
-            facebook_page: primaryProfile.facebook_page,
-            linkedin_page: primaryProfile.linkedin_page,
-          });
-        }
-      } catch (loadError) {
-        if (!isMounted) {
-          return;
-        }
-
-        setClaimWarning(
-          loadError instanceof Error
-            ? `${loadError.message} You can still start building your business page below.`
-            : "Unable to load your business claim right now. You can still start building your business page below."
-        );
+      if (primaryProfileResult.status === "fulfilled") {
+        const primaryProfile = primaryProfileResult.value;
+        setSeedProfile({
+          name: primaryProfile.name,
+          description: primaryProfile.description,
+          website: primaryProfile.website,
+          business_hours: primaryProfile.business_hours,
+          business_hours_timezone: primaryProfile.business_hours_timezone,
+          business_category: primaryProfile.business_category,
+          business_categories: primaryProfile.business_categories,
+          product_categories: primaryProfile.product_categories,
+          cuisine_types: primaryProfile.cuisine_types,
+          ownership_markers: primaryProfile.ownership_markers,
+          sustainability_markers: primaryProfile.sustainability_markers,
+          instagram_handle: primaryProfile.instagram_handle,
+          facebook_page: primaryProfile.facebook_page,
+          linkedin_page: primaryProfile.linkedin_page,
+          is_vegan_friendly: primaryProfile.is_vegan_friendly,
+          is_gf_friendly: primaryProfile.is_gf_friendly,
+        });
+      } else {
+        setSeedProfile(null);
       }
     }
 
@@ -128,20 +124,14 @@ export default function BusinessCompanyPage() {
         <section className="dashboard-stage business-company-stage">
           <article className="panel dashboard-banner business-company-banner">
             <h1 className="home-hero-title">
-              {managedLocations.length ? "Add another location" : "Create your company profile"}
+              {hasExistingBusinessProfile ? "Add another location" : "Create your company profile"}
             </h1>
             <p className="lede">
-              {managedLocations.length
+              {hasExistingBusinessProfile
                 ? "Create a new storefront page while keeping your shared brand details consistent across locations."
                 : "Build the actual FOUND business page your community will see. Once it&apos;s live, you&apos;ll edit the company profile directly."}
             </p>
           </article>
-
-          {claimWarning ? (
-            <article className="detail-card">
-              <p className="contact-form-note">{claimWarning}</p>
-            </article>
-          ) : null}
 
           {managedLocations.length ? (
             <article className="detail-card">

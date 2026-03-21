@@ -22,7 +22,7 @@ export function ListManager({
   return (
     <div className="list-manager">
       <button className="button button-secondary list-manager-create-button" onClick={onCreateList} type="button">
-        create new list
+        CREATE NEW LIST
       </button>
 
       {lists.length > 0 ? (
