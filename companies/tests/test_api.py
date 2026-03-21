@@ -350,6 +350,39 @@ class TestTaxonomyAndCityApis:
 
 
 @pytest.mark.django_db
+class TestCompanyDomainMatchApi:
+    def test_domain_match_returns_existing_company(self, api_client):
+        company = Company.objects.create(
+            name="Seven Sisters",
+            website="https://sevensisters.com",
+            city="Portland",
+            state="OR",
+        )
+
+        response = api_client.get(
+            reverse("companies:company-domain-match"),
+            {"website": "https://www.sevensisters.com"},
+        )
+
+        assert response.status_code == 200
+        assert response.data["matched"] is True
+        assert response.data["company"]["id"] == company.id
+        assert response.data["company"]["name"] == company.name
+        assert response.data["company"]["slug"] == company.slug
+        assert response.data["company"]["city"] == company.city
+        assert response.data["company"]["state"] == company.state
+
+    def test_domain_match_returns_false_for_unknown_website(self, api_client):
+        response = api_client.get(
+            reverse("companies:company-domain-match"),
+            {"website": "https://unknown.example"},
+        )
+
+        assert response.status_code == 200
+        assert response.data == {"matched": False, "company": None}
+
+
+@pytest.mark.django_db
 class TestManagedBusinessProfileApi:
     def test_verified_business_user_can_get_and_update_managed_company(self, api_client, two_companies):
         company = two_companies[0]
@@ -557,6 +590,7 @@ class TestManagedBusinessProfileApi:
             {
                 "name": "Fresh Company",
                 "description": "A brand-new company profile.",
+                "website": "https://fresh-company.com",
                 "city": "Portland",
                 "state": "OR",
             },
@@ -569,6 +603,7 @@ class TestManagedBusinessProfileApi:
         assert claim.company.name == "Fresh Company"
         assert claim.company.listing_origin == Company.ListingOrigin.OWNER
         assert claim.company.submitted_by == user
+        assert claim.company.needs_editorial_review is False
         assert response.data["slug"] == claim.company.slug
 
     def test_managed_company_create_sets_primary_category_from_business_categories(
@@ -593,6 +628,7 @@ class TestManagedBusinessProfileApi:
             reverse("companies:company-manage-current"),
             {
                 "name": "Categorized Company",
+                "website": "https://categorized-company.com",
                 "business_categories": [retail.id, food.id],
                 "city": "Portland",
                 "state": "OR",
@@ -608,6 +644,72 @@ class TestManagedBusinessProfileApi:
             retail.id,
             food.id,
         ]
+
+    def test_managed_company_create_requires_website(self, api_client):
+        user = User.objects.create_user(
+            email="new-business@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            business_name="Fresh Company",
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-manage-current"),
+            {
+                "name": "Fresh Company",
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert response.data["website"] == ["Add the business website before creating this listing."]
+
+    def test_managed_company_create_flags_same_name_same_city_for_editorial_review(self, api_client):
+        Company.objects.create(
+            name="Matt's",
+            website="https://matts-chicago.com",
+            address="123 State St",
+            city="Chicago",
+            state="IL",
+        )
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        claim = BusinessClaim.objects.create(
+            user=user,
+            business_name="Matt's",
+            business_email=user.email,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-manage-current"),
+            {
+                "name": "Matt's",
+                "website": "https://matts-second.com",
+                "address": "900 Lake Shore Dr",
+                "city": "Chicago",
+                "state": "IL",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        claim.refresh_from_db()
+        assert claim.company is not None
+        assert claim.company.needs_editorial_review is True
+        assert claim.company.slug == "matts-chicago-2"
 
     def test_verified_business_user_post_returns_existing_company_if_already_linked(self, api_client, two_companies):
         company = two_companies[0]
@@ -653,6 +755,7 @@ class TestCommunityCompanyListingApi:
             {
                 "name": "Corner Pantry",
                 "description": "A neighborhood staple.",
+                "website": "https://cornerpantry.com",
                 "city": "Portland",
                 "state": "OR",
                 "business_categories": [taxonomy_set["food"].id],
@@ -665,9 +768,30 @@ class TestCommunityCompanyListingApi:
         assert company.listing_origin == Company.ListingOrigin.COMMUNITY
         assert company.submitted_by == user
         assert company.is_published is True
-        assert company.needs_editorial_review is True
+        assert company.needs_editorial_review is False
         assert company.business_category == taxonomy_set["food"]
         assert response.data["slug"] == company.slug
+
+    def test_community_listing_requires_website(self, api_client):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Corner Pantry",
+                "city": "Portland",
+                "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert response.data["website"] == ["Add the business website before creating this listing."]
 
     def test_business_user_cannot_create_community_listing(self, api_client):
         user = User.objects.create_user(
@@ -681,6 +805,7 @@ class TestCommunityCompanyListingApi:
             reverse("companies:company-community-create"),
             {
                 "name": "Corner Pantry",
+                "website": "https://cornerpantry.com",
                 "city": "Portland",
                 "state": "OR",
             },
@@ -703,7 +828,7 @@ class TestCommunityCompanyListingApi:
 
         assert response.status_code == 401
 
-    def test_community_listing_duplicate_check_uses_name_city_state(self, api_client):
+    def test_community_listing_duplicate_check_blocks_matching_website(self, api_client):
         user = User.objects.create_user(
             email="reader@example.com",
             password="supersecure123",
@@ -711,6 +836,7 @@ class TestCommunityCompanyListingApi:
         )
         Company.objects.create(
             name="Corner Pantry",
+            website="https://cornerpantry.com",
             city="Portland",
             state="OR",
             listing_origin=Company.ListingOrigin.IMPORTED,
@@ -721,8 +847,101 @@ class TestCommunityCompanyListingApi:
             reverse("companies:company-community-create"),
             {
                 "name": "Corner Pantry",
+                "website": "https://www.cornerpantry.com",
                 "city": "Portland",
                 "state": "OR",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "already exists on FOUND" in str(response.data)
+
+    def test_community_listing_allows_same_name_different_city(self, api_client):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        Company.objects.create(
+            name="Matt's",
+            website="https://matts-chicago.com",
+            city="Chicago",
+            state="IL",
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Matt's",
+                "website": "https://matts-miami.com",
+                "city": "Miami",
+                "state": "FL",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        company = Company.objects.get(website="https://matts-miami.com")
+        assert company.needs_editorial_review is False
+        assert company.slug == "matts-miami"
+
+    def test_community_listing_flags_same_name_same_city_with_different_address(self, api_client):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        Company.objects.create(
+            name="Matt's",
+            website="https://matts-chicago.com",
+            address="123 State St",
+            city="Chicago",
+            state="IL",
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Matt's",
+                "website": "https://matts-second.com",
+                "address": "900 Lake Shore Dr",
+                "city": "Chicago",
+                "state": "IL",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        company = Company.objects.get(website="https://matts-second.com")
+        assert company.needs_editorial_review is True
+        assert company.slug == "matts-chicago-2"
+
+    def test_community_listing_blocks_exact_name_city_state_and_address_duplicate(self, api_client):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+        )
+        Company.objects.create(
+            name="Matt's",
+            website="https://matts-chicago.com",
+            address="123 State St",
+            city="Chicago",
+            state="IL",
+        )
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            reverse("companies:company-community-create"),
+            {
+                "name": "Matt's",
+                "website": "https://matts-new.com",
+                "address": "123 State St",
+                "city": "Chicago",
+                "state": "IL",
             },
             format="json",
         )

@@ -7,14 +7,16 @@ import { FormEvent, useDeferredValue, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { BodyClass } from "@/components/body-class";
 import { SiteHeader } from "@/components/site-header";
-import { listCompanies, loginUser, registerUser } from "@/lib/api";
-import { AccountType } from "@/types/auth";
+import { checkDisplayNameAvailability, getCompanyDomainMatch, listCompanies, loginUser, registerUser } from "@/lib/api";
+import { AccountType, DisplayNameAvailability } from "@/types/auth";
 
 type BusinessIntent = "existing" | "new";
 type SelectedCompany = {
   id: number;
   name: string;
   slug: string;
+  city: string;
+  state: string;
 };
 const CLAIM_SIGNUP_STORAGE_KEY = "found-signup-claim-company";
 const SIGNUP_DRAFT_STORAGE_KEY = "found-signup-draft";
@@ -41,6 +43,15 @@ const businessIntentOptions: Array<{ value: BusinessIntent; title: string }> = [
   },
 ];
 
+function formatCompanyLocation(company: Pick<SelectedCompany, "city" | "state">) {
+  return [company.city, company.state].filter(Boolean).join(", ");
+}
+
+function formatCompanyLabel(company: SelectedCompany) {
+  const location = formatCompanyLocation(company);
+  return location ? `${company.name} (${location})` : company.name;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const { signIn } = useAuth();
@@ -51,6 +62,7 @@ export default function SignupPage() {
     firstName: "",
     lastName: "",
     displayName: "",
+    businessWebsite: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -63,9 +75,15 @@ export default function SignupPage() {
   const [certifiedLocalOwnership, setCertifiedLocalOwnership] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
   const deferredCompanySearch = useDeferredValue(companySearch);
+  const deferredDisplayName = useDeferredValue(form.displayName);
   const [companyResults, setCompanyResults] = useState<SelectedCompany[]>([]);
   const [isSearchingCompanies, setIsSearchingCompanies] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<SelectedCompany | null>(null);
+  const [displayNameAvailability, setDisplayNameAvailability] = useState<DisplayNameAvailability | null>(null);
+  const [isCheckingDisplayName, setIsCheckingDisplayName] = useState(false);
+  const deferredBusinessWebsite = useDeferredValue(form.businessWebsite);
+  const [matchedCompany, setMatchedCompany] = useState<SelectedCompany | null>(null);
+  const [isCheckingBusinessWebsite, setIsCheckingBusinessWebsite] = useState(false);
 
   useEffect(() => {
     try {
@@ -159,6 +177,8 @@ export default function SignupPage() {
             id: company.id,
             name: company.name,
             slug: company.slug,
+            city: company.city,
+            state: company.state,
           }))
         );
       } catch {
@@ -170,6 +190,74 @@ export default function SignupPage() {
 
     void searchCompanies();
   }, [accountType, businessIntent, deferredCompanySearch]);
+
+  useEffect(() => {
+    async function loadDisplayNameAvailability() {
+      if (accountType !== "personal") {
+        setDisplayNameAvailability(null);
+        setIsCheckingDisplayName(false);
+        return;
+      }
+
+      const query = deferredDisplayName.trim();
+      if (!query) {
+        setDisplayNameAvailability(null);
+        setIsCheckingDisplayName(false);
+        return;
+      }
+
+      setIsCheckingDisplayName(true);
+      try {
+        const nextAvailability = await checkDisplayNameAvailability(query);
+        setDisplayNameAvailability(nextAvailability);
+      } catch {
+        setDisplayNameAvailability(null);
+      } finally {
+        setIsCheckingDisplayName(false);
+      }
+    }
+
+    void loadDisplayNameAvailability();
+  }, [accountType, deferredDisplayName]);
+
+  useEffect(() => {
+    async function loadDomainMatch() {
+      if (accountType !== "business" || businessIntent !== "new") {
+        setMatchedCompany(null);
+        setIsCheckingBusinessWebsite(false);
+        return;
+      }
+
+      const website = deferredBusinessWebsite.trim();
+      if (!website) {
+        setMatchedCompany(null);
+        setIsCheckingBusinessWebsite(false);
+        return;
+      }
+
+      setIsCheckingBusinessWebsite(true);
+      try {
+        const response = await getCompanyDomainMatch(website);
+        setMatchedCompany(
+          response.matched && response.company
+            ? {
+                id: response.company.id,
+                name: response.company.name,
+                slug: response.company.slug,
+                city: response.company.city,
+                state: response.company.state,
+              }
+            : null
+        );
+      } catch {
+        setMatchedCompany(null);
+      } finally {
+        setIsCheckingBusinessWebsite(false);
+      }
+    }
+
+    void loadDomainMatch();
+  }, [accountType, businessIntent, deferredBusinessWebsite]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -201,6 +289,35 @@ export default function SignupPage() {
     if (accountType === "business" && businessIntent === "existing" && !selectedCompany) {
       setError("Please choose the business listing you want to claim before creating your account.");
       return;
+    }
+
+    if (accountType === "business" && businessIntent === "new") {
+      const businessWebsite = form.businessWebsite.trim();
+      if (!businessWebsite) {
+        setError("Please add your business website before creating a business account.");
+        return;
+      }
+
+      const domainMatch = await getCompanyDomainMatch(businessWebsite);
+      if (domainMatch.matched && domainMatch.company) {
+        const nextCompany = {
+          id: domainMatch.company.id,
+          name: domainMatch.company.name,
+          slug: domainMatch.company.slug,
+          city: domainMatch.company.city,
+          state: domainMatch.company.state,
+        };
+        setMatchedCompany(nextCompany);
+        setSelectedCompany(nextCompany);
+        setCompanySearch(nextCompany.name);
+        setBusinessIntent("existing");
+        setForm((current) => ({
+          ...current,
+          displayName: current.displayName || nextCompany.name,
+        }));
+        setError("We found an existing FOUND listing for that website. Claim that business instead of creating a new one.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -301,7 +418,7 @@ export default function SignupPage() {
                     />
                     {selectedCompany ? (
                       <p className="auth-inline-note">
-                        Claiming: <strong>{selectedCompany.name}</strong>
+                        Claiming: <strong>{formatCompanyLabel(selectedCompany)}</strong>
                       </p>
                     ) : null}
                     {isSearchingCompanies ? (
@@ -327,10 +444,37 @@ export default function SignupPage() {
                             }}
                             type="button"
                           >
-                            {company.name}
+                            {formatCompanyLabel(company)}
                           </button>
                         ))}
                       </div>
+                    ) : null}
+                  </label>
+                ) : null}
+
+                {businessIntent === "new" ? (
+                  <label className="contact-field">
+                    <span className="contact-field-label">Business website or domain</span>
+                    <input
+                      autoCapitalize="none"
+                      name="businessWebsite"
+                      onChange={(event) => {
+                        setForm((current) => ({ ...current, businessWebsite: event.target.value }));
+                        setError("");
+                      }}
+                      placeholder="yourbusiness.com"
+                      required
+                      spellCheck={false}
+                      value={form.businessWebsite}
+                    />
+                    {isCheckingBusinessWebsite ? (
+                      <p className="auth-inline-note">Checking for an existing FOUND listing...</p>
+                    ) : null}
+                    {matchedCompany ? (
+                      <p className="contact-form-note">
+                        FOUND already has <strong>{formatCompanyLabel(matchedCompany)}</strong> for this website. Choose
+                        “Claim an existing business” instead.
+                      </p>
                     ) : null}
                   </label>
                 ) : null}
@@ -368,7 +512,10 @@ export default function SignupPage() {
                 <input
                   autoComplete="nickname"
                   name="displayName"
-                  onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, displayName: event.target.value }));
+                    setError("");
+                  }}
                   placeholder={
                     accountType === "business"
                       ? businessIntent === "new"
@@ -378,6 +525,27 @@ export default function SignupPage() {
                   }
                   value={form.displayName}
                 />
+                {accountType === "personal" && isCheckingDisplayName ? (
+                  <p className="auth-inline-note">Checking display name availability...</p>
+                ) : null}
+                {accountType === "personal" &&
+                !isCheckingDisplayName &&
+                form.displayName.trim() &&
+                displayNameAvailability?.available ? (
+                  <p className="contact-form-note is-success">Display name available.</p>
+                ) : null}
+                {accountType === "personal" &&
+                !isCheckingDisplayName &&
+                form.displayName.trim() &&
+                displayNameAvailability &&
+                !displayNameAvailability.available ? (
+                  <p className="contact-form-note is-error">
+                    That display name is taken.
+                    {displayNameAvailability.suggestions.length
+                      ? ` Try ${displayNameAvailability.suggestions.join(", ")}.`
+                      : ""}
+                  </p>
+                ) : null}
               </label>
 
               <label className="contact-field">

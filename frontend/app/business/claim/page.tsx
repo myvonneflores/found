@@ -25,7 +25,18 @@ type SelectedCompany = {
   id: number;
   name: string;
   slug: string;
+  city: string;
+  state: string;
 };
+
+function formatCompanyLocation(company: Pick<SelectedCompany, "city" | "state">) {
+  return [company.city, company.state].filter(Boolean).join(", ");
+}
+
+function formatCompanyLabel(company: SelectedCompany) {
+  const location = formatCompanyLocation(company);
+  return location ? `${company.name} (${location})` : company.name;
+}
 
 function normalizeWebsite(value: string) {
   const trimmed = value.trim();
@@ -175,6 +186,8 @@ function BusinessClaimPageContent() {
             id: claim.company,
             name: claim.company_name,
             slug: claim.company_slug,
+            city: "",
+            state: "",
           };
           setSelectedCompany(company);
           setCompanySearch(company.name);
@@ -214,6 +227,8 @@ function BusinessClaimPageContent() {
             id: company.id,
             name: company.name,
             slug: company.slug,
+            city: company.city,
+            state: company.state,
           }))
         );
       } catch {
@@ -372,7 +387,7 @@ function BusinessClaimPageContent() {
                     />
                     {selectedCompany ? (
                       <p className="auth-inline-note">
-                        Claiming: <strong>{selectedCompany.name}</strong>
+                        Claiming: <strong>{formatCompanyLabel(selectedCompany)}</strong>
                       </p>
                     ) : null}
                     {isSearchingCompanies ? (
@@ -403,7 +418,7 @@ function BusinessClaimPageContent() {
                             }}
                             type="button"
                           >
-                            {company.name}
+                            {formatCompanyLabel(company)}
                           </button>
                         ))}
                       </div>
@@ -469,6 +484,7 @@ function BusinessClaimPageContent() {
                       setForm((current) => ({ ...current, businessDomain: event.target.value }))
                     }
                     placeholder="yourbusiness.com"
+                    required={!isExistingIntent}
                     value={form.businessDomain}
                   />
                 </label>

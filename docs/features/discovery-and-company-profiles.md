@@ -101,6 +101,13 @@ The public discovery API currently exposes:
 
 All of these are public endpoints.
 
+Important current creation rules:
+
+- new company creation requires a website across community and owner-create flows
+- same-name businesses are allowed when they are clearly distinct listings
+- the API blocks exact duplicates by normalized website hostname or matching `name + city + state + address`
+- same-name, same-city submissions with different website or address are allowed but flagged for editorial review
+
 ## API Payload Shapes
 
 This feature uses three distinct company payload shapes on purpose.
@@ -367,9 +374,10 @@ The most relevant backend coverage for this feature lives in:
 Current covered behaviors include:
 
 - public accessibility of list and detail endpoints
-- slug generation
+- location-aware slug generation
 - taxonomy endpoint exposure
 - city canonicalization and alias behavior
+- same-name business duplicate handling and editorial-review rules
 - filter behavior for category, ownership, multi-value taxonomy, search, and range filters
 - exact response shape expectations for list and detail payloads
 

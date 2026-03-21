@@ -4,6 +4,7 @@ from django.db.models.functions import Coalesce
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import BusinessClaim, PersonalProfile, business_claim_history_table_exists
@@ -16,6 +17,8 @@ from .serializers import (
     PublicProfileSerializer,
     RegisterSerializer,
     UserSerializer,
+    DisplayNameAvailabilitySerializer,
+    get_display_name_availability,
 )
 
 User = get_user_model()
@@ -112,3 +115,20 @@ class PublicProfileDetailView(generics.RetrieveAPIView):
             )
             .distinct()
         )
+
+
+class DisplayNameAvailabilityView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        display_name = request.query_params.get("display_name", "")
+        exclude_user_id = None
+        if request.user.is_authenticated:
+            exclude_user_id = request.user.pk
+
+        payload = get_display_name_availability(
+            display_name=display_name,
+            exclude_user_id=exclude_user_id,
+        )
+        serializer = DisplayNameAvailabilitySerializer(payload)
+        return Response(serializer.data)

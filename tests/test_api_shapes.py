@@ -124,8 +124,11 @@ PUBLIC_LIST_PREVIEW_FIELDS = {
     "preview_companies",
 }
 SAVED_LIST_FIELDS = {"id", "created_at", "list"}
+COMPANY_DOMAIN_MATCH_FIELDS = {"matched", "company"}
+COMPANY_DOMAIN_MATCH_COMPANY_FIELDS = {"id", "name", "slug", "city", "state"}
 
-USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "is_business_verified", "onboarding_completed", "badges"}
+USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "needs_display_name_review", "is_business_verified", "onboarding_completed", "badges"}
+DISPLAY_NAME_AVAILABILITY_FIELDS = {"available", "suggestions"}
 BUSINESS_CLAIM_LIST_FIELDS = {
     "id",
     "company",
@@ -218,6 +221,20 @@ def test_company_list_result_fields(api_client):
             assert isinstance(val, str)
     assert isinstance(item["is_vegan_friendly"], bool)
     assert isinstance(item["is_gf_friendly"], bool)
+
+
+@pytest.mark.django_db
+def test_company_domain_match_response_shape(api_client):
+    response = api_client.get(
+        reverse("companies:company-domain-match"),
+        {"website": "https://unknown.example"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == COMPANY_DOMAIN_MATCH_FIELDS
+    assert isinstance(data["matched"], bool)
+    assert data["company"] is None
 
 
 @pytest.mark.django_db
@@ -525,6 +542,22 @@ def test_register_validation_error_shape(api_client):
             assert isinstance(msg, str)
 
 
+@pytest.mark.django_db
+def test_display_name_availability_response_shape(api_client):
+    response = api_client.get(
+        reverse("users:display-name-availability"),
+        {"display_name": "Reader One"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == DISPLAY_NAME_AVAILABILITY_FIELDS
+    assert isinstance(data["available"], bool)
+    assert isinstance(data["suggestions"], list)
+    for suggestion in data["suggestions"]:
+        assert isinstance(suggestion, str)
+
+
 # ---------------------------------------------------------------------------
 # User me
 # ---------------------------------------------------------------------------
@@ -538,6 +571,7 @@ def test_me_response_shape(authenticated_client):
     data = response.json()
     assert set(data.keys()) == USER_FIELDS
     assert isinstance(data["badges"], list)
+    assert isinstance(data["needs_display_name_review"], bool)
 
 
 @pytest.mark.django_db

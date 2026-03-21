@@ -17,6 +17,7 @@ from .models import (
 )
 from .serializers import (
     BusinessCategorySerializer,
+    CompanyDomainMatchSerializer,
     CommunityCompanyCreateSerializer,
     CompanyDetailSerializer,
     CompanyListSerializer,
@@ -26,6 +27,7 @@ from .serializers import (
     ProductCategorySerializer,
     SustainabilityMarkerSerializer,
 )
+from .creation import normalized_hostname
 
 
 class CompanyListView(generics.ListAPIView):
@@ -121,6 +123,27 @@ class ManagedBusinessCompanyView(generics.RetrieveUpdateAPIView):
 class CommunityCompanyCreateView(generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CommunityCompanyCreateSerializer
+
+
+class CompanyDomainMatchView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        website = request.query_params.get("website", "")
+        hostname = normalized_hostname(website)
+        if not hostname:
+            return Response({"matched": False, "company": None})
+
+        for company in Company.objects.exclude(website=""):
+            if normalized_hostname(company.website) == hostname:
+                return Response(
+                    {
+                        "matched": True,
+                        "company": CompanyDomainMatchSerializer(company).data,
+                    }
+                )
+
+        return Response({"matched": False, "company": None})
 
 
 class BusinessCategoryListView(generics.ListAPIView):

@@ -2,7 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import connection
 from django.db import models
 from django.db import utils as db_utils
-from django.db.models.functions import Coalesce
+from django.db.models import Q
+from django.db.models.functions import Coalesce, Lower
 from django.utils.text import slugify
 
 from .managers import UserManager
@@ -32,12 +33,22 @@ class User(AbstractUser):
     )
     display_name = models.CharField(max_length=120, blank=True)
     public_slug = models.SlugField(max_length=140, unique=True, blank=True, null=True)
+    needs_display_name_review = models.BooleanField(default=False)
     onboarding_completed = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            models.UniqueConstraint(
+                Lower("display_name"),
+                condition=Q(account_type="personal") & ~Q(display_name=""),
+                name="users_personal_display_name_ci_unique",
+            ),
+        ]
 
     @property
     def is_business_verified(self):

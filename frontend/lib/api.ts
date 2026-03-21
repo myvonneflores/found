@@ -1,10 +1,12 @@
 import {
   BusinessClaim,
   BusinessClaimPayload,
+  DisplayNameAvailability,
   LoginPayload,
   LoginResponse,
   RegisterPayload,
   AuthUser,
+  UpdateCurrentUserPayload,
 } from "@/types/auth";
 import {
   CuratedList,
@@ -23,6 +25,7 @@ import {
 } from "@/lib/business-categories";
 import {
   CompanyDetail,
+  CompanyDomainMatch,
   CompanyCreatePayload,
   CompanyListItem,
   ManagedBusinessProfile,
@@ -239,6 +242,14 @@ export function getCompany(slug: string) {
   }).then(normalizeCompanyDetail);
 }
 
+export function getCompanyDomainMatch(website: string) {
+  return fetchJson<CompanyDomainMatch>("companies/domain-match/", {
+    website,
+  }, {
+    cache: "no-store",
+  });
+}
+
 export function getManagedBusinessProfile(token: string) {
   return requestJson<ManagedBusinessProfile>("companies/manage/current/", {
     headers: {
@@ -338,6 +349,29 @@ export function getCurrentUser(token: string) {
       Authorization: `Bearer ${token}`,
     },
   });
+}
+
+export function updateCurrentUser(token: string, payload: UpdateCurrentUserPayload) {
+  return requestJson<AuthUser>("users/me/", {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function checkDisplayNameAvailability(displayName: string, token?: string) {
+  return requestJson<DisplayNameAvailability>(
+    `users/display-name-availability/?display_name=${encodeURIComponent(displayName)}`,
+    token
+      ? {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      : undefined,
+  );
 }
 
 export function listBusinessClaims(token: string) {

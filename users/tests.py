@@ -91,6 +91,55 @@ class UserRegistrationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["public_slug"], "reader-one")
 
+    def test_personal_registration_rejects_duplicate_display_name(self):
+        User.objects.create_user(
+            email="existing@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+
+        response = self.client.post(
+            reverse("users:register"),
+            {
+                "email": "reader@example.com",
+                "password": "supersecure123",
+                "first_name": "Reader",
+                "last_name": "Two",
+                "display_name": "reader one",
+                "account_type": User.AccountType.PERSONAL,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["display_name"], ["That display name is already taken."])
+
+    def test_business_registration_can_reuse_existing_personal_display_name(self):
+        User.objects.create_user(
+            email="existing@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+
+        response = self.client.post(
+            reverse("users:register"),
+            {
+                "email": "owner@example.com",
+                "password": "supersecure123",
+                "first_name": "Owner",
+                "last_name": "One",
+                "display_name": "Reader One",
+                "account_type": User.AccountType.BUSINESS,
+                "certify_local_ownership": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["display_name"], "Reader One")
+
 
 class MeViewTests(APITestCase):
     def test_me_includes_business_verification_fields(self):
@@ -155,6 +204,160 @@ class MeViewTests(APITestCase):
         self.assertEqual(
             response.data["badges"],
             [{"slug": "community-contributor", "label": "Community Contributor"}],
+        )
+
+    def test_personal_user_cannot_patch_duplicate_display_name(self):
+        User.objects.create_user(
+            email="existing@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader Two",
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.patch(
+            reverse("users:me"),
+            {"display_name": "reader one"},
+            format="json",
+        )
+
+        user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["display_name"], ["That display name is already taken."])
+        self.assertEqual(user.display_name, "Reader Two")
+
+    def test_personal_display_name_update_keeps_public_slug_stable(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+        user.needs_display_name_review = True
+        user.save(update_fields=["needs_display_name_review"])
+        self.client.force_authenticate(user=user)
+
+        response = self.client.patch(
+            reverse("users:me"),
+            {"display_name": "Reader Two"},
+            format="json",
+        )
+
+        user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.display_name, "Reader Two")
+        self.assertEqual(user.public_slug, "reader-one")
+        self.assertFalse(user.needs_display_name_review)
+
+
+class DisplayNameAvailabilityTests(APITestCase):
+    def test_availability_endpoint_reports_taken_name_and_suggestions(self):
+        User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+
+        response = self.client.get(
+            reverse("users:display-name-availability"),
+            {"display_name": "Reader One"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["available"])
+        self.assertIn("Reader One 2", response.data["suggestions"])
+
+    def test_availability_endpoint_treats_current_user_name_as_available(self):
+        user = User.objects.create_user(
+            email="reader@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.PERSONAL,
+            display_name="Reader One",
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(
+            reverse("users:display-name-availability"),
+            {"display_name": "Reader One"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["available"])
+        self.assertEqual(response.data["suggestions"], [])
+
+
+class BusinessClaimValidationTests(APITestCase):
+    def test_new_business_claim_requires_website(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.post(
+            reverse("users:business-claim-list"),
+            {
+                "intent": BusinessClaim.ClaimIntent.NEW,
+                "business_name": "Aurora Pantry",
+                "submitter_first_name": "Owner",
+                "submitter_last_name": "One",
+                "business_email": "owner@aurora.com",
+                "role_title": "Founder",
+                "website": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["website"],
+            ["Add the business website before starting a new business claim."],
+        )
+
+    def test_new_business_claim_rejects_existing_company_website(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        Company.objects.create(
+            name="Seven Sisters",
+            website="https://sevensisters.com",
+            city="Portland",
+            state="OR",
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.post(
+            reverse("users:business-claim-list"),
+            {
+                "intent": BusinessClaim.ClaimIntent.NEW,
+                "business_name": "Seven Sisters",
+                "submitter_first_name": "Owner",
+                "submitter_last_name": "One",
+                "business_email": "owner@sevensisters.com",
+                "role_title": "Founder",
+                "website": "https://www.sevensisters.com",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["website"],
+            [
+                "A FOUND business listing already uses this website. Choose 'Claim an existing business' and search for that listing instead."
+            ],
         )
 
 

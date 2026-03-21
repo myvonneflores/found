@@ -64,6 +64,11 @@ export type CompanyListItem = {
   is_gf_friendly: boolean;
 };
 
+export type CompanyDomainMatch = {
+  matched: boolean;
+  company: Pick<CompanyListItem, "id" | "name" | "slug" | "city" | "state"> | null;
+};
+
 export type CompanyDetail = {
   id: number;
   id_hash: string;

@@ -6,6 +6,7 @@ app_name = "users"
 
 urlpatterns = [
     path("register/", views.RegisterView.as_view(), name="register"),
+    path("display-name-availability/", views.DisplayNameAvailabilityView.as_view(), name="display-name-availability"),
     path("me/", views.MeView.as_view(), name="me"),
     path("me/profile/", views.PersonalProfileView.as_view(), name="me-profile"),
     path("public-profiles/<slug:public_slug>/", views.PublicProfileDetailView.as_view(), name="public-profile-detail"),

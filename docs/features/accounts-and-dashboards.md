@@ -67,6 +67,7 @@ Important account fields:
 - `account_type`: `personal` or `business`
 - `display_name`
 - `public_slug`
+- `needs_display_name_review`
 - `onboarding_completed`
 
 The app does not use `username`; auth is email-based.
@@ -121,6 +122,7 @@ That automatic profile creation is an important implementation detail because th
 Relevant endpoints:
 
 - `POST /api/users/register/`
+- `GET /api/users/display-name-availability/`
 - `GET/PATCH /api/users/me/`
 - `GET/PATCH /api/users/me/profile/`
 - `GET/POST /api/users/business-claims/`
@@ -142,6 +144,7 @@ Current UX behavior:
   - claim an existing business
   - add a new business
 - the form collects first name, last name, display name, email, password, and password confirmation
+- personal-account signup checks display-name availability and suggests alternatives when a name is already taken
 - password confirmation is validated on the client before submit
 
 ### Current submit flow
@@ -262,7 +265,9 @@ The `MeView` returns the authenticated user and allows limited patching.
 Important current behavior:
 
 - fields like `account_type` remain read-only through the serializer
-- `display_name` can be updated
+- personal-user `display_name` values must be unique
+- `display_name` can be updated without changing `public_slug`
+- `needs_display_name_review` is returned so the dashboard can prompt migrated users to rename themselves
 - business verification fields are always included in the response
 
 ### `users/me/profile/`
@@ -339,6 +344,7 @@ If token-related requests fail, the user is signed out and redirected back to lo
 
 The share/profile column is the main place where personal users:
 
+- edit `display_name`
 - edit bio
 - toggle public visibility
 - save profile changes
@@ -420,7 +426,9 @@ The most relevant backend coverage for this feature lives in:
 Current tested behaviors include:
 
 - registration for personal and business account types
+- personal display-name availability and uniqueness
 - automatic public slug generation
+- stable public slugs after personal display-name edits
 - automatic personal-profile creation for personal accounts
 - login payloads for personal, pending business, and verified business users
 - `me` response verification fields
