@@ -307,6 +307,7 @@ export function CompanyProfileCreationForm({
             <input
               onChange={(event) => updateField("website", event.target.value)}
               placeholder="https://yourbusiness.com"
+              required
               value={profile.website}
             />
           </label>

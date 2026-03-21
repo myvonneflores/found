@@ -29,11 +29,17 @@ export interface AuthUser {
   last_name: string;
   display_name: string;
   public_slug: string;
+  needs_display_name_review: boolean;
   account_type: AccountType;
   onboarding_completed: boolean;
   is_business_verified: boolean;
   verification_status: VerificationStatus;
   badges: UserBadge[];
+}
+
+export interface DisplayNameAvailability {
+  available: boolean;
+  suggestions: string[];
 }
 
 export interface LoginResponse {
@@ -55,6 +61,10 @@ export interface RegisterPayload {
 export interface LoginPayload {
   email: string;
   password: string;
+}
+
+export interface UpdateCurrentUserPayload {
+  display_name?: string;
 }
 
 export interface BusinessClaim {

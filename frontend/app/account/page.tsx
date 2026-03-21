@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useDeferredValue, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { AuthGuardShell } from "@/components/auth-guard-shell";
@@ -13,15 +13,18 @@ import { ListManager } from "@/components/list-manager";
 import { SavedListShelf } from "@/components/saved-list-shelf";
 import { SiteHeader } from "@/components/site-header";
 import {
+  checkDisplayNameAvailability,
   getPersonalProfile,
   listCuratedLists,
   listFavorites,
   listSavedCuratedLists,
+  updateCurrentUser,
   updateCuratedList,
   updatePersonalProfile,
 } from "@/lib/api";
 import { CuratedList, Favorite, SavedCuratedList } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
+import { DisplayNameAvailability } from "@/types/auth";
 
 const DASHBOARD_SCROLL_CAP = 15;
 const DASHBOARD_DESKTOP_BREAKPOINT = 980;
@@ -72,7 +75,7 @@ function isTokenError(message: string) {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isReady, setRedirecting, signOut, user } = useAuth();
+  const { accessToken, isAuthenticated, isReady, refreshUser, setRedirecting, signOut, user } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [savedLists, setSavedLists] = useState<SavedCuratedList[]>([]);
@@ -88,6 +91,10 @@ export default function AccountPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSavedMessage, setProfileSavedMessage] = useState("");
   const [savedProfileIsPublic, setSavedProfileIsPublic] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const deferredDisplayName = useDeferredValue(displayName);
+  const [displayNameAvailability, setDisplayNameAvailability] = useState<DisplayNameAvailability | null>(null);
+  const [isCheckingDisplayName, setIsCheckingDisplayName] = useState(false);
   const [mobileFavoritesOpen, setMobileFavoritesOpen] = useState(true);
   const [mobileListsOpen, setMobileListsOpen] = useState(false);
   const [mobileShareOpen, setMobileShareOpen] = useState(false);
@@ -98,8 +105,8 @@ export default function AccountPage() {
   const safeLists = normalizeLists(lists);
   const [togglingListIds, setTogglingListIds] = useState<Set<number>>(new Set());
   const hasPublicPresence = savedProfileIsPublic || safeLists.some((list) => list.is_public);
-  const profileName = user?.display_name || `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email || "";
   const profileHref = user?.public_slug ? `/profiles/${user.public_slug}` : null;
+  const hasDisplayNameChanged = displayName.trim() !== (user?.display_name ?? "").trim();
   const isDesktopDashboard = viewportWidth !== null && viewportWidth > DASHBOARD_DESKTOP_BREAKPOINT;
   const syncedPanelStyle =
     isDesktopDashboard && syncedPanelHeight
@@ -195,10 +202,36 @@ export default function AccountPage() {
           create a profile for easy sharing. don&apos;t see your favs listed? contribute to the community by adding a
           business listing.
         </p>
+        {user?.needs_display_name_review ? (
+          <p className="contact-form-note">
+            We updated your display name to keep curator names unique. Pick a new one below if you&apos;d like.
+          </p>
+        ) : null}
         <label className="contact-field">
-          <span className="contact-field-label">Name</span>
-          <input disabled value={profileName} />
+          <span className="contact-field-label">Display name</span>
+          <input
+            autoComplete="nickname"
+            onChange={(event) => {
+              setDisplayName(event.target.value);
+              setProfileSavedMessage("");
+            }}
+            value={displayName}
+          />
         </label>
+        {isCheckingDisplayName ? (
+          <p className="auth-inline-note">Checking display name availability...</p>
+        ) : null}
+        {!isCheckingDisplayName && hasDisplayNameChanged && displayName.trim() && displayNameAvailability?.available ? (
+          <p className="contact-form-note is-success">Display name available.</p>
+        ) : null}
+        {!isCheckingDisplayName && hasDisplayNameChanged && displayName.trim() && displayNameAvailability && !displayNameAvailability.available ? (
+          <p className="contact-form-note is-error">
+            That display name is taken.
+            {displayNameAvailability.suggestions.length
+              ? ` Try ${displayNameAvailability.suggestions.join(", ")}.`
+              : ""}
+          </p>
+        ) : null}
         <label className="contact-field">
           <span className="contact-field-label">Bio</span>
           <textarea
@@ -298,7 +331,7 @@ export default function AccountPage() {
         window.cancelAnimationFrame(frame);
       }
     };
-  }, [isDesktopDashboard, profile, profileHref, profileName, profileSavedMessage, safeLists.length]);
+  }, [displayName, isDesktopDashboard, profile, profileHref, profileSavedMessage, safeLists.length]);
 
   useEffect(() => {
     if (!isReady) {
@@ -316,6 +349,44 @@ export default function AccountPage() {
       router.replace(user.is_business_verified ? "/business/dashboard" : "/business/pending");
     }
   }, [isAuthenticated, isReady, router, setRedirecting, user]);
+
+  useEffect(() => {
+    if (!user || user.account_type !== "personal") {
+      setDisplayName("");
+      return;
+    }
+
+    setDisplayName(user.display_name || user.first_name || user.email || "");
+  }, [user]);
+
+  useEffect(() => {
+    async function loadDisplayNameAvailability() {
+      if (!user || user.account_type !== "personal") {
+        setDisplayNameAvailability(null);
+        setIsCheckingDisplayName(false);
+        return;
+      }
+
+      const query = deferredDisplayName.trim();
+      if (!query) {
+        setDisplayNameAvailability(null);
+        setIsCheckingDisplayName(false);
+        return;
+      }
+
+      setIsCheckingDisplayName(true);
+      try {
+        const nextAvailability = await checkDisplayNameAvailability(query, accessToken ?? undefined);
+        setDisplayNameAvailability(nextAvailability);
+      } catch {
+        setDisplayNameAvailability(null);
+      } finally {
+        setIsCheckingDisplayName(false);
+      }
+    }
+
+    void loadDisplayNameAvailability();
+  }, [accessToken, deferredDisplayName, user]);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -367,15 +438,27 @@ export default function AccountPage() {
       return;
     }
 
+    if (!displayName.trim()) {
+      setError("Please enter a display name.");
+      return;
+    }
+
     setIsSavingProfile(true);
     setError("");
     setProfileSavedMessage("");
 
     try {
+      const displayNameChanged = hasDisplayNameChanged;
+
+      if (displayNameChanged) {
+        await updateCurrentUser(accessToken, { display_name: displayName.trim() });
+        await refreshUser();
+      }
+
       const nextProfile = await updatePersonalProfile(accessToken, profile);
       setProfile(nextProfile);
       setSavedProfileIsPublic(nextProfile.is_public);
-      setProfileSavedMessage("Profile updated.");
+      setProfileSavedMessage(displayNameChanged ? "Profile and display name updated." : "Profile updated.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update your profile.");
     } finally {

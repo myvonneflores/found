@@ -1,9 +1,18 @@
+from django.db import utils as db_utils
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from companies.creation import normalized_hostname
+from companies.models import Company
+
 from .models import BusinessClaim, BusinessClaimEvent, PersonalProfile, business_claim_history_table_exists
+from .display_names import (
+    build_display_name_suggestions,
+    derive_personal_display_name,
+    normalize_display_name,
+)
 
 User = get_user_model()
 
@@ -18,6 +27,31 @@ def get_user_badges(user):
             }
         )
     return badges
+
+
+def is_personal_display_name_taken(display_name, *, exclude_user_id=None):
+    normalized_name = normalize_display_name(display_name)
+    if not normalized_name:
+        return False
+
+    queryset = User.objects.filter(
+        account_type=User.AccountType.PERSONAL,
+        display_name__iexact=normalized_name,
+    )
+    if exclude_user_id is not None:
+        queryset = queryset.exclude(pk=exclude_user_id)
+    return queryset.exists()
+
+
+def validate_personal_display_name(display_name, *, exclude_user_id=None):
+    normalized_name = normalize_display_name(display_name)
+    if not normalized_name:
+        raise serializers.ValidationError("Enter a display name.")
+
+    if is_personal_display_name_taken(normalized_name, exclude_user_id=exclude_user_id):
+        raise serializers.ValidationError("That display name is already taken.")
+
+    return normalized_name
 
 
 def _claim_target_company(attrs, instance=None):
@@ -42,6 +76,18 @@ def _claim_target_business_name(attrs, instance=None):
     if instance is not None:
         return instance.business_name.strip()
     return ""
+
+
+def find_existing_company_for_new_claim(*, website: str):
+    hostname = normalized_hostname(website)
+    if not hostname:
+        return None
+
+    for company in Company.objects.exclude(website=""):
+        if normalized_hostname(company.website) == hostname:
+            return company
+
+    return None
 
 
 def validate_business_claim_attrs(*, attrs, user, instance=None):
@@ -69,6 +115,22 @@ def validate_business_claim_attrs(*, attrs, user, instance=None):
 
     if intent == BusinessClaim.ClaimIntent.NEW and company is not None:
         raise serializers.ValidationError({"company": "New business claims cannot target an existing company profile."})
+
+    website = attrs.get("website", getattr(instance, "website", "")).strip()
+    if intent == BusinessClaim.ClaimIntent.NEW and not website:
+        raise serializers.ValidationError({"website": "Add the business website before starting a new business claim."})
+
+    if intent == BusinessClaim.ClaimIntent.NEW:
+        existing_company = find_existing_company_for_new_claim(website=website)
+        if existing_company is not None:
+            raise serializers.ValidationError(
+                {
+                    "website": (
+                        "A FOUND business listing already uses this website. "
+                        "Choose 'Claim an existing business' and search for that listing instead."
+                    )
+                }
+            )
 
     duplicate_queryset = user.business_claims.exclude(
         status=BusinessClaim.VerificationStatus.VERIFIED
@@ -106,6 +168,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "display_name",
             "public_slug",
+            "needs_display_name_review",
             "account_type",
             "onboarding_completed",
             "is_business_verified",
@@ -117,6 +180,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "account_type",
             "public_slug",
+            "needs_display_name_review",
             "is_business_verified",
             "verification_status",
             "badges",
@@ -130,6 +194,28 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_badges(self, obj):
         return get_user_badges(obj)
+
+    def validate_display_name(self, value):
+        user = self.instance
+        normalized_name = normalize_display_name(value)
+
+        if user and user.account_type == User.AccountType.PERSONAL:
+            return validate_personal_display_name(
+                normalized_name,
+                exclude_user_id=user.pk,
+            )
+
+        return normalized_name
+
+    def update(self, instance, validated_data):
+        display_name = validated_data.get("display_name")
+        if (
+            instance.account_type == User.AccountType.PERSONAL
+            and display_name is not None
+            and display_name != instance.display_name
+        ):
+            validated_data["needs_display_name_review"] = False
+        return super().update(instance, validated_data)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -154,6 +240,19 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         account_type = attrs.get("account_type", User.AccountType.PERSONAL)
+        attrs["display_name"] = normalize_display_name(attrs.get("display_name", ""))
+
+        if account_type == User.AccountType.PERSONAL:
+            resolved_display_name = derive_personal_display_name(
+                attrs.get("display_name", ""),
+                attrs.get("first_name", ""),
+                attrs.get("email", ""),
+            )
+            try:
+                attrs["display_name"] = validate_personal_display_name(resolved_display_name)
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({"display_name": exc.detail}) from exc
+
         if account_type == User.AccountType.BUSINESS and not attrs.get("certify_local_ownership", False):
             raise serializers.ValidationError(
                 {
@@ -315,6 +414,14 @@ class BusinessClaimUpdateSerializer(serializers.ModelSerializer):
             "claim_message",
         )
 
+    def validate_website(self, value):
+        value = value.strip()
+        if not value:
+            return ""
+        if "://" not in value:
+            value = f"https://{value}"
+        return value
+
     def validate(self, attrs):
         claim = self.instance
         if claim.status == BusinessClaim.VerificationStatus.VERIFIED:
@@ -469,3 +576,32 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             "company__sustainability_markers",
         )
         return PublicRecommendationSerializer(recommendations, many=True).data
+
+
+class DisplayNameAvailabilitySerializer(serializers.Serializer):
+    available = serializers.BooleanField()
+    suggestions = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+
+
+def get_display_name_availability(*, display_name, exclude_user_id=None):
+    normalized_name = normalize_display_name(display_name)
+    if not normalized_name:
+        return {"available": False, "suggestions": []}
+
+    available = not is_personal_display_name_taken(
+        normalized_name,
+        exclude_user_id=exclude_user_id,
+    )
+    suggestions = (
+        []
+        if available
+        else build_display_name_suggestions(
+            normalized_name,
+            is_taken=lambda candidate: is_personal_display_name_taken(
+                candidate,
+                exclude_user_id=exclude_user_id,
+            ),
+        )
+    )
+
+    return {"available": available, "suggestions": suggestions}

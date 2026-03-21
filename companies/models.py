@@ -136,9 +136,18 @@ class Company(BaseModel):
     def __str__(self):
         return self.name
 
+    def _slug_location_segment(self):
+        for value in (self.city, self.state, self.country):
+            segment = slugify(value)
+            if segment:
+                return segment
+        return ""
+
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.name) or self.id_hash.lower()
+            name_slug = slugify(self.name) or self.id_hash.lower()
+            location_slug = self._slug_location_segment()
+            base_slug = f"{name_slug}-{location_slug}" if location_slug else name_slug
             slug = base_slug
             counter = 2
             while Company.objects.exclude(pk=self.pk).filter(slug=slug).exists():

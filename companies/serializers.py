@@ -1,5 +1,3 @@
-from urllib.parse import urlparse
-
 from django.db.models import Count
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
@@ -10,6 +8,7 @@ from users.models import BusinessClaim
 
 from .business_hours import validate_business_hours, validate_timezone
 from .cities import canonicalize_city
+from .creation import assess_new_company_listing
 from .models import (
     BusinessCategory,
     Company,
@@ -105,6 +104,12 @@ class CompanyListSerializer(serializers.ModelSerializer):
             "is_published",
         )
         read_only_fields = ("is_published",)
+
+
+class CompanyDomainMatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = ("id", "name", "slug", "city", "state")
 
 
 class ClaimedCompanyPublicListSerializer(serializers.ModelSerializer):
@@ -251,17 +256,6 @@ def _normalize_website(value):
     return value
 
 
-def _normalized_hostname(value):
-    if not value:
-        return ""
-    parsed = urlparse(value)
-    hostname = parsed.netloc or parsed.path
-    hostname = hostname.lower().strip()
-    if hostname.startswith("www."):
-        hostname = hostname[4:]
-    return hostname.rstrip("/")
-
-
 class BaseCompanyWriteSerializer(serializers.ModelSerializer):
     city = CanonicalCityField(required=False, allow_blank=True)
     business_hours = serializers.JSONField(required=False, allow_null=True)
@@ -332,6 +326,9 @@ class BaseCompanyWriteSerializer(serializers.ModelSerializer):
             except serializers.ValidationError as exc:
                 raise serializers.ValidationError({"business_hours": exc.detail}) from exc
 
+        if self.instance is None and not attrs.get("website", "").strip():
+            raise serializers.ValidationError({"website": "Add the business website before creating this listing."})
+
         return attrs
 
 
@@ -366,6 +363,29 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
             "is_published",
         )
         read_only_fields = ("id", "slug")
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if self.instance is not None:
+            return attrs
+
+        assessment = assess_new_company_listing(
+            existing_companies=Company.objects.all(),
+            name=attrs.get("name", ""),
+            website=attrs.get("website", ""),
+            city=attrs.get("city", ""),
+            state=attrs.get("state", ""),
+            address=attrs.get("address", ""),
+        )
+
+        if assessment.is_duplicate:
+            raise serializers.ValidationError(
+                "A similar business listing already exists on FOUND."
+            )
+
+        attrs["needs_editorial_review"] = assessment.needs_editorial_review
+        return attrs
 
     def _inject_manual_hours_metadata(self, validated_data):
         if "business_hours" not in validated_data:
@@ -422,39 +442,27 @@ class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
         if user.account_type != user.AccountType.PERSONAL:
             raise serializers.ValidationError("Only personal users can create community business listings.")
 
-        address = attrs.get("address", "").strip()
-        city = attrs.get("city", "").strip()
-        website = attrs.get("website", "").strip()
-        if not any((address, city, website)):
-            raise serializers.ValidationError(
-                "Add at least a website, city, or street address so the community can identify this listing."
-            )
+        assessment = assess_new_company_listing(
+            existing_companies=Company.objects.all(),
+            name=attrs.get("name", ""),
+            website=attrs.get("website", ""),
+            city=attrs.get("city", ""),
+            state=attrs.get("state", ""),
+            address=attrs.get("address", ""),
+        )
 
-        name = attrs.get("name", "").strip()
-        state = attrs.get("state", "").strip()
-        hostname = _normalized_hostname(website)
-
-        duplicate_queryset = Company.objects.all()
-        if hostname:
-            duplicate_queryset = duplicate_queryset.filter(website__icontains=hostname)
-        else:
-            if not city or not state:
-                return attrs
-            duplicate_queryset = duplicate_queryset.filter(
-                name__iexact=name,
-                city__iexact=city,
-                state__iexact=state,
-            )
-
-        if duplicate_queryset.exists():
+        if assessment.is_duplicate:
             raise serializers.ValidationError(
                 "A similar business listing already exists on FOUND."
             )
+
+        attrs["needs_editorial_review"] = assessment.needs_editorial_review
 
         return attrs
 
     def create(self, validated_data):
         many_to_many_fields = {}
+        needs_editorial_review = validated_data.pop("needs_editorial_review", False)
         for field_name in (
             "business_categories",
             "product_categories",
@@ -469,7 +477,7 @@ class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
             **validated_data,
             listing_origin=Company.ListingOrigin.COMMUNITY,
             submitted_by=self.context["request"].user,
-            needs_editorial_review=True,
+            needs_editorial_review=needs_editorial_review,
             is_published=True,
         )
 
