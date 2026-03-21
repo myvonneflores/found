@@ -350,12 +350,8 @@ def test_taxonomy_item_fields(api_client):
 
 @pytest.mark.django_db
 def test_business_claim_list_fields(api_client):
-    user = User.objects.create_user(
-        email="owner@example.com",
-        password="supersecure123",
-        account_type=User.AccountType.BUSINESS,
-    )
-    company = CompanyFactory(name="Shape Claim Co")
+    user = UserFactory(account_type=User.AccountType.BUSINESS)
+    company = CompanyFactory()
     claim = BusinessClaim.objects.create(
         user=user,
         company=company,
@@ -379,12 +375,8 @@ def test_business_claim_list_fields(api_client):
 
 @pytest.mark.django_db
 def test_business_claim_detail_fields(api_client):
-    user = User.objects.create_user(
-        email="owner-detail@example.com",
-        password="supersecure123",
-        account_type=User.AccountType.BUSINESS,
-    )
-    company = CompanyFactory(name="Shape Claim Detail Co")
+    user = UserFactory(account_type=User.AccountType.BUSINESS)
+    company = CompanyFactory()
     claim = BusinessClaim.objects.create(
         user=user,
         company=company,
