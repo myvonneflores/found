@@ -8,7 +8,7 @@ import { BusinessHoursEditor } from "@/components/business-hours-editor";
 import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
   createCommunityListing,
-  createManagedBusinessProfile,
+  createManagedBusinessLocation,
   listBusinessCategories,
   listCuisineTypes,
   listOwnershipMarkers,
@@ -58,9 +58,11 @@ function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = TAXONOMY
 
 export function CompanyProfileCreationForm({
   latestClaim,
+  seedProfile,
   mode = "owner",
 }: {
   latestClaim?: BusinessClaim | null;
+  seedProfile?: Partial<CompanyCreatePayload> | null;
   mode?: "owner" | "community";
 }) {
   const router = useRouter();
@@ -71,24 +73,24 @@ export function CompanyProfileCreationForm({
   const [taxonomyWarning, setTaxonomyWarning] = useState("");
   const [taxonomies, setTaxonomies] = useState<TaxonomyState>(EMPTY_TAXONOMIES);
   const [profile, setProfile] = useState<CompanyCreatePayload>({
-    name: latestClaim?.business_name || (mode === "owner" ? user?.display_name || "" : ""),
+    name: latestClaim?.business_name || seedProfile?.name || (mode === "owner" ? user?.display_name || "" : ""),
     description: "",
-    website: latestClaim?.website || "",
+    website: latestClaim?.website || seedProfile?.website || "",
     address: "",
     city: "",
     state: "",
     zip_code: "",
     business_hours: null,
     business_hours_timezone: null,
-    business_category: null,
-    business_categories: [],
-    product_categories: [],
-    cuisine_types: [],
-    ownership_markers: [],
-    sustainability_markers: [],
-    instagram_handle: latestClaim?.instagram_handle || "",
-    facebook_page: latestClaim?.facebook_page || "",
-    linkedin_page: latestClaim?.linkedin_page || "",
+    business_category: seedProfile?.business_category ?? null,
+    business_categories: seedProfile?.business_categories ?? [],
+    product_categories: seedProfile?.product_categories ?? [],
+    cuisine_types: seedProfile?.cuisine_types ?? [],
+    ownership_markers: seedProfile?.ownership_markers ?? [],
+    sustainability_markers: seedProfile?.sustainability_markers ?? [],
+    instagram_handle: latestClaim?.instagram_handle || seedProfile?.instagram_handle || "",
+    facebook_page: latestClaim?.facebook_page || seedProfile?.facebook_page || "",
+    linkedin_page: latestClaim?.linkedin_page || seedProfile?.linkedin_page || "",
     is_vegan_friendly: false,
     is_gf_friendly: false,
   });
@@ -155,19 +157,25 @@ export function CompanyProfileCreationForm({
   }, []);
 
   useEffect(() => {
-    if (!latestClaim) {
+    if (!latestClaim && !seedProfile) {
       return;
     }
 
     setProfile((current) => ({
       ...current,
-      name: current.name || latestClaim.business_name || (mode === "owner" ? user?.display_name || "" : ""),
-      website: current.website || latestClaim.website || "",
-      instagram_handle: current.instagram_handle || latestClaim.instagram_handle || "",
-      facebook_page: current.facebook_page || latestClaim.facebook_page || "",
-      linkedin_page: current.linkedin_page || latestClaim.linkedin_page || "",
+      name: current.name || latestClaim?.business_name || seedProfile?.name || (mode === "owner" ? user?.display_name || "" : ""),
+      website: current.website || latestClaim?.website || seedProfile?.website || "",
+      business_category: current.business_category ?? seedProfile?.business_category ?? null,
+      business_categories: current.business_categories.length ? current.business_categories : seedProfile?.business_categories ?? [],
+      product_categories: current.product_categories.length ? current.product_categories : seedProfile?.product_categories ?? [],
+      cuisine_types: current.cuisine_types.length ? current.cuisine_types : seedProfile?.cuisine_types ?? [],
+      ownership_markers: current.ownership_markers.length ? current.ownership_markers : seedProfile?.ownership_markers ?? [],
+      sustainability_markers: current.sustainability_markers.length ? current.sustainability_markers : seedProfile?.sustainability_markers ?? [],
+      instagram_handle: current.instagram_handle || latestClaim?.instagram_handle || seedProfile?.instagram_handle || "",
+      facebook_page: current.facebook_page || latestClaim?.facebook_page || seedProfile?.facebook_page || "",
+      linkedin_page: current.linkedin_page || latestClaim?.linkedin_page || seedProfile?.linkedin_page || "",
     }));
-  }, [latestClaim, mode, user?.display_name]);
+  }, [latestClaim, mode, seedProfile, user?.display_name]);
 
   const hasAnyTaxonomies = useMemo(
     () =>
@@ -266,7 +274,7 @@ export function CompanyProfileCreationForm({
       const nextProfile =
         mode === "community"
           ? await createCommunityListing(token, profile)
-          : await createManagedBusinessProfile(token, {
+          : await createManagedBusinessLocation(token, {
               ...profile,
               is_published: false,
             });

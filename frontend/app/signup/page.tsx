@@ -15,6 +15,7 @@ type SelectedCompany = {
   id: number;
   name: string;
   slug: string;
+  address: string;
   city: string;
   state: string;
 };
@@ -45,8 +46,8 @@ const businessIntentOptions: Array<{ value: BusinessIntent; title: string }> = [
   },
 ];
 
-function formatCompanyLocation(company: Pick<SelectedCompany, "city" | "state">) {
-  return [company.city, company.state].filter(Boolean).join(", ");
+function formatCompanyLocation(company: Pick<SelectedCompany, "address" | "city" | "state">) {
+  return [company.address, company.city, company.state].filter(Boolean).join(", ");
 }
 
 function formatCompanyLabel(company: SelectedCompany) {
@@ -89,7 +90,7 @@ export default function SignupPage() {
   const [displayNameAvailability, setDisplayNameAvailability] = useState<DisplayNameAvailability | null>(null);
   const [isCheckingDisplayName, setIsCheckingDisplayName] = useState(false);
   const deferredBusinessWebsite = useDeferredValue(form.businessWebsite);
-  const [matchedCompany, setMatchedCompany] = useState<SelectedCompany | null>(null);
+  const [matchedCompanies, setMatchedCompanies] = useState<SelectedCompany[]>([]);
   const [isCheckingBusinessWebsite, setIsCheckingBusinessWebsite] = useState(false);
   const [showBusinessWebsitePending, setShowBusinessWebsitePending] = useState(false);
 
@@ -185,6 +186,7 @@ export default function SignupPage() {
             id: company.id,
             name: company.name,
             slug: company.slug,
+            address: "",
             city: company.city,
             state: company.state,
           }))
@@ -230,7 +232,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (accountType !== "business" || businessIntent !== "new") {
-      setMatchedCompany(null);
+      setMatchedCompanies([]);
       setIsCheckingBusinessWebsite(false);
       setShowBusinessWebsitePending(false);
       return;
@@ -238,7 +240,7 @@ export default function SignupPage() {
 
     const website = deferredBusinessWebsite.trim();
     if (!website || !looksLikeWebsite(website)) {
-      setMatchedCompany(null);
+      setMatchedCompanies([]);
       setIsCheckingBusinessWebsite(false);
       setShowBusinessWebsitePending(false);
       return;
@@ -260,20 +262,21 @@ export default function SignupPage() {
             return;
           }
 
-          setMatchedCompany(
-            response.matched && response.company
-              ? {
-                  id: response.company.id,
-                  name: response.company.name,
-                  slug: response.company.slug,
-                  city: response.company.city,
-                  state: response.company.state,
-                }
-              : null
+          setMatchedCompanies(
+            response.matched
+              ? response.companies.map((company) => ({
+                  id: company.id,
+                  name: company.name,
+                  slug: company.slug,
+                  address: company.address,
+                  city: company.city,
+                  state: company.state,
+                }))
+              : []
           );
         } catch {
           if (!isCancelled) {
-            setMatchedCompany(null);
+            setMatchedCompanies([]);
           }
         } finally {
           window.clearTimeout(pendingUiTimeout);
@@ -342,23 +345,32 @@ export default function SignupPage() {
         return;
       }
 
-      if (domainMatch.matched && domainMatch.company) {
-        const nextCompany = {
-          id: domainMatch.company.id,
-          name: domainMatch.company.name,
-          slug: domainMatch.company.slug,
-          city: domainMatch.company.city,
-          state: domainMatch.company.state,
-        };
-        setMatchedCompany(nextCompany);
-        setSelectedCompany(nextCompany);
-        setCompanySearch(nextCompany.name);
+      if (domainMatch.matched && domainMatch.companies.length > 0) {
+        const nextCompanies = domainMatch.companies.map((company) => ({
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+          address: company.address,
+          city: company.city,
+          state: company.state,
+        }));
+        setMatchedCompanies(nextCompanies);
         setBusinessIntent("existing");
+        setCompanyResults(nextCompanies);
         setForm((current) => ({
           ...current,
-          displayName: current.displayName || nextCompany.name,
+          displayName: current.displayName || nextCompanies[0].name,
         }));
-        setError("We found an existing FOUND listing for that website. Claim that business instead of creating a new one.");
+        if (nextCompanies.length === 1) {
+          const nextCompany = nextCompanies[0];
+          setSelectedCompany(nextCompany);
+          setCompanySearch(nextCompany.name);
+          setError("We found an existing FOUND listing for that website. Claim that business instead of creating a new one.");
+        } else {
+          setSelectedCompany(null);
+          setCompanySearch(nextCompanies[0].name);
+          setError("We found multiple FOUND listings for that website. Choose the exact location to claim.");
+        }
         return;
       }
     }
@@ -583,10 +595,15 @@ export default function SignupPage() {
                   <div className="auth-field-status" aria-live="polite">
                     {showBusinessWebsitePending && isCheckingBusinessWebsite ? (
                       <p className="auth-inline-note">Checking for an existing FOUND listing...</p>
-                    ) : matchedCompany ? (
+                    ) : matchedCompanies.length === 1 ? (
                       <p className="contact-form-note">
-                        FOUND already has <strong>{formatCompanyLabel(matchedCompany)}</strong> for this website.
+                        FOUND already has <strong>{formatCompanyLabel(matchedCompanies[0])}</strong> for this website.
                         Choose “Claim an existing business” instead.
+                      </p>
+                    ) : matchedCompanies.length > 1 ? (
+                      <p className="contact-form-note">
+                        FOUND already has <strong>{matchedCompanies.length} listings</strong> for this website.
+                        Choose “Claim an existing business” and select the exact location.
                       </p>
                     ) : null}
                   </div>

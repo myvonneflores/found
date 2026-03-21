@@ -104,9 +104,11 @@ All of these are public endpoints.
 Important current creation rules:
 
 - new company creation requires a website across community and owner-create flows
+- company records are location-first, so multi-location businesses use separate company pages per storefront
 - same-name businesses are allowed when they are clearly distinct listings
-- the API blocks exact duplicates by normalized website hostname or matching `name + city + state + address`
-- same-name, same-city submissions with different website or address are allowed but flagged for editorial review
+- the API blocks exact duplicates by shared hostname plus matching address or by matching `name + city + state + address`
+- reusing an existing website for another location requires a street address on the new listing
+- same-name, same-city submissions with different website or address are allowed but flagged for editorial review unless a verified owner is explicitly adding another managed location
 
 ## API Payload Shapes
 
@@ -131,6 +133,8 @@ The company detail page consumes the `CompanyDetailSerializer` shape:
 - provenance fields include `listing_origin` and `is_community_listed`
 - `business_hours` is a canonical JSON object with `open_by_week` and `open_by_date`
 - `business_hours_timezone` is the IANA timezone used to interpret those hours
+- `other_locations` lists published sibling storefronts from the same `CompanyGroup`
+- `public_recommendations` contains recommendation content for this exact location only
 - timestamps are present
 - richer location and social fields are included
 

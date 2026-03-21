@@ -84,8 +84,10 @@ docker compose run --rm frontend sh -lc 'npm install && npm run build'
 - The company detail page is the source of truth for public company presentation and verified owner editing.
 - Personal-user `display_name` values are now unique and public-profile URLs stay stable through `public_slug` even if the display name changes later.
 - Personal users can add businesses after signup from the account area without changing the signup flow.
-- New company creation now requires a website, allows same-name businesses in different places, and uses location-aware slugs plus editorial review for same-name same-city submissions that are not exact duplicates.
+- Company records are location-first. Multi-location businesses use one `Company` per storefront, optional `CompanyGroup` relationships for sibling locations, and location-aware slugs.
+- New company creation now requires a website, allows same-name businesses in different places, requires a street address before reusing an existing website for another location, and uses editorial review for same-name same-city submissions that are not clearly the same location.
 - Community-submitted listings publish with a `Community Listed` badge until a verified owner claim exists.
+- Verified business accounts can manage multiple company locations. Public lists stay account-level on the business public profile, while recommendations stay attached to specific company locations.
 - Business verification gates editing, while broader community tools remain available based on current account rules in code.
 - Preserve metadata and canonical URL behavior on public pages when changing route-level rendering.
 

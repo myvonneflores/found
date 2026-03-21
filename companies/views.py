@@ -1,3 +1,4 @@
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
@@ -22,12 +23,14 @@ from .serializers import (
     CompanyDetailSerializer,
     CompanyListSerializer,
     CuisineTypeSerializer,
+    ManagedBusinessLocationSerializer,
     ManagedBusinessCompanySerializer,
     OwnershipMarkerSerializer,
     ProductCategorySerializer,
     SustainabilityMarkerSerializer,
 )
-from .creation import normalized_hostname
+from .creation import normalized_hostname, resolve_company_group
+from users.models import BusinessClaim
 
 
 class CompanyListView(generics.ListAPIView):
@@ -63,51 +66,91 @@ class CompanyDetailView(generics.RetrieveAPIView):
             "business_claims",
             "business_categories",
             "product_categories",
+            "cuisine_types",
             "ownership_markers",
             "sustainability_markers",
+            "recommendations",
         )
 
 
-class ManagedBusinessCompanyView(generics.RetrieveUpdateAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = ManagedBusinessCompanySerializer
-
-    def _get_latest_verified_claim(self, *, company_required: bool):
+class ManagedBusinessAccessMixin:
+    def _assert_verified_business_user(self):
         user = self.request.user
         if user.account_type != user.AccountType.BUSINESS:
             raise PermissionDenied("Only business accounts can manage a business profile.")
         if not user.is_business_verified:
             raise PermissionDenied("Your business needs to be verified before you can edit this profile.")
+        return user
 
-        claim_filters = {"status": "verified"}
+    def _managed_company_queryset(self):
+        user = self._assert_verified_business_user()
+        return (
+            Company.objects.filter(
+                business_claims__user=user,
+                business_claims__status=BusinessClaim.VerificationStatus.VERIFIED,
+            )
+            .select_related("business_category", "company_group")
+            .prefetch_related(
+                "business_categories",
+                "product_categories",
+                "cuisine_types",
+                "ownership_markers",
+                "sustainability_markers",
+            )
+            .distinct()
+        )
+
+    def _managed_claim_queryset(self, *, company_required):
+        user = self._assert_verified_business_user()
+        claim_filters = {"status": BusinessClaim.VerificationStatus.VERIFIED}
         if company_required:
             claim_filters["company__isnull"] = False
+        return (
+            user.business_claims.filter(**claim_filters)
+            .select_related("company", "company__company_group")
+            .order_by("submitted_at", "pk")
+        )
 
-        verified_claim = user.business_claims.filter(**claim_filters).select_related("company").order_by(
-            "-submitted_at", "-pk"
-        ).first()
-
-        if not verified_claim:
+    def _get_primary_managed_claim(self, *, company_required):
+        managed_claim = self._managed_claim_queryset(company_required=company_required).first()
+        if managed_claim is None:
             if company_required:
                 raise PermissionDenied("We couldn't find a verified business profile to manage yet.")
             raise PermissionDenied("We couldn't find a verified business claim to connect to a company profile.")
-        return verified_claim
+        return managed_claim
+
+    def _get_primary_managed_company(self, *, required):
+        managed_claim = self._managed_claim_queryset(company_required=True).first()
+        if managed_claim is None:
+            if required:
+                raise PermissionDenied("We couldn't find a verified business profile to manage yet.")
+            return None
+        return managed_claim.company
+
+    def _ensure_company_group(self, company):
+        if company.company_group_id:
+            return company.company_group
+        return resolve_company_group(
+            company=company,
+            matched_hostname_companies=[company],
+            hostname=normalized_hostname(company.website),
+        )
+
+
+class ManagedBusinessCompanyCurrentView(ManagedBusinessAccessMixin, generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = ManagedBusinessCompanySerializer
 
     def get_object(self):
-        return self._get_latest_verified_claim(company_required=True).company
+        return self._get_primary_managed_company(required=True)
 
     def post(self, request, *args, **kwargs):
-        existing_claim = (
-            request.user.business_claims.filter(status="verified", company__isnull=False)
-            .select_related("company")
-            .order_by("-submitted_at", "-pk")
-            .first()
-        )
-        if existing_claim:
-            serializer = self.get_serializer(existing_claim.company)
+        existing_company = self._get_primary_managed_company(required=False)
+        if existing_company is not None:
+            serializer = self.get_serializer(existing_company)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        claim = self._get_latest_verified_claim(company_required=False)
+        claim = self._get_primary_managed_claim(company_required=False)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         company = serializer.save(
@@ -118,6 +161,67 @@ class ManagedBusinessCompanyView(generics.RetrieveUpdateAPIView):
         claim.save(update_fields=("company",))
         output = self.get_serializer(company)
         return Response(output.data, status=status.HTTP_201_CREATED)
+
+
+class ManagedBusinessLocationListCreateView(ManagedBusinessAccessMixin, generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return self._managed_company_queryset().order_by("name", "address", "pk")
+
+    def get_serializer_class(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return ManagedBusinessLocationSerializer
+        return ManagedBusinessCompanySerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == "POST":
+            primary_company = self._get_primary_managed_company(required=False)
+            if primary_company is not None:
+                context["preferred_company_group"] = self._ensure_company_group(primary_company)
+        return context
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            company = serializer.save(
+                listing_origin=Company.ListingOrigin.OWNER,
+                submitted_by=request.user,
+            )
+            primary_company = self._get_primary_managed_company(required=False)
+            if primary_company is None:
+                claim = self._get_primary_managed_claim(company_required=False)
+                claim.company = company
+                claim.save(update_fields=("company",))
+            else:
+                BusinessClaim.objects.create(
+                    user=request.user,
+                    company=company,
+                    intent=BusinessClaim.ClaimIntent.NEW,
+                    status=BusinessClaim.VerificationStatus.VERIFIED,
+                    business_name=company.name,
+                    submitter_first_name=request.user.first_name,
+                    submitter_last_name=request.user.last_name,
+                    business_email=request.user.email,
+                    website=company.website,
+                    role_title="Verified owner",
+                )
+
+        output = ManagedBusinessCompanySerializer(company, context=self.get_serializer_context())
+        headers = self.get_success_headers(output.data)
+        return Response(output.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class ManagedBusinessLocationDetailView(ManagedBusinessAccessMixin, generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = ManagedBusinessCompanySerializer
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return self._managed_company_queryset()
 
 
 class CommunityCompanyCreateView(generics.CreateAPIView):
@@ -132,18 +236,23 @@ class CompanyDomainMatchView(APIView):
         website = request.query_params.get("website", "")
         hostname = normalized_hostname(website)
         if not hostname:
-            return Response({"matched": False, "company": None})
+            return Response({"matched": False, "companies": []})
 
-        for company in Company.objects.exclude(website=""):
-            if normalized_hostname(company.website) == hostname:
-                return Response(
-                    {
-                        "matched": True,
-                        "company": CompanyDomainMatchSerializer(company).data,
-                    }
-                )
+        matches = [
+            company
+            for company in Company.objects.exclude(website="")
+            if normalized_hostname(company.website) == hostname
+        ]
+        if not matches:
+            return Response({"matched": False, "companies": []})
 
-        return Response({"matched": False, "company": None})
+        ordered_matches = sorted(matches, key=lambda company: (company.name.lower(), company.address.lower(), company.pk))
+        return Response(
+            {
+                "matched": True,
+                "companies": CompanyDomainMatchSerializer(ordered_matches, many=True).data,
+            }
+        )
 
 
 class BusinessCategoryListView(generics.ListAPIView):

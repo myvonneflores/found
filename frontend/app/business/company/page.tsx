@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -8,8 +9,9 @@ import { AuthGuardShell } from "@/components/auth-guard-shell";
 import { BodyClass } from "@/components/body-class";
 import { CompanyProfileCreationForm } from "@/components/company-profile-creation-form";
 import { SiteHeader } from "@/components/site-header";
-import { listBusinessClaims } from "@/lib/api";
+import { getManagedBusinessProfile, listBusinessClaims, listManagedBusinessLocations } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
+import type { CompanyCreatePayload, ManagedBusinessLocation } from "@/types/company";
 
 function normalizeClaims(value: BusinessClaim[] | unknown): BusinessClaim[] {
   if (Array.isArray(value)) {
@@ -32,6 +34,8 @@ export default function BusinessCompanyPage() {
   const router = useRouter();
   const { accessToken, isAuthenticated, isReady, setRedirecting, user } = useAuth();
   const [latestClaim, setLatestClaim] = useState<BusinessClaim | null>(null);
+  const [managedLocations, setManagedLocations] = useState<ManagedBusinessLocation[]>([]);
+  const [seedProfile, setSeedProfile] = useState<Partial<CompanyCreatePayload> | null>(null);
   const [claimWarning, setClaimWarning] = useState("");
 
   useEffect(() => {
@@ -61,20 +65,35 @@ export default function BusinessCompanyPage() {
 
     async function loadBusinessRoute() {
       try {
-        const claimResponse = await listBusinessClaims(accessToken!);
+        const [claimResponse, locations, primaryProfile] = await Promise.all([
+          listBusinessClaims(accessToken!),
+          listManagedBusinessLocations(accessToken!),
+          getManagedBusinessProfile(accessToken!).catch(() => null),
+        ]);
         const claims = normalizeClaims(claimResponse);
-        const verifiedClaim = claims.find((claim) => claim.status === "verified") ?? null;
-        const nextLatestClaim = verifiedClaim ?? claims[0] ?? null;
+        const nextLatestClaim = claims[0] ?? null;
 
         if (!isMounted) {
           return;
         }
 
         setLatestClaim(nextLatestClaim);
+        setManagedLocations(locations);
 
-        if (verifiedClaim?.company_slug) {
-          router.replace(`/companies/${verifiedClaim.company_slug}?edit=1`);
-          return;
+        if (primaryProfile) {
+          setSeedProfile({
+            name: primaryProfile.name,
+            website: primaryProfile.website,
+            business_category: primaryProfile.business_category,
+            business_categories: primaryProfile.business_categories,
+            product_categories: primaryProfile.product_categories,
+            cuisine_types: primaryProfile.cuisine_types,
+            ownership_markers: primaryProfile.ownership_markers,
+            sustainability_markers: primaryProfile.sustainability_markers,
+            instagram_handle: primaryProfile.instagram_handle,
+            facebook_page: primaryProfile.facebook_page,
+            linkedin_page: primaryProfile.linkedin_page,
+          });
         }
       } catch (loadError) {
         if (!isMounted) {
@@ -108,10 +127,13 @@ export default function BusinessCompanyPage() {
 
         <section className="dashboard-stage business-company-stage">
           <article className="panel dashboard-banner business-company-banner">
-            <h1 className="home-hero-title">Create your company profile</h1>
+            <h1 className="home-hero-title">
+              {managedLocations.length ? "Add another location" : "Create your company profile"}
+            </h1>
             <p className="lede">
-              Build the actual FOUND business page your community will see. Once it&apos;s live, you&apos;ll edit the
-              company profile directly.
+              {managedLocations.length
+                ? "Create a new storefront page while keeping your shared brand details consistent across locations."
+                : "Build the actual FOUND business page your community will see. Once it&apos;s live, you&apos;ll edit the company profile directly."}
             </p>
           </article>
 
@@ -121,7 +143,27 @@ export default function BusinessCompanyPage() {
             </article>
           ) : null}
 
-          <CompanyProfileCreationForm latestClaim={latestClaim} />
+          {managedLocations.length ? (
+            <article className="detail-card">
+              <span className="field-label">Managed locations</span>
+              <div className="detail-recommendations-pill-grid">
+                {managedLocations.map((location) => (
+                  <Link
+                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill"
+                    href={`/companies/${location.slug}?edit=1`}
+                    key={location.slug}
+                  >
+                    <span className="dashboard-chip-label">
+                      <strong>{location.name}</strong>
+                      <span>{[location.address, location.city, location.state].filter(Boolean).join(", ") || "Location details coming soon"}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </article>
+          ) : null}
+
+          <CompanyProfileCreationForm latestClaim={latestClaim} seedProfile={seedProfile} />
         </section>
       </div>
     </main>

@@ -43,6 +43,33 @@ export type ClaimedCompanyProfile = {
   public_lists: ClaimedCompanyPublicList[];
 };
 
+export type CompanyDomainMatchCompany = {
+  id: number;
+  name: string;
+  slug: string;
+  address: string;
+  city: string;
+  state: string;
+};
+
+export type CompanySiblingLocation = {
+  id: number;
+  name: string;
+  slug: string;
+  address: string;
+  city: string;
+  state: string;
+};
+
+export type CompanyRecommendation = {
+  id: number;
+  id_hash: string;
+  title: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CompanyListItem = {
   id: number;
   id_hash: string;
@@ -66,7 +93,7 @@ export type CompanyListItem = {
 
 export type CompanyDomainMatch = {
   matched: boolean;
-  company: Pick<CompanyListItem, "id" | "name" | "slug" | "city" | "state"> | null;
+  companies: CompanyDomainMatchCompany[];
 };
 
 export type CompanyDetail = {
@@ -91,6 +118,8 @@ export type CompanyDetail = {
   product_categories: TaxonomyItem[];
   cuisine_types: TaxonomyItem[];
   claimed_profile: ClaimedCompanyProfile | null;
+  other_locations: CompanySiblingLocation[];
+  public_recommendations: CompanyRecommendation[];
   ownership_markers: TaxonomyItem[];
   sustainability_markers: TaxonomyItem[];
   instagram_handle: string;
@@ -125,6 +154,16 @@ export type ManagedBusinessProfile = {
   linkedin_page: string;
   is_vegan_friendly: boolean;
   is_gf_friendly: boolean;
+  is_published: boolean;
+};
+
+export type ManagedBusinessLocation = {
+  id: number;
+  slug: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
   is_published: boolean;
 };
 

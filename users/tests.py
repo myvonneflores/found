@@ -360,6 +360,81 @@ class BusinessClaimValidationTests(APITestCase):
             ],
         )
 
+    def test_verified_business_user_can_create_additional_claim_for_different_company(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        first_company = Company.objects.create(name="North Star", city="Portland", state="OR")
+        second_company = Company.objects.create(name="North Star", city="Seattle", state="WA")
+        BusinessClaim.objects.create(
+            user=user,
+            company=first_company,
+            intent=BusinessClaim.ClaimIntent.EXISTING,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+            business_name=first_company.name,
+            submitter_first_name="Owner",
+            submitter_last_name="One",
+            business_email="owner@northstar.example.com",
+            role_title="Founder",
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.post(
+            reverse("users:business-claim-list"),
+            {
+                "company": second_company.id,
+                "intent": BusinessClaim.ClaimIntent.EXISTING,
+                "business_name": second_company.name,
+                "submitter_first_name": "Owner",
+                "submitter_last_name": "One",
+                "business_email": "owner@northstar.example.com",
+                "role_title": "Founder",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["company"], second_company.id)
+
+    def test_verified_business_user_cannot_create_duplicate_claim_for_same_company(self):
+        user = User.objects.create_user(
+            email="owner@example.com",
+            password="supersecure123",
+            account_type=User.AccountType.BUSINESS,
+        )
+        company = Company.objects.create(name="North Star", city="Portland", state="OR")
+        BusinessClaim.objects.create(
+            user=user,
+            company=company,
+            intent=BusinessClaim.ClaimIntent.EXISTING,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+            business_name=company.name,
+            submitter_first_name="Owner",
+            submitter_last_name="One",
+            business_email="owner@northstar.example.com",
+            role_title="Founder",
+        )
+        self.client.force_authenticate(user=user)
+
+        response = self.client.post(
+            reverse("users:business-claim-list"),
+            {
+                "company": company.id,
+                "intent": BusinessClaim.ClaimIntent.EXISTING,
+                "business_name": company.name,
+                "submitter_first_name": "Owner",
+                "submitter_last_name": "One",
+                "business_email": "owner@northstar.example.com",
+                "role_title": "Founder",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("active verification workflow", str(response.data))
+
 
 class TokenViewTests(APITestCase):
     token_url = reverse("token_obtain_pair")
@@ -609,12 +684,24 @@ class PublicProfileTests(APITestCase):
         )
         profile = PersonalProfile.objects.create(user=user, is_public=True)
         company = Company.objects.create(name="North Star Market")
+        newer_company = Company.objects.create(name="North Star Market Seattle")
         BusinessClaim.objects.create(
             user=user,
             company=company,
             intent=BusinessClaim.ClaimIntent.EXISTING,
             status=BusinessClaim.VerificationStatus.VERIFIED,
             business_name=company.name,
+            submitter_first_name="Owner",
+            submitter_last_name="One",
+            business_email="owner@northstar.example.com",
+            reviewed_at=timezone.now(),
+        )
+        BusinessClaim.objects.create(
+            user=user,
+            company=newer_company,
+            intent=BusinessClaim.ClaimIntent.EXISTING,
+            status=BusinessClaim.VerificationStatus.VERIFIED,
+            business_name=newer_company.name,
             submitter_first_name="Owner",
             submitter_last_name="One",
             business_email="owner@northstar.example.com",

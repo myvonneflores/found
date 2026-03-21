@@ -381,8 +381,9 @@ The verified dashboard also uses the favorites/lists/share structure, but with b
 Current behavior:
 
 - the user can load favorites, lists, saved public lists, and business claims
-- the CTA strip uses `EDIT MY BUSINESS` if a claimed company exists
-- if no company is linked yet, the CTA routes to `/business/company`
+- the CTA strip now routes verified users into location management rather than a single-company editor
+- the dashboard lists all managed locations and links each one to its public company page in edit mode
+- `/business/company` is the add-location entry point and also handles the first-company case for verified users without a linked company
 
 That CTA behavior is defined in [`../../frontend/components/business-profile-card.tsx`](../../frontend/components/business-profile-card.tsx).
 

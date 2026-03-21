@@ -102,6 +102,8 @@ Important properties:
 
 Public lists are the main user-facing sharing artifact in the current app.
 
+For business accounts, lists are account-level content rather than location-level content. A multi-location business shares one pool of public lists through its public profile.
+
 ### `CuratedListItem`
 
 `CuratedListItem` represents a company saved into a list with:
@@ -138,7 +140,7 @@ Important properties:
 - has `body`
 - has `is_public`
 
-Recommendations are fully implemented in the backend and typed in the frontend, but they are not currently as integrated into the main dashboard and public-profile UI as lists are.
+Recommendations are location-specific because each record belongs to a concrete `Company`. On multi-location business pages, recommendations stay attached to the exact storefront page rather than the whole business profile.
 
 ## Ownership And Access Rules
 
@@ -218,6 +220,10 @@ Public list search uses a lighter preview serializer that adds:
 Saved-list serializers wrap that preview under a `list` field.
 
 ### Recommendations
+
+- public profile responses still include public recommendations for the user
+- company detail responses now expose location-specific public recommendations for that exact company
+- company detail pages link back to the business public profile for shared lists instead of duplicating the same list shelf across every sibling location
 
 Recommendations also serialize the related company in compact list shape.
 

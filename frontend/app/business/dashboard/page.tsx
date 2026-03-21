@@ -18,11 +18,13 @@ import {
   listBusinessClaims,
   listCuratedLists,
   listFavorites,
+  listManagedBusinessLocations,
   listSavedCuratedLists,
   updateCuratedList,
   updatePersonalProfile,
 } from "@/lib/api";
 import type { BusinessClaim } from "@/types/auth";
+import type { ManagedBusinessLocation } from "@/types/company";
 import { CuratedList, Favorite, SavedCuratedList } from "@/types/community";
 import { PersonalProfile } from "@/types/profile";
 
@@ -95,6 +97,7 @@ export default function BusinessDashboardPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [lists, setLists] = useState<CuratedList[]>([]);
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
+  const [managedLocations, setManagedLocations] = useState<ManagedBusinessLocation[]>([]);
   const [savedLists, setSavedLists] = useState<SavedCuratedList[]>([]);
   const [profile, setProfile] = useState<PersonalProfile>({
     bio: "",
@@ -306,6 +309,7 @@ export default function BusinessDashboardPage() {
         setFavorites([]);
         setLists([]);
         setClaims([]);
+        setManagedLocations([]);
         setSavedLists([]);
         setIsLoading(false);
         return;
@@ -314,16 +318,18 @@ export default function BusinessDashboardPage() {
       setIsLoading(true);
 
       try {
-        const [nextFavorites, nextLists, nextClaims, nextProfile, nextSavedLists] = await Promise.all([
+        const [nextFavorites, nextLists, nextClaims, nextManagedLocations, nextProfile, nextSavedLists] = await Promise.all([
           listFavorites(accessToken),
           listCuratedLists(accessToken),
           listBusinessClaims(accessToken),
+          listManagedBusinessLocations(accessToken),
           getPersonalProfile(accessToken),
           listSavedCuratedLists(accessToken),
         ]);
         setFavorites(normalizeFavorites(nextFavorites));
         setLists(normalizeLists(nextLists));
         setClaims(normalizeClaims(nextClaims));
+        setManagedLocations(nextManagedLocations);
         setProfile(nextProfile);
         setSavedProfileIsPublic(nextProfile.is_public);
         setSavedLists(nextSavedLists);
@@ -336,6 +342,7 @@ export default function BusinessDashboardPage() {
         setFavorites([]);
         setLists([]);
         setClaims([]);
+        setManagedLocations([]);
         setSavedLists([]);
         setError(loadError instanceof Error ? loadError.message : "Unable to load your community tools.");
       } finally {
@@ -371,6 +378,38 @@ export default function BusinessDashboardPage() {
           </article>
 
           <BusinessProfileCard isVerified latestClaim={latestClaim} />
+
+          <article className="panel dashboard-panel dashboard-saved-lists-card">
+            <div className="detail-claimed-header">
+              <div className="detail-claimed-copy">
+                <h2>Locations</h2>
+                <p className="muted">Manage each storefront directly from its own public company page.</p>
+              </div>
+              <Link className="button button-secondary" href="/business/company">
+                Add location
+              </Link>
+            </div>
+            {managedLocations.length ? (
+              <div className="detail-recommendations-pill-grid">
+                {managedLocations.map((location) => (
+                  <Link
+                    className="dashboard-row dashboard-row-link dashboard-chip-link dashboard-chip-button detail-recommendation-pill dashboard-saved-list-pill-link"
+                    href={`/companies/${location.slug}?edit=1`}
+                    key={location.slug}
+                  >
+                    <span className="dashboard-chip-label">
+                      <strong>{location.name}</strong>
+                      <span>{[location.address, location.city, location.state].filter(Boolean).join(", ") || "Location details coming soon"}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="detail-recommendations-empty">
+                <span className="muted">No managed locations yet. Add your first storefront to start editing.</span>
+              </div>
+            )}
+          </article>
 
           <div className="dashboard-column-headings">
             <div className="dashboard-column-heading dashboard-column-heading-favorites">favorites</div>

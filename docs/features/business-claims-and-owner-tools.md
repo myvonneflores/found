@@ -14,6 +14,7 @@ This area currently covers:
 - business claim submission
 - pending versus verified business state
 - create-or-edit business profile routing
+- multi-location management for verified business users
 - owner editing from the public company page
 - owner-managed weekly business hours with strict validation
 
@@ -29,6 +30,8 @@ This area currently covers:
   - `GET/POST /api/users/business-claims/`
   - `GET/PATCH /api/users/business-claims/<pk>/`
   - `GET/POST/PATCH /api/companies/manage/current/`
+  - `GET/POST /api/companies/manage/locations/`
+  - `GET/PATCH /api/companies/manage/locations/<slug>/`
 
 ## Source Of Truth
 
@@ -54,11 +57,12 @@ This area currently covers:
 - claim history is preserved as an event timeline
 - verified claims unlock business profile creation or editing
 - a verified user with no linked company can create one through `/business/company`
-- a verified user with a linked company is redirected into that company’s public page with `?edit=1`
+- a verified user with linked companies can add another location through `/business/company`
 - personal users may also add community listings through the account flow, but they do not gain owner edit access
-- owner editing currently depends on fetching the managed business profile and matching its slug to the current company detail route
+- owner editing now fetches the managed company directly by the current public slug
 - the business user edits the actual company record that powers the public page
 - owner-entered business hours are stored as structured JSON plus a timezone, not free text
+- verified business users can hold multiple verified claims as long as they target different companies
 
 ## Current Flow Snapshot
 
@@ -71,14 +75,14 @@ What seems true in the code today:
 - the claim page supports both first-time submission and rejected-claim resubmission
 - the pending dashboard shows current claim details, reviewer feedback, and next-step messaging
 - pending business users can still use parts of the dashboard and community experience while waiting
-- verified business users use `/business/company` as a create-or-redirect entry point
-- existing claimed businesses route into the public company page in edit mode
+- verified business users use `/business/company` as an add-location entry point with shared brand defaults
+- the verified dashboard lists all managed locations and links each one into the public company page in edit mode
 - both the verified-business creation form and owner editor support recurring weekly business hours
 
 ## Areas Still In Flux
 
 - whether business verification should eventually support uploads or stronger proof collection
-- whether one business user will eventually manage multiple companies
+- whether multi-brand management should ever be separate from the current location-grouping model
 - how much of business setup should live on `/business/company` versus the public company page
 - whether owner edits should ever move from immediate publish to a review queue
 
@@ -99,4 +103,4 @@ What seems true in the code today:
 ## Open Questions
 
 - Should owner edits publish immediately forever, or eventually move to a review queue?
-- How should multi-location or multi-brand businesses fit into the current single-managed-company path?
+- Should multi-brand management ever become distinct from the current multi-location grouping model?
