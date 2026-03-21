@@ -363,6 +363,7 @@ export function CompanyDirectory({
   const viewportFrameRef = useRef<number | null>(null);
   const heightFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<number | null>(null);
+  const searchCommitTimeoutRef = useRef<number | null>(null);
   const sidePanelHeightRef = useRef<string | undefined>(undefined);
   const previousSelectedSlugRef = useRef<string | undefined>(searchParams.selected);
   const draftSearchParamsRef = useRef<CompanySearchParams>(searchParams);
@@ -586,11 +587,7 @@ export function CompanyDirectory({
     [businessCategories]
   );
 
-  function updateFilters(updates: Partial<CompanySearchParams>) {
-    const nextSearchParams = {
-      ...draftSearchParamsRef.current,
-      ...updates,
-    };
+  function syncSearchParams(nextSearchParams: CompanySearchParams, method: "push" | "replace" = "push") {
     const nextParams = new URLSearchParams();
 
     Object.entries(nextSearchParams).forEach(([key, value]) => {
@@ -604,12 +601,26 @@ export function CompanyDirectory({
     draftSearchParamsRef.current = nextSearchParams;
     setDraftSearchParams(nextSearchParams);
     saveFilters(nextSearchParams);
-    router.push(query ? `${pathname}?${query}` : pathname);
+
+    const href = query ? `${pathname}?${query}` : pathname;
+    if (method === "replace") {
+      router.replace(href, { scroll: false });
+      return;
+    }
+
+    router.push(href, { scroll: false });
+  }
+
+  function updateFilters(updates: Partial<CompanySearchParams>) {
+    const nextSearchParams = {
+      ...draftSearchParamsRef.current,
+      ...updates,
+    };
+    syncSearchParams(nextSearchParams);
   }
 
   function submitFilters(form: HTMLFormElement) {
     const formData = new FormData(form);
-    const params = new URLSearchParams();
     const nextSearchParams: CompanySearchParams = {};
 
     for (const [key, value] of formData.entries()) {
@@ -617,16 +628,9 @@ export function CompanyDirectory({
       if (!normalized) {
         continue;
       }
-      params.append(key, normalized);
       nextSearchParams[key as keyof CompanySearchParams] = normalized;
     }
-
-    draftSearchParamsRef.current = nextSearchParams;
-    setDraftSearchParams(nextSearchParams);
-    saveFilters(nextSearchParams);
-
-    const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+    syncSearchParams(nextSearchParams);
   }
 
   function handleResetFilters() {
@@ -634,7 +638,7 @@ export function CompanyDirectory({
     draftSearchParamsRef.current = {};
     setDraftSearchParams({});
     setSearchValue("");
-    router.push(pathname);
+    router.push(pathname, { scroll: false });
   }
 
   function toggleOwnershipMarker(value: string) {
@@ -821,6 +825,44 @@ export function CompanyDirectory({
   }, [isMobileStack, selectedCompany, selectedSlug]);
 
   useEffect(() => {
+    const normalizedSearch = searchValue.trim();
+    const currentSearch = draftSearchParamsRef.current.search ?? "";
+    if (normalizedSearch === currentSearch) {
+      return undefined;
+    }
+
+    if (searchCommitTimeoutRef.current !== null) {
+      window.clearTimeout(searchCommitTimeoutRef.current);
+    }
+
+    searchCommitTimeoutRef.current = window.setTimeout(() => {
+      syncSearchParams(
+        {
+          ...draftSearchParamsRef.current,
+          search: normalizedSearch || undefined,
+        },
+        "replace"
+      );
+      searchCommitTimeoutRef.current = null;
+    }, 220);
+
+    return () => {
+      if (searchCommitTimeoutRef.current !== null) {
+        window.clearTimeout(searchCommitTimeoutRef.current);
+        searchCommitTimeoutRef.current = null;
+      }
+    };
+  }, [pathname, router, searchValue]);
+
+  useEffect(() => {
+    return () => {
+      if (searchCommitTimeoutRef.current !== null) {
+        window.clearTimeout(searchCommitTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const grid = gridRef.current;
     const filtersPanel = filtersPanelRef.current;
     const filtersSurface = filtersSurfaceRef.current;
@@ -940,6 +982,9 @@ export function CompanyDirectory({
                 ref={filtersFormRef}
                 onChange={(event) => {
                   const target = event.target as HTMLInputElement | HTMLSelectElement;
+                  if (target.name === "search") {
+                    return;
+                  }
                   submitFilters(event.currentTarget);
                 }}
                 onSubmit={(event) => {

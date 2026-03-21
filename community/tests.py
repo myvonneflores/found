@@ -352,6 +352,37 @@ class CommunityApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["results"][0]["preview_companies"][0]["name"], "North Star Market")
 
+    def test_public_list_search_ignores_apostrophes_in_company_names(self):
+        mens_company = Company.objects.create(name="Men's Supply")
+        curated_list = CuratedList.objects.create(
+            user=self.personal_user,
+            title="Tailoring favorites",
+            is_public=True,
+        )
+        curated_list.items.create(company=mens_company, position=1)
+
+        without_apostrophe = self.client.get(
+            reverse("community:public-list-list"),
+            {"search": "mens"},
+        )
+        with_apostrophe = self.client.get(
+            reverse("community:public-list-list"),
+            {"search": "men's"},
+        )
+
+        self.assertEqual(without_apostrophe.status_code, status.HTTP_200_OK)
+        self.assertEqual(with_apostrophe.status_code, status.HTTP_200_OK)
+        self.assertEqual(without_apostrophe.data["count"], 1)
+        self.assertEqual(with_apostrophe.data["count"], 1)
+        self.assertEqual(
+            without_apostrophe.data["results"][0]["preview_companies"][0]["name"],
+            "Men's Supply",
+        )
+        self.assertEqual(
+            with_apostrophe.data["results"][0]["preview_companies"][0]["name"],
+            "Men's Supply",
+        )
+
     def test_public_list_search_hides_private_lists(self):
         CuratedList.objects.create(
             user=self.personal_user,

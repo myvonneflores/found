@@ -1,9 +1,11 @@
 from django.db import transaction
 from django.db.models import F
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, Prefetch
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+
+from companies.search import build_apostrophe_insensitive_query, split_search_terms
 
 from .models import CuratedList, CuratedListItem, Favorite, Recommendation, SavedCuratedList
 from .serializers import (
@@ -174,20 +176,26 @@ class PublicCuratedListDetailView(generics.RetrieveAPIView):
 class PublicCuratedListSearchView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = PublicCuratedListPreviewSerializer
+    search_text_fields = (
+        "title",
+        "user__display_name",
+        "user__first_name",
+        "user__last_name",
+        "user__public_slug",
+        "items__company__name",
+    )
 
     def get_queryset(self):
         queryset = public_curated_list_preview_queryset()
         search = self.request.query_params.get("search", "").strip()
-        if not search:
+        terms = split_search_terms(search)
+        if not terms:
             return queryset
-        return queryset.filter(
-            Q(title__icontains=search)
-            | Q(user__display_name__icontains=search)
-            | Q(user__first_name__icontains=search)
-            | Q(user__last_name__icontains=search)
-            | Q(user__public_slug__icontains=search)
-            | Q(items__company__name__icontains=search)
-        ).distinct().order_by("-updated_at", "-pk")
+
+        for term in terms:
+            queryset = queryset.filter(build_apostrophe_insensitive_query(term, self.search_text_fields))
+
+        return queryset.distinct().order_by("-updated_at", "-pk")
 
 
 class SavedCuratedListListCreateView(CommunityAccessMixin, generics.ListCreateAPIView):
