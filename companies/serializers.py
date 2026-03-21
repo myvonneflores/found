@@ -3,15 +3,16 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 from rest_framework import serializers
 
-from community.models import CuratedList
+from community.models import CuratedList, Recommendation
 from users.models import BusinessClaim
 
 from .business_hours import validate_business_hours, validate_timezone
 from .cities import canonicalize_city
-from .creation import assess_new_company_listing
+from .creation import assess_new_company_listing, normalized_hostname, resolve_company_group
 from .models import (
     BusinessCategory,
     Company,
+    CompanyGroup,
     CuisineType,
     OwnershipMarker,
     ProductCategory,
@@ -107,9 +108,27 @@ class CompanyListSerializer(serializers.ModelSerializer):
 
 
 class CompanyDomainMatchSerializer(serializers.ModelSerializer):
+    city = CanonicalCityField(read_only=True)
+
     class Meta:
         model = Company
-        fields = ("id", "name", "slug", "city", "state")
+        fields = ("id", "name", "slug", "address", "city", "state")
+
+
+class ManagedBusinessLocationSerializer(serializers.ModelSerializer):
+    city = CanonicalCityField(read_only=True)
+
+    class Meta:
+        model = Company
+        fields = ("id", "slug", "name", "address", "city", "state", "is_published")
+
+
+class CompanySiblingLocationSerializer(serializers.ModelSerializer):
+    city = CanonicalCityField(read_only=True)
+
+    class Meta:
+        model = Company
+        fields = ("id", "name", "slug", "address", "city", "state")
 
 
 class ClaimedCompanyPublicListSerializer(serializers.ModelSerializer):
@@ -138,6 +157,8 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
     ownership_markers = OwnershipMarkerSerializer(many=True)
     sustainability_markers = serializers.SerializerMethodField()
     is_community_listed = serializers.SerializerMethodField()
+    other_locations = serializers.SerializerMethodField()
+    public_recommendations = serializers.SerializerMethodField()
 
     def get_cuisine_types(self, obj):
         try:
@@ -157,16 +178,12 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
 
         owner = verified_claim.user
         public_lists = owner.curated_lists.filter(is_public=True).annotate(item_count=Count("items"))
-        public_list_count = public_lists.count()
-        if public_list_count == 0:
-            return None
-
         display_name = owner.display_name or owner.first_name or owner.email.split("@")[0]
         summary = {
             "display_name": display_name,
             "public_slug": owner.public_slug or "",
             "account_type": owner.account_type,
-            "public_list_count": public_list_count,
+            "public_list_count": public_lists.count(),
             "public_lists": list(public_lists[:3]),
         }
         return ClaimedCompanyProfileSerializer(summary).data
@@ -209,6 +226,31 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
 
         return markers
 
+    def get_other_locations(self, obj):
+        if not obj.company_group_id:
+            return []
+
+        siblings = (
+            obj.company_group.companies.filter(is_published=True)
+            .exclude(pk=obj.pk)
+            .order_by("name", "address", "pk")
+        )
+        return CompanySiblingLocationSerializer(siblings, many=True).data
+
+    def get_public_recommendations(self, obj):
+        from community.serializers import PublicRecommendationSerializer
+
+        recommendations = (
+            obj.recommendations.filter(is_public=True)
+            .select_related("company", "company__business_category")
+            .prefetch_related(
+                "company__product_categories",
+                "company__ownership_markers",
+                "company__sustainability_markers",
+            )
+        )
+        return PublicRecommendationSerializer(recommendations, many=True).data
+
     class Meta:
         model = Company
         fields = (
@@ -233,6 +275,8 @@ class CompanyDetailSerializer(serializers.ModelSerializer):
             "product_categories",
             "cuisine_types",
             "claimed_profile",
+            "other_locations",
+            "public_recommendations",
             "ownership_markers",
             "sustainability_markers",
             "instagram_handle",
@@ -254,6 +298,32 @@ def _normalize_website(value):
     if "://" not in value:
         value = f"https://{value}"
     return value
+
+
+def _assign_company_group(company, *, assessment=None, preferred_group=None):
+    hostname = normalized_hostname(company.website)
+    matched_hostname_companies = []
+    if assessment and assessment.matched_hostname_companies:
+        matched_hostname_companies = assessment.matched_hostname_companies
+
+    group = resolve_company_group(
+        company=company,
+        preferred_group=preferred_group,
+        matched_hostname_companies=matched_hostname_companies,
+        hostname=hostname,
+    )
+    if group is None:
+        return company
+
+    if company.company_group_id != group.id:
+        company.company_group = group
+        company.save(update_fields=("company_group", "updated_at"))
+
+    if not group.name:
+        group.name = company.name
+        group.save(update_fields=("name", "updated_at"))
+
+    return company
 
 
 class BaseCompanyWriteSerializer(serializers.ModelSerializer):
@@ -331,6 +401,29 @@ class BaseCompanyWriteSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def _validate_creation_assessment(self, attrs):
+        assessment = assess_new_company_listing(
+            existing_companies=Company.objects.select_related("company_group").all(),
+            name=attrs.get("name", ""),
+            website=attrs.get("website", ""),
+            city=attrs.get("city", ""),
+            state=attrs.get("state", ""),
+            address=attrs.get("address", ""),
+        )
+
+        if assessment.address_required_for_shared_hostname:
+            raise serializers.ValidationError(
+                {"address": "Add the street address before creating another location with this website."}
+            )
+
+        if assessment.is_duplicate:
+            raise serializers.ValidationError(
+                "A similar business listing already exists on FOUND."
+            )
+
+        attrs["_creation_assessment"] = assessment
+        return attrs
+
 
 class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
     is_published = serializers.BooleanField(required=False)
@@ -374,21 +467,11 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
                 )
             return attrs
 
-        assessment = assess_new_company_listing(
-            existing_companies=Company.objects.all(),
-            name=attrs.get("name", ""),
-            website=attrs.get("website", ""),
-            city=attrs.get("city", ""),
-            state=attrs.get("state", ""),
-            address=attrs.get("address", ""),
+        attrs = self._validate_creation_assessment(attrs)
+        assessment = attrs["_creation_assessment"]
+        attrs["needs_editorial_review"] = (
+            False if self.context.get("preferred_company_group") else assessment.needs_editorial_review
         )
-
-        if assessment.is_duplicate:
-            raise serializers.ValidationError(
-                "A similar business listing already exists on FOUND."
-            )
-
-        attrs["needs_editorial_review"] = assessment.needs_editorial_review
         return attrs
 
     def _inject_manual_hours_metadata(self, validated_data):
@@ -402,8 +485,14 @@ class ManagedBusinessCompanySerializer(BaseCompanyWriteSerializer):
         return validated_data
 
     def create(self, validated_data):
+        assessment = validated_data.pop("_creation_assessment", None)
         self._inject_manual_hours_metadata(validated_data)
-        return super().create(validated_data)
+        company = super().create(validated_data)
+        return _assign_company_group(
+            company,
+            assessment=assessment,
+            preferred_group=self.context.get("preferred_company_group"),
+        )
 
     def update(self, instance, validated_data):
         self._inject_manual_hours_metadata(validated_data)
@@ -446,26 +535,14 @@ class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
         if user.account_type != user.AccountType.PERSONAL:
             raise serializers.ValidationError("Only personal users can create community business listings.")
 
-        assessment = assess_new_company_listing(
-            existing_companies=Company.objects.all(),
-            name=attrs.get("name", ""),
-            website=attrs.get("website", ""),
-            city=attrs.get("city", ""),
-            state=attrs.get("state", ""),
-            address=attrs.get("address", ""),
-        )
-
-        if assessment.is_duplicate:
-            raise serializers.ValidationError(
-                "A similar business listing already exists on FOUND."
-            )
-
-        attrs["needs_editorial_review"] = assessment.needs_editorial_review
+        attrs = self._validate_creation_assessment(attrs)
+        attrs["needs_editorial_review"] = attrs["_creation_assessment"].needs_editorial_review
 
         return attrs
 
     def create(self, validated_data):
         many_to_many_fields = {}
+        assessment = validated_data.pop("_creation_assessment", None)
         needs_editorial_review = validated_data.pop("needs_editorial_review", False)
         for field_name in (
             "business_categories",
@@ -488,4 +565,4 @@ class CommunityCompanyCreateSerializer(BaseCompanyWriteSerializer):
         for field_name, values in many_to_many_fields.items():
             getattr(company, field_name).set(values)
 
-        return company
+        return _assign_company_group(company, assessment=assessment)

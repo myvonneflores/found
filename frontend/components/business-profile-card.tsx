@@ -39,12 +39,8 @@ export function BusinessProfileCard({
     );
   }
 
-  const ctaHref = isVerified
-    ? latestClaim?.company_slug
-      ? `/companies/${latestClaim.company_slug}?edit=1`
-      : "/business/company"
-    : "/business/claim";
-  const ctaLabel = isVerified ? "EDIT MY BUSINESS" : "CLAIM MY BUSINESS";
+  const ctaHref = isVerified ? "/business/dashboard" : "/business/claim";
+  const ctaLabel = isVerified ? "MANAGE MY LOCATIONS" : "CLAIM MY BUSINESS";
 
   return (
     <article className="dashboard-logout-strip dashboard-business-claim-strip">

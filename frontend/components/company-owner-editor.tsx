@@ -10,14 +10,14 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { clearAuthSession, readAuthSession, writeAuthSession } from "@/lib/auth-storage";
 import { TaxonomyMultiSelect } from "@/components/taxonomy-multi-select";
 import {
-  getManagedBusinessProfile,
+  getManagedBusinessLocation,
   listBusinessCategories,
   listCuisineTypes,
   listOwnershipMarkers,
   listProductCategories,
   refreshAccessToken,
   listSustainabilityMarkers,
-  updateManagedBusinessProfile,
+  updateManagedBusinessLocation,
 } from "@/lib/api";
 import type { CompanyDetail, ManagedBusinessProfile, TaxonomyItem } from "@/types/company";
 
@@ -183,7 +183,7 @@ export function CompanyOwnerEditor({
       try {
         let nextProfile;
         try {
-          nextProfile = await getManagedBusinessProfile(token);
+          nextProfile = await getManagedBusinessLocation(token, company.slug);
         } catch (loadError) {
           if (!(loadError instanceof Error) || !isTokenError(loadError.message)) {
             throw loadError;
@@ -202,22 +202,16 @@ export function CompanyOwnerEditor({
             refresh: refreshed.refresh ?? session.refresh,
           };
           writeAuthSession(nextSession);
-          nextProfile = await getManagedBusinessProfile(nextSession.access);
+          nextProfile = await getManagedBusinessLocation(nextSession.access, company.slug);
         }
 
         if (!isMounted) {
           return;
         }
 
-        if (nextProfile.slug === company.slug) {
-          setProfile(nextProfile);
-          setSavedProfile(nextProfile);
-          setCanEdit(true);
-        } else {
-          setProfile(null);
-          setSavedProfile(null);
-          setCanEdit(false);
-        }
+        setProfile(nextProfile);
+        setSavedProfile(nextProfile);
+        setCanEdit(true);
       } catch {
         if (isMounted) {
           setProfile(null);
@@ -415,7 +409,7 @@ export function CompanyOwnerEditor({
       }
 
       const { id: _id, ...payload } = profile;
-      const nextProfile = await updateManagedBusinessProfile(token, payload);
+      const nextProfile = await updateManagedBusinessLocation(token, company.slug, payload);
       setProfile(nextProfile);
       setSavedProfile(nextProfile);
       setIsEditMode(false);

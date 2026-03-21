@@ -41,6 +41,17 @@ class OwnershipMarker(NamedTaxonomy):
         verbose_name_plural = "Ownership markers"
 
 
+class CompanyGroup(BaseModel):
+    name = models.CharField(max_length=255)
+    normalized_hostname = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["name", "created_at", "pk"]
+
+    def __str__(self):
+        return self.name
+
+
 class Company(BaseModel):
     class ListingOrigin(models.TextChoices):
         IMPORTED = "imported", "Imported"
@@ -128,6 +139,13 @@ class Company(BaseModel):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="submitted_companies",
+    )
+    company_group = models.ForeignKey(
+        CompanyGroup,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="companies",
     )
 
     class Meta:

@@ -57,6 +57,8 @@ COMPANY_DETAIL_FIELDS = {
     "business_categories",
     "product_categories",
     "claimed_profile",
+    "other_locations",
+    "public_recommendations",
     "ownership_markers",
     "sustainability_markers",
     "instagram_handle",
@@ -94,6 +96,15 @@ MANAGED_COMPANY_FIELDS = {
     "is_gf_friendly",
     "is_published",
 }
+MANAGED_LOCATION_FIELDS = {
+    "id",
+    "slug",
+    "name",
+    "address",
+    "city",
+    "state",
+    "is_published",
+}
 
 CLAIMED_PROFILE_FIELDS = {
     "display_name",
@@ -111,6 +122,8 @@ CLAIMED_PUBLIC_LIST_FIELDS = {
     "updated_at",
     "item_count",
 }
+OTHER_LOCATION_FIELDS = {"id", "name", "slug", "address", "city", "state"}
+COMPANY_PUBLIC_RECOMMENDATION_FIELDS = {"id", "id_hash", "title", "body", "created_at", "updated_at"}
 PUBLIC_LIST_OWNER_FIELDS = {"display_name", "public_slug", "account_type"}
 PUBLIC_LIST_PREVIEW_COMPANY_FIELDS = {"id", "slug", "name", "city", "state", "country"}
 PUBLIC_LIST_PREVIEW_FIELDS = {
@@ -124,8 +137,8 @@ PUBLIC_LIST_PREVIEW_FIELDS = {
     "preview_companies",
 }
 SAVED_LIST_FIELDS = {"id", "created_at", "list"}
-COMPANY_DOMAIN_MATCH_FIELDS = {"matched", "company"}
-COMPANY_DOMAIN_MATCH_COMPANY_FIELDS = {"id", "name", "slug", "city", "state"}
+COMPANY_DOMAIN_MATCH_FIELDS = {"matched", "companies"}
+COMPANY_DOMAIN_MATCH_COMPANY_FIELDS = {"id", "name", "slug", "address", "city", "state"}
 
 USER_FIELDS = {"id", "email", "first_name", "last_name", "account_type", "public_slug", "verification_status", "display_name", "needs_display_name_review", "is_business_verified", "onboarding_completed", "badges"}
 DISPLAY_NAME_AVAILABILITY_FIELDS = {"available", "suggestions"}
@@ -234,7 +247,7 @@ def test_company_domain_match_response_shape(api_client):
     data = response.json()
     assert set(data.keys()) == COMPANY_DOMAIN_MATCH_FIELDS
     assert isinstance(data["matched"], bool)
-    assert data["company"] is None
+    assert isinstance(data["companies"], list)
 
 
 @pytest.mark.django_db
@@ -279,6 +292,24 @@ def test_company_detail_fields(api_client):
             assert isinstance(item["description"], str)
             assert isinstance(item["updated_at"], str)
             assert isinstance(item["item_count"], int)
+    assert isinstance(data["other_locations"], list)
+    for item in data["other_locations"]:
+        assert set(item.keys()) == OTHER_LOCATION_FIELDS
+        assert isinstance(item["id"], int)
+        assert isinstance(item["name"], str)
+        assert isinstance(item["slug"], str)
+        assert isinstance(item["address"], str)
+        assert isinstance(item["city"], str)
+        assert isinstance(item["state"], str)
+    assert isinstance(data["public_recommendations"], list)
+    for item in data["public_recommendations"]:
+        assert set(item.keys()) == COMPANY_PUBLIC_RECOMMENDATION_FIELDS
+        assert isinstance(item["id"], int)
+        assert isinstance(item["id_hash"], str)
+        assert isinstance(item["title"], str)
+        assert isinstance(item["body"], str)
+        assert isinstance(item["created_at"], str)
+        assert isinstance(item["updated_at"], str)
     # Timestamps are ISO-format strings
     assert isinstance(data["created_at"], str)
     assert isinstance(data["updated_at"], str)
@@ -312,6 +343,38 @@ def test_managed_company_fields(api_client):
     assert "business_hours_last_verified_at" not in data
     assert data["business_hours"] is None or isinstance(data["business_hours"], dict)
     assert data["business_hours_timezone"] is None or isinstance(data["business_hours_timezone"], str)
+
+
+@pytest.mark.django_db
+def test_managed_location_list_fields(api_client):
+    company = CompanyFactory()
+    user = User.objects.create_user(
+        email="managed-locations@example.com",
+        password="supersecure123",
+        account_type=User.AccountType.BUSINESS,
+    )
+    BusinessClaim.objects.create(
+        user=user,
+        company=company,
+        business_name=company.name,
+        business_email=user.email,
+        status=BusinessClaim.VerificationStatus.VERIFIED,
+    )
+    api_client.force_authenticate(user=user)
+
+    response = api_client.get(reverse("companies:company-manage-location-list"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    data = payload[0] if isinstance(payload, list) else payload["results"][0]
+    assert set(data.keys()) == MANAGED_LOCATION_FIELDS
+    assert isinstance(data["id"], int)
+    assert isinstance(data["slug"], str)
+    assert isinstance(data["name"], str)
+    assert isinstance(data["address"], str)
+    assert isinstance(data["city"], str)
+    assert isinstance(data["state"], str)
+    assert isinstance(data["is_published"], bool)
 
 
 @pytest.mark.django_db

@@ -94,11 +94,6 @@ def validate_business_claim_attrs(*, attrs, user, instance=None):
     if user.account_type != User.AccountType.BUSINESS:
         raise serializers.ValidationError("Only business users can create business claims.")
 
-    if instance is None and user.is_business_verified:
-        raise serializers.ValidationError(
-            "This business account already manages a verified company."
-        )
-
     intent = _claim_target_intent(attrs, instance)
     company = _claim_target_company(attrs, instance)
     business_name = _claim_target_business_name(attrs, instance)
@@ -132,9 +127,7 @@ def validate_business_claim_attrs(*, attrs, user, instance=None):
                 }
             )
 
-    duplicate_queryset = user.business_claims.exclude(
-        status=BusinessClaim.VerificationStatus.VERIFIED
-    )
+    duplicate_queryset = user.business_claims.all()
     if instance is not None:
         duplicate_queryset = duplicate_queryset.exclude(pk=instance.pk)
 
@@ -545,7 +538,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
         verified_claim = (
             obj.business_claims.filter(status=BusinessClaim.VerificationStatus.VERIFIED, company__isnull=False)
             .select_related("company")
-            .order_by("-reviewed_at", "-pk")
+            .order_by("submitted_at", "pk")
             .first()
         )
         if not verified_claim or not verified_claim.company:

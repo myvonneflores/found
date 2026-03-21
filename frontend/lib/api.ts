@@ -28,6 +28,7 @@ import {
   CompanyDomainMatch,
   CompanyCreatePayload,
   CompanyListItem,
+  ManagedBusinessLocation,
   ManagedBusinessProfile,
   CompanySearchParams,
   PaginatedResponse,
@@ -258,6 +259,25 @@ export function getManagedBusinessProfile(token: string) {
   });
 }
 
+export function listManagedBusinessLocations(token: string) {
+  return requestJson<ManagedBusinessLocation[] | PaginatedResponse<ManagedBusinessLocation>>(
+    "companies/manage/locations/",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  ).then(unwrapListResponse);
+}
+
+export function getManagedBusinessLocation(token: string, slug: string) {
+  return requestJson<ManagedBusinessProfile>(`companies/manage/locations/${slug}/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export function updateManagedBusinessProfile(
   token: string,
   payload: Omit<ManagedBusinessProfile, "id">
@@ -271,11 +291,38 @@ export function updateManagedBusinessProfile(
   });
 }
 
+export function updateManagedBusinessLocation(
+  token: string,
+  slug: string,
+  payload: Omit<ManagedBusinessProfile, "id">
+) {
+  return requestJson<ManagedBusinessProfile>(`companies/manage/locations/${slug}/`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function createManagedBusinessProfile(
   token: string,
   payload: Omit<ManagedBusinessProfile, "id" | "slug">
 ) {
   return requestJson<ManagedBusinessProfile>("companies/manage/current/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createManagedBusinessLocation(
+  token: string,
+  payload: Omit<ManagedBusinessProfile, "id" | "slug">
+) {
+  return requestJson<ManagedBusinessProfile>("companies/manage/locations/", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

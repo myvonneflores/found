@@ -8,7 +8,13 @@ urlpatterns = [
     path("companies/", views.CompanyListView.as_view(), name="company-list"),
     path("companies/domain-match/", views.CompanyDomainMatchView.as_view(), name="company-domain-match"),
     path("companies/community-listings/", views.CommunityCompanyCreateView.as_view(), name="company-community-create"),
-    path("companies/manage/current/", views.ManagedBusinessCompanyView.as_view(), name="company-manage-current"),
+    path("companies/manage/current/", views.ManagedBusinessCompanyCurrentView.as_view(), name="company-manage-current"),
+    path("companies/manage/locations/", views.ManagedBusinessLocationListCreateView.as_view(), name="company-manage-location-list"),
+    path(
+        "companies/manage/locations/<slug:slug>/",
+        views.ManagedBusinessLocationDetailView.as_view(),
+        name="company-manage-location-detail",
+    ),
     path("companies/<slug:slug>/", views.CompanyDetailView.as_view(), name="company-detail"),
     path(
         "business-categories/",
