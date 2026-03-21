@@ -363,6 +363,26 @@ class TestCompanyListApi:
         assert response.data["count"] == 1
         assert response.data["results"][0]["name"] == "North Star Market"
 
+    def test_search_ignores_apostrophes_in_company_names(self, api_client):
+        Company.objects.create(
+            name="Men's Supply",
+            description="Classic menswear and tailoring.",
+            city="Portland",
+            state="Oregon",
+            country="USA",
+            is_published=True,
+        )
+
+        without_apostrophe = api_client.get(reverse("companies:company-list"), {"search": "mens"})
+        with_apostrophe = api_client.get(reverse("companies:company-list"), {"search": "men's"})
+
+        assert without_apostrophe.status_code == 200
+        assert with_apostrophe.status_code == 200
+        assert without_apostrophe.data["count"] == 1
+        assert with_apostrophe.data["count"] == 1
+        assert without_apostrophe.data["results"][0]["name"] == "Men's Supply"
+        assert with_apostrophe.data["results"][0]["name"] == "Men's Supply"
+
     def test_invalid_detail_slug_returns_404(self, api_client):
         response = api_client.get(
             reverse("companies:company-detail", kwargs={"slug": "missing"})

@@ -1,10 +1,10 @@
 import django_filters
 from django.db.models import Q
-from django.utils.text import smart_split
 
 from .business_categories import business_category_query_names
 from .cities import city_filter_variants
 from .models import Company
+from .search import build_apostrophe_insensitive_query, split_search_terms
 
 
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
@@ -84,18 +84,13 @@ class CompanyFilterSet(django_filters.FilterSet):
     }
 
     def filter_search(self, queryset, name, value):
-        terms = [term.strip("\"'") for term in smart_split(value or "") if term.strip("\"'")]
+        terms = split_search_terms(value)
         if not terms:
             return queryset
 
         for term in terms:
-            term_query = Q()
-
-            for field_name in self.search_text_fields:
-                term_query |= Q(**{f"{field_name}__icontains": term})
-
-            for field_name in self.search_related_fields:
-                term_query |= Q(**{f"{field_name}__icontains": term})
+            term_query = build_apostrophe_insensitive_query(term, self.search_text_fields)
+            term_query |= build_apostrophe_insensitive_query(term, self.search_related_fields)
 
             lowered_term = term.lower()
             for flag_name, aliases in self.search_flag_aliases.items():

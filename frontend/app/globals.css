@@ -6355,6 +6355,10 @@ body.contact-page-body {
     align-items: flex-start;
   }
 
+  .auth-form-card-signup .auth-form-actions .contact-submit {
+    align-self: center;
+  }
+
   .dashboard-business-profile-footer {
     grid-template-columns: 1fr;
   }
